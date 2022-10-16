@@ -27,6 +27,7 @@ RUN apt-get -y install build-essential \
 	autoconf \
 	libatomic-ops-dev \
 	pkg-config \
+	cargo \
     	&& apt-get -y clean all \
     	&& rm -rf /var/cache
 
@@ -64,13 +65,6 @@ RUN wget https://github.com/samtools/samtools/releases/download/1.16.1/samtools-
 	&& make install
 
 #no need to env path, because of make install - should be sufficient
-
-##install cargo
-
-RUN mkdir -p /var/cache/apt/archives/partial \
-	&& apt-get -y install cargo \
-    	&& apt-get -y clean all \
-    	&& rm -rf /var/cache
 	
 ##install gafpack
 
