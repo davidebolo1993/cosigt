@@ -28,6 +28,7 @@ RUN apt-get -y install build-essential \
 	libatomic-ops-dev \
 	pkg-config \
 	cargo \
+	pigz \
     	&& apt-get -y clean all \
     	&& rm -rf /var/cache
 
