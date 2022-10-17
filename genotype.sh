@@ -71,7 +71,7 @@ fi
 
 #chop
 echo "odgi chop"
-odgi chop -i $g -c $t -o - | odgi view -i - -g > $l/z.gfa
+odgi chop -i $g -c 32 -o - | odgi view -i - -g > $l/z.gfa
 
 #haplotype binary matrix
 echo "odgi build"
