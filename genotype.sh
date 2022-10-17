@@ -79,7 +79,7 @@ odgi build -g $l/z.gfa -o - | odgi paths -i - -H | cut -f 1,4- | pigz > $l/z.pat
 
 #index for giraffe
 echo "vg autoindex"
-vg autoindex -w giraffe -g $l/z.gfa -t $t -p $l/index
+vg autoindex -w giraffe -g $l/z.gfa -t $t -p $l/index -T $l
 
 #extract fq.gz
 echo "samtools fastq"
