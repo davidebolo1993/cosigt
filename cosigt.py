@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import os
 import sys
@@ -31,7 +31,7 @@ def main(bin_tsv,sam_tsv,outf):
         #matrix[i]=matrix[i]/matrix[i].sum()
     #store as table
     combo_df = pd.DataFrame(matrix,columns=binary_df.columns.tolist())
-    combo_df.index = [combo[0][1] + "_" +combo[1][1] for combo in combos]
+    combo_df.index = [combo[0][1] + "/" +combo[1][1] for combo in combos]
     combo_df.to_csv(os.path.abspath(outf+ "/combo.tsv"), sep = "\t", index=True)
     #do the dot product
     cov_tsv=pd.read_table(sam_tsv).set_index("#sample", drop=True)
