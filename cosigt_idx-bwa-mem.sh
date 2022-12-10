@@ -7,7 +7,7 @@ scratch=$4
 
 #chop
 echo "odgi chop"
-odgi chop -i $g -c 32 -o - -t $t | odgi view -i - -g > $base.gfa
+odgi chop -i $g -c 150 -o - -t $t | odgi view -i - -g > $base.gfa
 
 #haplotype binary matrix
 echo "odgi build"
