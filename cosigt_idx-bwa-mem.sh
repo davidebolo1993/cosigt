@@ -4,10 +4,13 @@ g=$1
 base=$2
 t=$3
 scratch=$4
+#chop=$5
 
 #chop
-echo "odgi chop"
-odgi chop -i $g -c 150 -o - -t $t | odgi view -i - -g > $base.gfa
+echo "cp the graph"
+cp $g $base.gfa
+#echo "odgi chop -c $chop"
+#odgi chop -i $g -c $chop -o - -t $t | odgi view -i - -g > $base.gfa
 
 #haplotype binary matrix
 echo "odgi build"

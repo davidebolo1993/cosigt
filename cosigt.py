@@ -23,14 +23,14 @@ def main(bin_tsv,sam_tsv,outf):
     #with no normalization, ok to use int
     matrix = np.zeros(shape=(len(combos),binary_df.shape[1]),dtype=int)
     # recode zeros in input vectors to this value
-    zero_weight=-1e3
+    #zero_weight=0
     #with normalization, we have to use floats
     #matrix = np.zeros(shape=(len(combos),binary_df.shape[1]),dtype=np.float32)
 
     #iterate over the combinations and get the sum of corresponding values
     for i,combo in enumerate(combos):
         matrix[i]=binary_ar[combo[0][0]] + binary_ar[combo[1][0]]
-        matrix[i]=np.where(matrix[i]==0, zero_weight, matrix[i])
+        #matrix[i]=np.where(matrix[i]==0, zero_weight, matrix[i])
     #store as table
     combo_df = pd.DataFrame(matrix,columns=binary_df.columns.tolist())
     combo_df.index = [combo[0][1] + "/" +combo[1][1] for combo in combos]
@@ -47,7 +47,7 @@ def main(bin_tsv,sam_tsv,outf):
         
         s_results=list()
         # zero weighting ~ -(max possible read coverage)
-        row=np.where(row==0, zero_weight, row)
+        #row=np.where(row==0, zero_weight, row)
 
         for idx2,row2 in combo_df.iterrows():
             cos_sim=1-spatial.distance.cosine(row.tolist(), row2.tolist())
