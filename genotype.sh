@@ -95,4 +95,4 @@ gafpack -g $l/z.gfa -a $l/x.gaf | pigz > $l/x.gafpack.gz
 
 #calculate genotype
 echo "cosigt"
-./cosigt $l/z.paths.tsv.gz $l/x.gafpack.gz $l
+cosigt $l/z.paths.tsv.gz $l/x.gafpack.gz $l
