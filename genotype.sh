@@ -94,5 +94,5 @@ echo "gafpack"
 gafpack -g $l/z.gfa -a $l/x.gaf | pigz > $l/x.gafpack.gz
 
 #calculate genotype
-echo "genotype.py"
-genotype.py $l/z.paths.tsv.gz $l/x.gafpack.gz $l
+echo "cosigt"
+./cosigt $l/z.paths.tsv.gz $l/x.gafpack.gz $l

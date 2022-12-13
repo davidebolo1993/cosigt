@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:latest
 LABEL description="graph genotyper"
 LABEL base_image="ubuntu:latest"
 LABEL software="graph genotyper"
@@ -10,6 +10,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /opt
 
+RUN add-apt-repository ppa:longsleep/golang-backports
 RUN apt-get update
 RUN apt-get -y install build-essential \
 	wget git\
@@ -29,8 +30,9 @@ RUN apt-get -y install build-essential \
 	pkg-config \
 	cargo \
 	pigz \
-    	&& apt-get -y clean all \
-    	&& rm -rf /var/cache
+	golang-go \
+	&& apt-get -y clean all \
+	&& rm -rf /var/cache
 
 ##install odgi
 
@@ -51,7 +53,7 @@ ENV PATH /opt/odgi/bin:$PATH
 RUN mkdir -p vg \
 	&& cd vg \
 	&& wget https://github.com/vgteam/vg/releases/download/v1.43.0/vg \
-    	&& chmod +x vg
+	&& chmod +x vg
 
 ENV PATH /opt/vg:$PATH
 
@@ -66,6 +68,14 @@ RUN wget https://github.com/samtools/samtools/releases/download/1.16.1/samtools-
 	&& make install
 
 #no need to env path, because of make install - should be sufficient
+
+##install bwa-mem
+
+RUN git clone https://github.com/lh3/bwa.git \
+	&& cd bwa \
+	&& make
+
+ENV PATH /opt/bwa:$PATH
 	
 ##install gafpack
 
@@ -75,13 +85,20 @@ RUN git clone https://github.com/ekg/gafpack.git \
 
 ENV PATH /opt/gafpack/target/release:$PATH
 
-##install additional python3 modules
+##install gfainject
 
-RUN pip3 install pandas \
-	numpy \
-	scipy
+RUN git clone https://github.com/ekg/gfainject.git \
+	&& cd gfainject \
+	&& cargo install --force --path .
 
-##clone repo with commands required to run the entire genotyping + custom python script
-RUN git clone https://github.com/davidebolo1993/graph_genotyper.git
+ENV PATH /opt/gfainject/target/release:$PATH
+
+##install cosigt
+
+RUN git clone https://github.com/davidebolo1993/graph_genotyper.git \
+	&& cd graph_genotyper \
+	&& go mod init cosigt \
+	&& go mod tidy \
+	&& go build cosigt
 
 ENV PATH /opt/graph_genotyper:$PATH
