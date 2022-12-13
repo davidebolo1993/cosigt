@@ -14,7 +14,7 @@ RUN apt-get update
 
 RUN apt-get -y install build-essential \
 	software-properties-common \
-	wget git\
+	wget curl git\
 	bzip2 libbz2-dev \
 	zlib1g zlib1g-dev \
 	liblzma-dev \
