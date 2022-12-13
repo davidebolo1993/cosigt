@@ -29,7 +29,6 @@ RUN apt-get -y install build-essential \
 	autoconf \
 	libatomic-ops-dev \
 	pkg-config \
-	cargo \
 	pigz 
 
 #install golang
@@ -39,8 +38,13 @@ RUN apt-get -y install golang-go \
 	&& apt-get -y clean all \
 	&& rm -rf /var/cache
 
-#ln python to python3 -not used right now but, who knows?
+#install rust
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
+	&& rustup update
 
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+#ln python to python3 -not used right now but, who knows?
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
 ##install odgi
