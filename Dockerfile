@@ -93,9 +93,11 @@ RUN git clone https://github.com/lh3/bwa.git \
 ENV PATH /opt/bwa:$PATH
 	
 ##install gafpack
+##checkout to a specific version
 
 RUN git clone https://github.com/ekg/gafpack.git \
 	&& cd gafpack \
+	&& git checkout ad31875b6914d964c6fd72d1bf334f0843538fb6 \
 	&& cargo install --force --path .
 
 ENV PATH /opt/gafpack/target/release:$PATH
