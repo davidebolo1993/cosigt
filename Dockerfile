@@ -39,10 +39,12 @@ RUN apt-get -y install golang-go \
 	&& rm -rf /var/cache
 
 #install rust
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
-	&& rustup update
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 
 ENV PATH="/root/.cargo/bin:${PATH}"
+
+#and update
+RUN rustup update
 
 #ln python to python3 -not used right now but, who knows?
 RUN ln -s /usr/bin/python3 /usr/bin/python
