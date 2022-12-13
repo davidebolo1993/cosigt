@@ -10,9 +10,10 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /opt
 
-RUN add-apt-repository ppa:longsleep/golang-backports
 RUN apt-get update
+
 RUN apt-get -y install build-essential \
+	software-properties-common \
 	wget git\
 	bzip2 libbz2-dev \
 	zlib1g zlib1g-dev \
@@ -29,10 +30,18 @@ RUN apt-get -y install build-essential \
 	libatomic-ops-dev \
 	pkg-config \
 	cargo \
-	pigz \
-	golang-go \
+	pigz 
+
+#install golang
+RUN add-apt-repository ppa:longsleep/golang-backports
+
+RUN apt-get -y install golang-go \
 	&& apt-get -y clean all \
 	&& rm -rf /var/cache
+
+#ln python to python3 -not used right now but, who knows?
+
+RUN ln -s /usr/bin/python3 /usr/bin/python
 
 ##install odgi
 
