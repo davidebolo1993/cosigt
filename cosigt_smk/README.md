@@ -11,7 +11,7 @@ Uncommenting --profile will run on slurm cluster, but first ajust the slurm conf
 
 ```bash
 #edit config/slurm/config.yaml first 
-#assume snakemake and singularity in path
-./cosigt_run
+#assume snakemake and singularity in path for cosigt, R with ggplot2/data.table in path for evaluate
+./cosigt_run.sh
 ```
 
