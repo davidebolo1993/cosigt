@@ -8,3 +8,4 @@ cosigt_smk/resources/*
 cosigt_smk/logs/* 
 cosigt_smk/.snakemake/*
 genotype_old.sh
+cosigt_smk/singularity_bind_paths.csv
