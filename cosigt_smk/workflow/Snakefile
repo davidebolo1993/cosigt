@@ -1,0 +1,20 @@
+import pandas as pd
+
+configfile: 'config/config.yaml'
+
+df=(pd.read_table(config['samples'], dtype={"sample_id": str, "cram":str})
+	.set_index("sample_id", drop=False)
+	.sort_index()
+)
+
+include: "rules/extract.smk"
+include: "rules/odgi.smk"
+include: "rules/bwa.smk"
+#include: "rules/vg.smk"
+include: "rules/gfainject.smk"
+include: "rules/gafpack.smk"
+include: "rules/cosigt.smk"
+
+rule cosigt:
+	input:		
+		expand("results/cosigt_results/{sample}/best_genotype.tsv", sample=df['sample_id'].tolist())

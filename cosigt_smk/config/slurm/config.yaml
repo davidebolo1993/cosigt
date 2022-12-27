@@ -1,0 +1,33 @@
+cluster:
+  mkdir -p logs/{rule} &&
+  sbatch
+    --account={resources.account}
+    --partition={resources.partition}
+    --qos={resources.qos}
+    --cpus-per-task={threads}
+    --mem={resources.mem_mb}
+    --job-name=smk-{rule}-{wildcards}
+    --output=logs/{rule}/{rule}-{wildcards}-%j.out
+    --time={resources.time}
+    --gres=gpu:{resources.gpu}
+default-resources:
+  - account=co_genomicdata
+  - partition=savio3_bigmem
+  - qos=genomicdata_bigmem3_normal
+  - mem_mb=1000
+  - time="00:10:00"
+  - gpu=0
+max-jobs-per-second: 20
+max-status-checks-per-second: 20
+local-cores: 1
+latency-wait: 90
+jobs: 1000
+keep-going: True
+rerun-incomplete: True
+printshellcmds: True
+scheduler: greedy
+use-conda: True
+use-singularity: True
+verbose: True
+reason: True
+
