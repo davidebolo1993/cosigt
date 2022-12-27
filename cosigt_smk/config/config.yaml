@@ -1,4 +1,0 @@
-samples: config/samples.tsv
-reference: resources/ref/GRCh38_full_analysis_set_plus_decoy_hla.fa
-graph: resources/graph/AMY1A_region_seq.fa.gz.4a49d6f.68f91e8.fd809ae.smooth.final.gfa
-region: "chr1:103456064-103863972"
