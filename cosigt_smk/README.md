@@ -11,6 +11,7 @@ Uncommenting --profile will run on slurm cluster, but first ajust the slurm conf
 
 ```bash
 #edit config/slurm/config.yaml first 
+#assume snakemake and singularity in path
 ./cosigt_run
 ```
 
