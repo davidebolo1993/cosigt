@@ -1,0 +1,6 @@
+channels:
+ - conda-forge
+dependencies:
+ - r-base
+ - r-ggplot2
+ - r-data.table
