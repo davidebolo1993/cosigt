@@ -33,14 +33,16 @@ rule evaluate_cosigt:
 	input:
 		rules.cosigt_genotype.output.combo
 	output:
-		"results/cosigt_results/{sample}/evaluation.tsv"
+		evaluation="results/cosigt_results/{sample}/evaluation.tsv",
+		maxtimes="results/cosigt_results/{sample}/maxtimes.txt"
 	threads:
 		1
 	params:
 		samplename="{sample}"
 	shell:
 		'''
-		sort -k 2 -n -r {input} | awk -v var="{params.samplename}" -F '{params.samplename}' '{{print NR "\t" NF-1 "\t" var}}'  > {output}  		
+		sort -k 2 -n -r {input} | awk -v var="{params.samplename}" -F '{params.samplename}' '{{print NR "\t" NF-1 "\t" var}}'  > {output.evaluation} \
+		&& sort -k 2 -n -r {input} | cut -f 1 | tr '-' '\n' | grep '{params.samplename}' | sort | uniq | wc -l > {output.maxtimes}
 		'''
 
 rule plot_evaluation:
@@ -57,5 +59,5 @@ rule plot_evaluation:
 		"../envs/r.yml"
 	shell:
 		'''
-		Rscript workflow/scripts/plot_evaluation.r results/cosigt_results 10 {output}
+		Rscript workflow/scripts/plot_evaluation.r results/cosigt_results 100 {output}
 		'''

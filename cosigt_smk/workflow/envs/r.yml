@@ -4,3 +4,4 @@ dependencies:
  - r-base
  - r-ggplot2
  - r-data.table
+ - r-ggforce
