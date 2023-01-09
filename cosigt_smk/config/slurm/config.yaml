@@ -12,8 +12,8 @@ cluster:
     --gres=gpu:{resources.gpu}
 default-resources:
   - account=co_genomicdata
-  - partition=savio3_bigmem
-  - qos=genomicdata_bigmem3_normal
+  - partition=savio3_htc
+  - qos=savio_lowprio
   - mem_mb=1000
   - time="00:10:00"
   - gpu=0

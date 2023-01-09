@@ -8,7 +8,5 @@ conda activate /global/home/users/davidebolognini/micromamba/envs/snakemake_late
 bindings=$(cat singularity_bind_paths.csv)
 stringb=$(echo "-B $bindings")
 snakemake --unlock
-snakemake --cores 5 --use-singularity --singularity-args "$stringb" cosigt #--profile config/slurm
-#module load r/3.6.3
-#module load r-packages/default
-snakemake --cores 1 evaluate --use-conda #to try to install the r env
+snakemake --cores 5 --use-singularity --singularity-args "$stringb" cosigt --profile config/slurm
+snakemake --cores 1 evaluate --use-conda --profile config/slurm

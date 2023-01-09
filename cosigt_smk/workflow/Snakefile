@@ -15,12 +15,18 @@ include: "rules/gfainject.smk"
 include: "rules/gafpack.smk"
 include: "rules/cosigt.smk"
 
+
+rule all:
+	input:
+		expand("results/cosigt_results/{sample}/best_genotype.tsv", sample=df['sample_id'].tolist()),
+		"results/cosigt_results/evaluation.pdf"
+
+
 rule cosigt:
 	input:		
 		expand("results/cosigt_results/{sample}/best_genotype.tsv", sample=df['sample_id'].tolist())
 
 rule evaluate:
 	input:
-		expand("results/cosigt_results/{sample}/evaluation.tsv", sample=df['sample_id'].tolist()),
 		"results/cosigt_results/evaluation.pdf"		
 
