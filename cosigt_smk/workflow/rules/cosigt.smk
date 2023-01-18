@@ -41,23 +41,57 @@ rule evaluate_cosigt:
 		samplename="{sample}"
 	shell:
 		'''
-		sort -k 2 -n -r {input} | awk -v var="{params.samplename}" -F '{params.samplename}' '{{print NR "\t" NF-1 "\t" var}}'  > {output.evaluation} \
+		sort -k 2 -n -r {input} | awk -v var="{params.samplename}" -F '{params.samplename}' '{{print NR "\t" NF-1 "\t" var "\t" $0}}' | tr '-' '\t'  > {output.evaluation} \
 		&& sort -k 2 -n -r {input} | cut -f 1 | tr '-' '\n' | grep '{params.samplename}' | sort | uniq | wc -l > {output.maxtimes}
 		'''
 
 rule plot_evaluation:
+        '''
+        plot evaluation
+        '''
+        input:
+                expand("results/cosigt_results/{sample}/evaluation.tsv", sample=df['sample_id'].tolist())
+        output:
+                "results/cosigt_results/evaluation.pdf"
+        threads:
+                1
+        conda:
+                "../envs/r.yml"
+        shell:
+                '''
+                Rscript workflow/scripts/plot_evaluation.r results/cosigt_results 100 "" {output}
+		'''
+
+rule plot_evaluation_dendro:
 	'''
 	plot evaluation
 	'''
 	input:
 		expand("results/cosigt_results/{sample}/evaluation.tsv", sample=df['sample_id'].tolist())
 	output:
-		"results/cosigt_results/evaluation.pdf"
+		"results/cosigt_results/evaluation_dendro.pdf"
 	threads:
 		1
 	conda:
 		"../envs/r.yml"
 	shell:
 		'''
-		Rscript workflow/scripts/plot_evaluation.r results/cosigt_results 100 {output}
+		Rscript workflow/scripts/plot_evaluation.r results/cosigt_results 100 resources/extra/dendro.proxi.json {output}
 		'''
+
+rule plot_evaluation_dbscan:
+        '''
+        plot evaluation
+        '''
+        input:
+                expand("results/cosigt_results/{sample}/evaluation.tsv", sample=df['sample_id'].tolist())
+        output:
+                "results/cosigt_results/evaluation_dbscan.pdf"
+        threads:
+                1
+        conda:
+                "../envs/r.yml"
+        shell:
+                '''
+                Rscript workflow/scripts/plot_evaluation.r results/cosigt_results 100 resources/extra/DBSCAN.proxi.json {output}
+                '''

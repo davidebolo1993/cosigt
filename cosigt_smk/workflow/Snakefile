@@ -19,8 +19,9 @@ include: "rules/cosigt.smk"
 rule all:
 	input:
 		expand("results/cosigt_results/{sample}/best_genotype.tsv", sample=df['sample_id'].tolist()),
-		"results/cosigt_results/evaluation.pdf"
-
+		"results/cosigt_results/evaluation.pdf",
+                "results/cosigt_results/evaluation_dendro.pdf",
+                "results/cosigt_results/evaluation_dbscan.pdf"
 
 rule cosigt:
 	input:		
@@ -28,5 +29,6 @@ rule cosigt:
 
 rule evaluate:
 	input:
-		"results/cosigt_results/evaluation.pdf"		
-
+		"results/cosigt_results/evaluation.pdf",
+		"results/cosigt_results/evaluation_dendro.pdf",
+		"results/cosigt_results/evaluation_dbscan.pdf"
