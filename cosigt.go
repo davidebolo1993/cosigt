@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"compress/gzip"
 	"encoding/csv"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"strings"
 
 	"gonum.org/v1/gonum/stat/combin"
 )
@@ -62,6 +64,25 @@ func GetDotProduct(A []float64, B []float64) float64 {
 	}
 
 	return dot_product
+}
+
+func ReadBlacklist(s string) []string {
+
+	ids := make([]string, 0, 10) //don't want to re-allocate too many times
+
+	f, _ := os.Open(s)
+	defer f.Close()
+
+	b := bufio.NewScanner(f)
+
+	for b.Scan() {
+
+		ids = append(ids, b.Text())
+
+	}
+
+	return ids
+
 }
 
 func ReadGz(s string) ([]string, [][]float64) {
@@ -123,6 +144,22 @@ func WriteMap(m map[string]float64, s string) {
 
 }
 
+func SliceContains(s string, ids []string) bool {
+
+	for _, x := range ids {
+
+		if strings.Contains(s, x) {
+
+			return true
+
+		}
+
+	}
+
+	return false
+
+}
+
 func SumSlices(a []float64, b []float64) []float64 {
 
 	c := make([]float64, len(a))
@@ -145,6 +182,9 @@ func main() {
 	hapid, gcov := ReadGz(os.Args[1])
 	//read second table
 	smpl, bcov := ReadGz(os.Args[2])
+	//read blacklist - it can be empty or not
+	blck := ReadBlacklist(os.Args[3])
+
 	//store results in map
 	m := make(map[string]float64)
 
@@ -155,9 +195,14 @@ func main() {
 	for gen.Next() {
 
 		h1, h2 := gen.Combination(nil)[0], gen.Combination(nil)[1]
-		sum := SumSlices(gcov[h1], gcov[h2])
-		indiv := (hapid[h1] + "-" + hapid[h2])
-		m[indiv] = GetCosineSimilarity(sum, bcov[0])
+
+		if len(blck) == 0 || (!SliceContains(hapid[h1], blck) && !SliceContains(hapid[h2], blck)) { //nothing to blacklist or both ids not in blacklist
+
+			sum := SumSlices(gcov[h1], gcov[h2])
+			indiv := (hapid[h1] + "-" + hapid[h2])
+			m[indiv] = GetCosineSimilarity(sum, bcov[0])
+
+		}
 
 	}
 
@@ -177,13 +222,12 @@ func main() {
 	})
 
 	//write combinations
-	_ = os.Mkdir(os.Args[3], os.ModePerm)
-	WriteMap(m, os.Args[3]+"/combos.tsv")
+	_ = os.Mkdir(os.Args[4], os.ModePerm)
+	WriteMap(m, os.Args[4]+"/combos.tsv")
 
 	//write best score
-	f, _ := os.Create(os.Args[3] + "/best_genotype.tsv")
+	f, _ := os.Create(os.Args[4] + "/best_genotype.tsv")
 	defer f.Close()
 	result := fmt.Sprintf("#sample\tbest_genotype\tbest_score\n%s\t%s\t%.16f\n", smpl[0], keys[0], m[keys[0]])
 	_, _ = f.WriteString(result)
 }
-

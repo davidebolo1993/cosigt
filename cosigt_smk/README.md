@@ -3,15 +3,14 @@
 ## prepare config and samples.tsv, organize resources
 
 ```bash
-./cosigt_prepare.sh <path/to/cram_directory> <path/to/reference.fa> <path/to/graph.gfa> <region> #"chr1:103456064-103863972 for AMY, for instance
+./cosigt_prepare.sh <path/to/cram_directory> <path/to/reference.fa> <path/to/graph.gfa> <region> <blacklist.txt> #chr1:103456064-103863972 for AMY, for instance
 ```
 
 ## run the snakemake pipeline
-Uncommenting --profile will run on slurm cluster, but first ajust the slurm config
+Uncommenting --profile will run on slurm cluster
 
 ```bash
-#edit config/slurm/config.yaml first 
-#assume snakemake and singularity in path for cosigt, R with ggplot2/data.table in path for evaluate
+#assume snakemake and singularity in path for cosigt, R with ggplot2/data.table/rjson in path for evaluate
 ./cosigt_run.sh
 ```
 

@@ -23,7 +23,7 @@ rule cosigt_genotype:
 		prefix="results/cosigt_results/{sample}"
 	shell:
 		'''
-		cosigt {input.zpath} {input.xpack} {params.prefix}
+		cosigt {input.zpath} {input.xpack} resources/extra/bad_samples.txt {params.prefix}
 		'''
 
 rule evaluate_cosigt:

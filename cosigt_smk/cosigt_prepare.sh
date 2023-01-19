@@ -1,12 +1,20 @@
 #!/bin/bash
 
-
 #initialize config
 echo -e "samples: config/samples.tsv"> config/config.yaml
 
 #link cram files and populate samples.tsv
 cram_base=$(readlink -f $1)
-cram=$(ls $cram_base/*.cram)
+
+if [ $# -eq 4 ]; then
+
+	cram=$(ls $cram_base/*.cram)
+
+else
+
+	cram=$(ls $cram_base/*.cram | grep -v -f $5)
+
+fi
 
 echo -e "sample_id\tcram" > config/samples.tsv
 mkdir -p resources/cram
