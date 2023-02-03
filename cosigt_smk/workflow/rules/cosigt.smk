@@ -52,7 +52,7 @@ rule plot_evaluation:
         input:
                 expand("results/cosigt_results/{sample}/evaluation.tsv", sample=df['sample_id'].tolist())
         output:
-                "results/cosigt_results/evaluation.pdf"
+                "results/cosigt_results/evaluation/evaluation.pdf"
         threads:
                 1
         conda:
@@ -64,34 +64,18 @@ rule plot_evaluation:
 
 rule plot_evaluation_dendro:
 	'''
-	plot evaluation
+	plot evaluation using helper dendrogram
 	'''
 	input:
-		expand("results/cosigt_results/{sample}/evaluation.tsv", sample=df['sample_id'].tolist())
+		prev_eval=rules.plot_evaluation.output,
+		proxi=lambda wildcards: glob('resources/extra/dendrogram.cut{sample}.json'.format(sample=wildcards.sample))
 	output:
-		"results/cosigt_results/evaluation_dendro.pdf"
+		"results/cosigt_results/evaluation/evaluation.cut{sample}.pdf"
 	threads:
 		1
 	conda:
 		"../envs/r.yml"
 	shell:
 		'''
-		Rscript workflow/scripts/plot_evaluation.r results/cosigt_results 100 resources/extra/dendro.proxi.json {output}
-		'''
-
-rule plot_evaluation_dbscan:
-        '''
-        plot evaluation
-        '''
-        input:
-                expand("results/cosigt_results/{sample}/evaluation.tsv", sample=df['sample_id'].tolist())
-        output:
-                "results/cosigt_results/evaluation_dbscan.pdf"
-        threads:
-                1
-        conda:
-                "../envs/r.yml"
-        shell:
-                '''
-                Rscript workflow/scripts/plot_evaluation.r results/cosigt_results 100 resources/extra/DBSCAN.proxi.json {output}
-                '''
+		Rscript workflow/scripts/plot_evaluation.r results/cosigt_results 100 {input.proxi} {output}
+		'''		
