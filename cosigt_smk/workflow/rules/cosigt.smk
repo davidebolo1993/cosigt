@@ -33,16 +33,14 @@ rule evaluate_cosigt:
 	input:
 		rules.cosigt_genotype.output.combo
 	output:
-		evaluation="results/cosigt_results/{sample}/evaluation.tsv",
-		maxtimes="results/cosigt_results/{sample}/maxtimes.txt"
+		"results/cosigt_results/{sample}/evaluation.tsv"
 	threads:
 		1
 	params:
 		samplename="{sample}"
 	shell:
 		'''
-		sort -k 2 -n -r {input} | awk -v var="{params.samplename}" -F '{params.samplename}' '{{print NR "\t" NF-1 "\t" var "\t" $0}}' | tr '-' '\t'  > {output.evaluation} \
-		&& sort -k 2 -n -r {input} | cut -f 1 | tr '-' '\n' | grep '{params.samplename}' | sort | uniq | wc -l > {output.maxtimes}
+		sort -k 2 -n -r {input} | awk -v var="{params.samplename}" -F '{params.samplename}' '{{print NR "\t" NF-1 "\t" var "\t" $0}}' | tr '-' '\t'  > {output}
 		'''
 
 rule plot_evaluation:
@@ -56,10 +54,10 @@ rule plot_evaluation:
         threads:
                 1
         conda:
-                "../envs/r.yml"
+                "../envs/python.yml"
         shell:
                 '''
-                Rscript workflow/scripts/plot_evaluation.r results/cosigt_results 100 "" {output}
+                python workflow/scripts/tpr.py results/cosigt_results "" {output}
 		'''
 
 rule plot_evaluation_dendro:
@@ -74,8 +72,8 @@ rule plot_evaluation_dendro:
 	threads:
 		1
 	conda:
-		"../envs/r.yml"
+		"../envs/python.yml"
 	shell:
 		'''
-		Rscript workflow/scripts/plot_evaluation.r results/cosigt_results 100 {input.proxi} {output}
+		python workflow/scripts/tpr.py results/cosigt_results {input.proxi} {output}
 		'''		
