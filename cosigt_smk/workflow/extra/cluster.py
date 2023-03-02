@@ -13,25 +13,6 @@ from scipy.cluster.hierarchy import dendrogram,cut_tree
 import matplotlib.pyplot as plt
 
 
-"""
-def editdist(x,y):
-
-	'''
-	Custom function for string clustering
-	'''
-
-	return int(editdistance.eval(data[int(x[0])], data[int(y[0])]))
-
-
-def diffperc(x,y):
-
-	'''
-	Custom function for string clustering
-	'''
-
-	return 100*int(editdistance.eval(data[int(x[0])], data[int(y[0])]))/max(len(data[int(x[0])]),len(data[int(y[0])]))
-
-"""
 
 def read_newick(nwk):
 
@@ -54,7 +35,7 @@ def read_tsv(tsv):
 
 	with open(tsv, 'r') as f:
 
-		next(f)
+		next(f) #skip header
 		for line in f:
 
 			key, value=line.split()
@@ -68,72 +49,6 @@ def read_tsv(tsv):
 				d[value] = [key]
 
 	return d
-
-"""
-def dbscan_tree(tree,affinity):
-
-	'''
-	Cluster clades using DBSCAN
-	'''
-	#output
-	result=[]
-	
-	#input, make it global
-	global data
-	data=[]
-
-	for clade in tree.get_terminals():
-	
-		key = clade.name
-		data.append(key)
-
-	X = np.arange(len(data)).reshape(-1, 1)
-	metric= pairwise_distances(X, X, metric=diffperc)
-	agg=DBSCAN(eps=100-affinity, min_samples=1,algorithm='brute', metric='precomputed')
-	cluster_=agg.fit(metric)
-	groups=set(cluster_.labels_)
-
-	for g in groups:
-		
-		group=list(np.take(data,np.where(cluster_.labels_ == g))[0])
-		result.append(group)
-
-	return result
-
-
-
-def agglomerative_tree(tree,n):
-
-	'''
-	Cluster clades using agglomerative clustering
-	'''
-
-	#output
-	result=[]
-	
-	#input, make it global
-	global data
-	data=[]
-
-	for clade in tree.get_terminals():
-	
-		key = clade.name
-		data.append(key)
-
-	X = np.arange(len(data)).reshape(-1, 1)
-	metric= pairwise_distances(X, X, metric=editdist)
-	agg = AgglomerativeClustering(distance_threshold=None, n_clusters=n,affinity='precomputed',linkage='average')
-	cluster_=agg.fit(metric)
-	groups=set(cluster_.labels_)
-
-	for g in groups:
-		
-		group=list(np.take(data,np.where(cluster_.labels_ == g))[0])
-		result.append(group)
-
-	return result
-
-"""
 
 def label_clustering_results(tsv_dict,cluster_results):
 
@@ -364,35 +279,6 @@ def main():
 		
 			json.dump(prox_clust, outfile, indent = 4)
 
-	"""
-	#not used right now
-
-	#clustering based on string similarity
-	#recluster based on string similarity - AGGLOMERATIVE clustering - ngroups
-	n=14
-	new_clust=agglomerative_tree(tree,n)
-	cluster_labels=label_clustering_results(dendro_labels,new_clust)
-	outcluster(cluster_labels, outpath + "/agglomerative_" + str(n) +".tsv")
-	prox_clust=proximities(cluster_labels)
-
-	with open(outpath +"/agglomerative_" + str(n) +".json", "w") as outfile:
-		
-		json.dump(prox_clust, outfile, indent = 4)
-
-
-	#recluster based on string similarity - DBSCAN clustering - similarity teshold
-	n=88
-	new_clust=dbscan_tree(tree,n)
-	cluster_labels=label_clustering_results(dendro_labels,new_clust)
-	outcluster(cluster_labels, outpath + "/dbscan_" + str(n) +".tsv")
-	prox_clust=proximities(cluster_labels)
-
-	with open(outpath +"/dbscan_" + str(n) +".json", "w") as outfile:
-		
-		json.dump(prox_clust, outfile, indent = 4)
-
-	"""
-	
 
 
 if __name__ == '__main__':
