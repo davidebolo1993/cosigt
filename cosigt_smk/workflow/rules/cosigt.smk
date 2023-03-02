@@ -40,7 +40,7 @@ rule evaluate_cosigt:
 		samplename="{sample}"
 	shell:
 		'''
-		sort -k 2 -n -r {input} | awk -v var="{params.samplename}" -F '{params.samplename}' '{{print NR "\t" NF-1 "\t" var "\t" $0}}' | tr '-' '\t'  > {output}
+		sort -k 2 -n -r {input} | awk -v var="{params.samplename}" -F '{params.samplename}' '{{print NR "\t" NF-1 "\t" var "\t" $0}}' | sed "s/haplotype1-/haplotype1_/g" | sed "s/haplotype2-/haplotype2_/g" | tr '-' '\t' | sed "s/haplotype1_/haplotype1-/g" | sed "s/haplotype2_/haplotype2-/g"  > {output}
 		'''
 
 rule plot_evaluation:
