@@ -69,7 +69,7 @@ rule bwa_aln_old:
 		'docker://davidebolo1993/graph_genotyper:latest'
 	shell:
 		'''
-		bwa aln -0 -t {threads}  -l 1024 -n 0.01 -o 2 {input.ref} {input.sample} > {output}
+		bwa aln -0 -t {threads} -l 1024 -n 0.01 -o 2 {input.ref} {input.sample} > {output}
 		'''
 
 rule bwa_samse_old:
@@ -83,7 +83,7 @@ rule bwa_samse_old:
 	output:
 		"results/cosigt_results/{sample}/{sample}.region.realigned.bam"
 	threads:
-		10
+		1
 	container:
 		'docker://davidebolo1993/graph_genotyper:latest'
 	shell:
