@@ -8,11 +8,11 @@ cram_base=$(readlink -f $1)
 
 if [ $# -eq 4 ]; then
 
-	cram=$(ls $cram_base/*.{bam,cram})
+	cram=$(ls $cram_base/*.*am)
 
 else
 
-	cram=$(ls $cram_base/*.{bam,cram} | grep -v -f $5)
+	cram=$(ls $cram_base/*.*am | grep -v -f $5)
 
 fi
 
