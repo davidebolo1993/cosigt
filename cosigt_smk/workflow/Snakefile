@@ -20,7 +20,8 @@ rule all:
 	input:
 		expand("results/cosigt_results/{sample}/best_genotype.tsv", sample=df['sample_id'].tolist()),
 		"results/cosigt_results/evaluation/evaluation.pdf",
-		expand("results/cosigt_results/evaluation/evaluation.cut{cut}.pdf", cut=list(range(2,15)))
+		expand("results/cosigt_results/evaluation/evaluation.cut{cut}.pdf", cut=list(range(2,15))),
+		"results/cosigt_results/evaluation/evaluation.jaccard.cut10.pdf"
 
 rule cosigt:
 	input:		
@@ -29,4 +30,5 @@ rule cosigt:
 rule evaluate:
 	input:
 		"results/cosigt_results/evaluation/evaluation.pdf",
-		expand("results/cosigt_results/evaluation/evaluation.cut{cut}.pdf", cut=list(range(2,15)))
+		expand("results/cosigt_results/evaluation/evaluation.cut{cut}.pdf", cut=list(range(2,15))),
+		"results/cosigt_results/evaluation/evaluation.jaccard.cut10.pdf"

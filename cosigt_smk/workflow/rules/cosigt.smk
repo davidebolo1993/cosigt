@@ -44,20 +44,20 @@ rule evaluate_cosigt:
 		'''
 
 rule plot_evaluation:
-        '''
-        plot evaluation
-        '''
-        input:
-                expand("results/cosigt_results/{sample}/evaluation.tsv", sample=df['sample_id'].tolist())
-        output:
-                "results/cosigt_results/evaluation/evaluation.pdf"
-        threads:
-                1
-        conda:
-                "../envs/python.yml"
-        shell:
-                '''
-                python workflow/scripts/tpr.py results/cosigt_results "" {output}
+	'''
+	plot evaluation
+	'''
+	input:
+		expand("results/cosigt_results/{sample}/evaluation.tsv", sample=df['sample_id'].tolist())
+	output:
+		"results/cosigt_results/evaluation/evaluation.pdf"
+	threads:
+		1
+	conda:
+		"../envs/python.yml"
+	shell:
+		'''
+		python workflow/scripts/tpr.py results/cosigt_results "" {output}
 		'''
 
 rule plot_evaluation_dendro:
@@ -76,4 +76,22 @@ rule plot_evaluation_dendro:
 	shell:
 		'''
 		python workflow/scripts/tpr.py results/cosigt_results {input.proxi} {output}
-		'''		
+		'''
+
+rule plot_evaluation_dendro_jaccard:
+	'''
+	plot evaluation using helper dendrogram - based on jaccard distance
+	'''
+	input:
+		prev_eval=rules.plot_evaluation.output,
+		proxi=lambda wildcards: glob('resources/extra/dendrogram.jaccard.cut{sample}.json'.format(sample=wildcards.sample))
+	output:
+		"results/cosigt_results/evaluation/evaluation.jaccard.cut{sample}.pdf"
+	threads:
+		1
+	conda:
+		"../envs/python.yml"
+	shell:
+		'''
+		python workflow/scripts/tpr.py results/cosigt_results {input.proxi} {output}
+		'''
