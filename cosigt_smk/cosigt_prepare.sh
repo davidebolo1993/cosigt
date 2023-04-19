@@ -8,11 +8,11 @@ cram_base=$(readlink -f $1)
 
 if [ $# -eq 4 ]; then
 
-	cram=$(ls $cram_base/*.cram)
+	cram=$(ls $cram_base/*.{bam,cram})
 
 else
 
-	cram=$(ls $cram_base/*.cram | grep -v -f $5)
+	cram=$(ls $cram_base/*.{bam,cram} | grep -v -f $5)
 
 fi
 
@@ -23,7 +23,9 @@ for c in $cram; do
 
 	filename=$(basename -- "$c")
 	ln -sf $c resources/cram/$filename
-	ln -sf $c".crai" resources/cram/$filename".crai"	
+	idx=$(ls $c"."*i)
+	ext="${idx##*.}"
+	ln -sf $c"."$ext resources/cram/$filename"."$ext
 	filename=$(echo $filename | cut -d "." -f 1)
 	echo -e "$filename\t$c" >> config/samples.tsv
 

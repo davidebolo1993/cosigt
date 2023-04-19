@@ -9,4 +9,4 @@ bindings=$(cat singularity_bind_paths.csv)
 stringb=$(echo "-B $bindings")
 snakemake --unlock
 snakemake --cores 5 --use-singularity --singularity-args "$stringb" cosigt #--profile config/slurm
-snakemake evaluate --cores 1 --use-conda #--profile config/slurm
+snakemake evaluate --cores 1 --use-conda --rerun-triggers mtime #--profile config/slurm
