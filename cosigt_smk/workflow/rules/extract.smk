@@ -5,7 +5,7 @@ rule samtools_view:
 	Samtools view to extract the region
 	'''
 	input:
-		lambda wildcards: glob('resources/cram/{sample}.*.*am'.format(sample=wildcards.sample))
+		lambda wildcards: glob('resources/cram/{sample}.*am'.format(sample=wildcards.sample))
 	output:
 		"results/cosigt_results/{sample}/{sample}.region.bam"
 	threads:
