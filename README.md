@@ -1,3 +1,3 @@
-# Workflow
+# Cosigt
 
 Workflow for genotyping from graph

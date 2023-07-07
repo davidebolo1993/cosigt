@@ -6,7 +6,7 @@ rule gafpack_coverage:
 		gfa=rules.odgi_chop.output,
 		gaf=rules.gfa_inject.output
 	output:
-		"results/cosigt_results/{sample}/{sample}.x.gafpack.gz"
+		'results/cosigt_results/{sample}/{sample}.x.gafpack.gz'
 	threads:
 		1
 	container:

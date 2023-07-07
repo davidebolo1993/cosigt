@@ -7,7 +7,7 @@ rule samtools_view:
 	input:
 		lambda wildcards: glob('resources/cram/{sample}.*am'.format(sample=wildcards.sample))
 	output:
-		"results/cosigt_results/{sample}/{sample}.region.bam"
+		'results/cosigt_results/{sample}/{sample}.region.bam'
 	threads:
 		5
 	container:
@@ -32,7 +32,7 @@ rule samtools_fastq:
 	input:
 		rules.samtools_view.output
 	output:
-		"results/cosigt_results/{sample}/{sample}.region.fastq.gz"
+		'results/cosigt_results/{sample}/{sample}.region.fastq.gz'
 	threads:
 		5
 	container:
@@ -51,7 +51,7 @@ rule samtools_fasta:
         input:
                 rules.samtools_view.output
         output:
-                "results/cosigt_results/{sample}/{sample}.region.fasta.gz"
+                'results/cosigt_results/{sample}/{sample}.region.fasta.gz'
         threads:
                 5
         container:

@@ -6,7 +6,7 @@ rule gfa_inject:
 		gfa=rules.odgi_chop.output,
 		bam=rules.bwa_mem_samtools_sort.output
 	output:
-		"results/cosigt_results/{sample}/{sample}.x.gaf"
+		'results/cosigt_results/{sample}/{sample}.x.gaf'
 	threads:
 		1
 	container:

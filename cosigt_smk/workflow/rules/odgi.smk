@@ -5,7 +5,7 @@ rule odgi_chop:
 	input:
 		config['graph']
 	output:
-		"resources/odgi/z.gfa"
+		'resources/odgi/z.gfa'
 	threads:
 		1
 	container:
@@ -27,7 +27,7 @@ rule odgi_build:
 	input:
 		rules.odgi_chop.output
 	output:
-		"resources/odgi/z.paths.tsv.gz"
+		'resources/odgi/z.paths.tsv.gz'
 	threads:
 		1
 	container:
@@ -48,7 +48,7 @@ rule odgi_paths:
 	input:
 		config['graph']
 	output:
-		"resources/odgi/z.fa"
+		'resources/odgi/z.fa'
 	threads:
 		1
 	container:
@@ -59,3 +59,23 @@ rule odgi_paths:
 		-i {input} \
 		-f > {output}
 		'''
+
+rule odgi_similarity:
+	'''
+	Odgi similarity
+	'''
+	input:
+		config['graph']
+	output:
+		'resources/odgi/hapdiff.tsv'
+	threads:
+		1
+	container:
+		'docker://davidebolo1993/graph_genotyper:latest'
+	shell:
+		'''
+		odgi build \
+		-g {input} \
+		-o - | odgi similarity \
+		-i - > {output}
+		'''	

@@ -65,12 +65,12 @@ ENV PATH /opt/odgi/bin:$PATH
 
 ##install vg
 
-RUN mkdir -p vg \
-	&& cd vg \
-	&& wget https://github.com/vgteam/vg/releases/download/v1.43.0/vg \
-	&& chmod +x vg
+#RUN mkdir -p vg \
+#	&& cd vg \
+#	&& wget https://github.com/vgteam/vg/releases/download/v1.43.0/vg \
+#	&& chmod +x vg
 
-ENV PATH /opt/vg:$PATH
+#ENV PATH /opt/vg:$PATH
 
 ##install samtools
 
@@ -112,10 +112,10 @@ ENV PATH /opt/gfainject/target/release:$PATH
 
 ##install cosigt
 
-RUN git clone https://github.com/davidebolo1993/graph_genotyper.git \
-	&& cd graph_genotyper \
+RUN git clone https://github.com/davidebolo1993/cosigt.git \
+	&& cd cosigt \
 	&& go mod init cosigt \
 	&& go mod tidy \
 	&& go build cosigt
 
-ENV PATH /opt/graph_genotyper:$PATH
+ENV PATH /opt/cosigt:$PATH
