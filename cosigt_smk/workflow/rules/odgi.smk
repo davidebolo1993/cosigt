@@ -1,6 +1,6 @@
 rule odgi_chop:
 	'''
-	Odgi chop
+	odgi chop
 	'''
 	input:
 		config['graph']
@@ -22,7 +22,7 @@ rule odgi_chop:
 
 rule odgi_build:
 	'''
-	Odgi build non-binary haplotype matrix
+	odgi build non-binary haplotype matrix
 	'''
 	input:
 		rules.odgi_chop.output
@@ -43,7 +43,7 @@ rule odgi_build:
 
 rule odgi_paths:
 	'''
-	Odgi paths
+	odgi paths
 	'''
 	input:
 		config['graph']
@@ -62,7 +62,7 @@ rule odgi_paths:
 
 rule odgi_similarity:
 	'''
-	Odgi similarity
+	odgi similarity
 	'''
 	input:
 		config['graph']

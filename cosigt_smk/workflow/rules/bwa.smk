@@ -1,6 +1,6 @@
 rule bwa_index:
 	'''
-	Bwa index
+	bwa index
 	'''
 	input:
 		rules.odgi_paths.output
@@ -17,7 +17,7 @@ rule bwa_index:
 
 rule bwa_mem_samtools_sort:
 	'''
-	Bwa mem and bam conversion
+	bwa mem and sam-to-bam conversion with samtools
 	'''
 	input:
 		ref=rules.odgi_paths.output,
@@ -27,6 +27,8 @@ rule bwa_mem_samtools_sort:
 		'results/cosigt_results/{sample}/{sample}.region.realigned.bam'
 	threads:
 		10
+	resources:
+		mem_mb=10000
 	container:
 		'docker://davidebolo1993/graph_genotyper:latest'
 	shell:

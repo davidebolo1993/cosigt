@@ -40,7 +40,7 @@ rule evaluate_cosigt:
 		samplename='{sample}'
 	shell:
 		'''
-		sort -k 2 -n -r {input} | awk -v var='{params.samplename}' -F '{params.samplename}' '{{print NR '\t' NF-1 '\t' var '\t' $0}}' | sed 's/haplotype1-/haplotype1_/g' | sed 's/haplotype2-/haplotype2_/g' | tr '-' '\t' | sed 's/haplotype1_/haplotype1-/g' | sed 's/haplotype2_/haplotype2-/g'  > {output}
+		sort -k 2 -n -r {input} | awk -v var="{params.samplename}" -F '{params.samplename}' '{{print NR "\t" NF-1 "\t" var "\t" $0}}' | sed 's/haplotype1-/haplotype1_/g' | sed 's/haplotype2-/haplotype2_/g' | tr '-' '\t' | sed 's/haplotype1_/haplotype1-/g' | sed 's/haplotype2_/haplotype2-/g'  > {output}
 		'''
 
 rule plot_evaluation:
@@ -82,7 +82,8 @@ rule plot_evaluation_dendro_jaccard:
 	plot evaluation using helper dendrogram - based on jaccard distance
 	'''
 	input:
-		rules.get_best_n_clusters.output
+		tsvs=expand('results/cosigt_results/{sample}/evaluation.tsv', sample=df['sample_id'].tolist()),
+		json=rules.get_best_n_clusters.output
 	output:
 		'results/cosigt_results/evaluation/evaluation.jaccard.pdf'
 	threads:
@@ -91,5 +92,5 @@ rule plot_evaluation_dendro_jaccard:
 		'../envs/python.yml'
 	shell:
 		'''
-		python workflow/scripts/tpr.py results/cosigt_results {input} {output}
+		python workflow/scripts/tpr.py results/cosigt_results {input.json} {output}
 		'''

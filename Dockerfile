@@ -74,10 +74,10 @@ ENV PATH /opt/odgi/bin:$PATH
 
 ##install samtools
 
-RUN wget https://github.com/samtools/samtools/releases/download/1.16.1/samtools-1.16.1.tar.bz2 \
-	&& tar -jxvf samtools-1.16.1.tar.bz2 \
-	&& rm samtools-1.16.1.tar.bz2 \
-	&& cd samtools-1.16.1 \
+RUN wget https://github.com/samtools/samtools/releases/download/1.17/samtools-1.1.tar.bz2 \
+	&& tar -jxvf samtools-1.17.tar.bz2 \
+	&& rm samtools-1.17.tar.bz2 \
+	&& cd samtools-1.17 \
 	&& ./configure \
 	&& make \
 	&& make install
@@ -91,7 +91,23 @@ RUN git clone https://github.com/lh3/bwa.git \
 	&& make
 
 ENV PATH /opt/bwa:$PATH
-	
+
+##install bwa-mem2 - testing
+
+RUN wget https://github.com/bwa-mem2/bwa-mem2/releases/download/v2.2.1/bwa-mem2-2.2.1_x64-linux.tar.bz2 \
+	&& tar -jxvf bwa-mem2-2.2.1_x64-linux.tar.bz2 \
+	&& rm bwa-mem2-2.2.1_x64-linux.tar.bz2
+
+ENV PATH /opt/bwa-mem2-2.2.1_x64-linux:$PATH
+
+##install minimap2 - testing
+
+RUN wget https://github.com/lh3/minimap2/releases/download/v2.26/minimap2-2.26_x64-linux.tar.bz2 \
+	&& tar -jxvf minimap2-2.26_x64-linux.tar.bz2 \
+	&& rm minimap2-2.26_x64-linux.tar.bz2
+
+ENV PATH /opt/minimap2-2.26_x64-linux:$PATH
+
 ##install gafpack
 ##checkout to a specific version
 

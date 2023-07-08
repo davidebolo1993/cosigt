@@ -1,6 +1,6 @@
 rule gfa_inject:
 	'''
-	gfa_inject
+	gfainject
 	'''
 	input:
 		gfa=rules.odgi_chop.output,

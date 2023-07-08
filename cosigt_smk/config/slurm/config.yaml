@@ -1,9 +1,7 @@
 cluster:
   mkdir -p logs/{rule} &&
   sbatch
-    --account={resources.account}
     --partition={resources.partition}
-    --qos={resources.qos}
     --cpus-per-task={threads}
     --mem={resources.mem_mb}
     --job-name=smk-{rule}-{wildcards}
@@ -11,9 +9,7 @@ cluster:
     --time={resources.time}
     --gres=gpu:{resources.gpu}
 default-resources:
-  - account=co_genomicdata
-  - partition=savio3_htc
-  - qos=savio_lowprio
+  - partition=cpuq
   - mem_mb=1000
   - time="01:00:00"
   - gpu=0
@@ -30,4 +26,3 @@ use-conda: True
 use-singularity: True
 verbose: True
 reason: True
-

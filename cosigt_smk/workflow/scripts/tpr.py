@@ -8,11 +8,10 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-
 def infiles(infolder):
 
 	'''
-	Identify evaluation tables to read
+	find evaluation tables
 	'''
 
 	return glob.glob(infolder + '/*/evaluation.tsv')
@@ -21,7 +20,7 @@ def infiles(infolder):
 def read_json(injson):
 
 	'''
-	Read json with similarities between haplotypes
+	read json with similarities between haplotypes
 	'''
 
 	try:
@@ -41,7 +40,7 @@ def read_json(injson):
 def GetHaplotypes(sample,df):
 
 	'''
-	Get possible haplotype names
+	get possible haplotype names
 	'''
 
 	out=[]
@@ -59,10 +58,10 @@ def GetHaplotypes(sample,df):
 def eval_sample(infile,json):
 
 	'''
-	Evaluation
+	evaluate
 	'''
 
-	df=pd.read_table(infile, sep="\t", header=None)
+	df=pd.read_table(infile, sep='\t', header=None)
 	sample=list(df.head(1)[2])[0]
 	haplos=GetHaplotypes(sample,df)
 	vec=np.zeros(df.shape[0])
@@ -106,7 +105,7 @@ def eval_sample(infile,json):
 def main():
 
 	'''
-	Calculate TPR
+	calculate true positive rate
 	'''
 
 	eval_files=infiles(os.path.abspath(sys.argv[1]))
@@ -121,7 +120,7 @@ def main():
 
 	result=np.zeros(len(vectors[0]))
 
-	with open(os.path.abspath(sys.argv[3]).replace(".pdf", ".badsamples.tsv"), 'w') as outreport:
+	with open(os.path.abspath(sys.argv[3]).replace('.pdf', '.badsamples.tsv'), 'w') as outreport:
 
 		for i in range(len(vectors[0])):
 
@@ -137,19 +136,21 @@ def main():
 				sum+=el[i]
 
 			result[i] = sum/len(vectors)
-			outreport.write(str(i+1) + "\t" + ",".join(nogood) + "\n")
+			outreport.write(str(i+1) + '\t' + ','.join(nogood) + '\n')
 
 	if jsonfile is not None:
 
-		cut=os.path.basename(sys.argv[2]).split(".")[1]
+		cut=os.path.basename(sys.argv[2]).split('.')[1]
 
 	else:
 
-		cut = "no"
+		cut = 'no'
 
-	plt.title("Evaluation - " + cut + " dendrogram")
+	plt.title('Evaluation - ' + cut + ' dendrogram')
 	plt.ylim([0, 1])
-	plt.plot(list(range(len(result))), result, marker="*")
+	plt.plot(list(range(len(result))), result, marker='*')
+	plt.xlabel('Combination index')
+	plt.ylabel('True positive rate')
 	plt.savefig(os.path.abspath(sys.argv[3]))
 
 
