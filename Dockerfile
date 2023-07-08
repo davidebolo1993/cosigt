@@ -14,7 +14,7 @@ RUN apt-get update
 
 RUN apt-get -y install build-essential \
 	software-properties-common \
-	wget curl git\
+	wget curl git \
 	bzip2 libbz2-dev \
 	zlib1g zlib1g-dev \
 	liblzma-dev \
@@ -73,8 +73,7 @@ ENV PATH /opt/odgi/bin:$PATH
 #ENV PATH /opt/vg:$PATH
 
 ##install samtools
-
-RUN wget https://github.com/samtools/samtools/releases/download/1.17/samtools-1.1.tar.bz2 \
+RUN wget https://github.com/samtools/samtools/releases/download/1.17/samtools-1.17.tar.bz2 \
 	&& tar -jxvf samtools-1.17.tar.bz2 \
 	&& rm samtools-1.17.tar.bz2 \
 	&& cd samtools-1.17 \
