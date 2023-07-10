@@ -9,15 +9,19 @@ rule samtools_view:
 	output:
 		'results/cosigt_results/{sample}/{sample}.region.bam'
 	threads:
-		5
+		config['samtools']['threads']
 	container:
 		'docker://davidebolo1993/graph_genotyper:latest'
 	params:
 		ref=config['reference'],
 		region=config['region']
+	resources:
+		mem_mb=config['samtools']['mem_mb'],
+		time=config['samtools']['time']
 	shell:
 		'''
-		samtools view -O bam \
+		samtools view \
+		-O bam \
 		-o {output} \
 		-T {params.ref} \
 		-@ {threads} \
@@ -34,9 +38,12 @@ rule samtools_fasta:
 	output:
 		'results/cosigt_results/{sample}/{sample}.region.fasta.gz'
 	threads:
-		5
+		config['samtools']['threads']
 	container:
 		'docker://davidebolo1993/graph_genotyper:latest'
+	resources:
+		mem_mb=config['samtools']['mem_mb'],
+		time=config['samtools']['time']
 	shell:
 		'''
 		samtools fasta \

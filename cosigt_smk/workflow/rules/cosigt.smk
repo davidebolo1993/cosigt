@@ -65,7 +65,8 @@ rule get_best_n_clusters:
 	cluster haplotypes by similarity
 	'''
 	input:
-		rules.odgi_similarity.output
+		files=expand('results/cosigt_results/{sample}/evaluation.tsv', sample=df['sample_id'].tolist()),
+		mtx=rules.odgi_similarity.output
 	output:
 		'results/cosigt_results/evaluation/dendrogram.jaccard.bestcut.json'
 	threads:
@@ -74,7 +75,7 @@ rule get_best_n_clusters:
 		'../envs/python.yml'
 	shell:
 		'''
-		python workflow/scripts/cluster.py {input} results/cosigt_results/evaluation
+		python workflow/scripts/cluster.py {input.mtx} results/cosigt_results/evaluation
 		'''
 
 rule plot_evaluation_dendro_jaccard:
@@ -82,8 +83,7 @@ rule plot_evaluation_dendro_jaccard:
 	plot evaluation using helper dendrogram - based on jaccard distance
 	'''
 	input:
-		tsvs=expand('results/cosigt_results/{sample}/evaluation.tsv', sample=df['sample_id'].tolist()),
-		json=rules.get_best_n_clusters.output
+		rules.get_best_n_clusters.output
 	output:
 		'results/cosigt_results/evaluation/evaluation.jaccard.pdf'
 	threads:
@@ -92,5 +92,5 @@ rule plot_evaluation_dendro_jaccard:
 		'../envs/python.yml'
 	shell:
 		'''
-		python workflow/scripts/tpr.py results/cosigt_results {input.json} {output}
+		python workflow/scripts/tpr.py results/cosigt_results {input} {output}
 		'''

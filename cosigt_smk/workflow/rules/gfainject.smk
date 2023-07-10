@@ -4,7 +4,7 @@ rule gfa_inject:
 	'''
 	input:
 		gfa=rules.odgi_chop.output,
-		bam=rules.bwa_mem_samtools_sort.output
+		bam=rules.bwa_mem2_samtools_sort.output
 	output:
 		'results/cosigt_results/{sample}/{sample}.x.gaf'
 	threads:
