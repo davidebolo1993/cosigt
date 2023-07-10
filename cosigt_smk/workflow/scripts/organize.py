@@ -11,10 +11,10 @@ def default_parameters():
     d=dict()
 
     #bwa-mem2
-    d['bwa-mem2']=dict()
-    d['bwa-mem2']['threads'] = 10
-    d['bwa-mem2']['mem_mb'] = 10000
-    d['bwa-mem2']['time'] = "00:30:00"
+    d['bwa']=dict()
+    d['bwa']['threads'] = 10
+    d['bwa']['mem_mb'] = 10000
+    d['bwa']['time'] = "00:30:00"
 
     #samtools
     d['samtools']=dict()
