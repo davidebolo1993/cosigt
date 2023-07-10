@@ -18,6 +18,7 @@ rule bwa_mem2_index:
 		bwa-mem2 index {input}
 		'''
 
+
 rule bwa_mem2_samtools_sort:
 	'''
 	bwa-mem2 and sam-to-bam conversion with samtools
