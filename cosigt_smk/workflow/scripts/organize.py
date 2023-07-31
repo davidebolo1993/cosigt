@@ -1,119 +1,271 @@
-#!/usr/bin/python3
+#!/usr/bin/python3 env
+
+#standard libraries
 
 import os
 import sys
 import glob
 import yaml
 import shutil
-
-def default_parameters():
-
-    d=dict()
-
-    #bwa-mem2
-    d['bwa-mem2']=dict()
-    d['bwa-mem2']['threads'] = 10
-    d['bwa-mem2']['mem_mb'] = 10000
-    d['bwa-mem2']['time'] = "00:30:00"
-
-    #samtools
-    d['samtools']=dict()
-    d['samtools']['threads'] = 5
-    d['samtools']['mem_mb'] = 5000
-    d['samtools']['time'] = "00:30:00"
-
-    return d
+import argparse
+from argparse import HelpFormatter
+from datetime import timedelta
 
 
-def main(cram_folder,graph_gfa,reference_fa,region_str,blacklist):
+class CustomFormat(HelpFormatter):
 
-    d=default_parameters()
+	'''
+	custo help format
+	'''
 
-    out_config_path='config'
-    out_yaml=os.path.join(out_config_path, 'config.yaml')
-    out_samples=os.path.join(out_config_path, 'samples.tsv')
+	def _format_action_invocation(self, action):
 
-    #symlink crams
-    out_resources_cram='resources/cram'
-    os.makedirs(out_resources_cram, exist_ok=True)
-    crams=sorted(glob.glob(cram_folder+'/*am*'))
+		if not action.option_strings:
 
-    with open(out_samples, 'w') as outfile:
+			default = self._get_default_metavar_for_positional(action)
+			metavar, = self._metavar_formatter(action, default)(1)
+			
+			return metavar
 
-        outfile.write('sample_id\tcram\n')
+		else:
 
-        for cram in crams:
+			parts = []
 
-            if any(x in cram for x in blacklist):
+			if action.nargs == 0:
 
-                continue
+				parts.extend(action.option_strings)
 
-            out_resouces_cram_file=os.path.join(out_resources_cram, os.path.basename(cram))
-            os.symlink(cram, out_resouces_cram_file)
-            
-            if cram.endswith('am'):
+			else:
 
-                sample_name=os.path.basename(cram).split('.')[0]
-                outfile.write(sample_name + '\t' + out_resouces_cram_file + '\n')
+				default = self._get_default_metavar_for_optional(action)
+				args_string = self._format_args(action, default)
+				
+				for option_string in action.option_strings:
 
+					parts.append(option_string)
 
-    #symlink graph gfa
-    out_resources_graph='resources/graph'
-    os.makedirs(out_resources_graph, exist_ok=True)
-    out_resources_graph_file=os.path.join(out_resources_graph, os.path.basename(graph_gfa))
-    os.symlink(graph_gfa, out_resources_graph_file)
-    d['graph'] = out_resources_graph_file
+				return '%s %s' % (', '.join(parts), args_string)
 
-    #symlink reference fasta
-    out_resources_ref='resources/ref'
-    os.makedirs(out_resources_ref, exist_ok=True)
-    out_resources_ref_file=os.path.join(out_resources_ref, os.path.basename(reference_fa))
-    os.symlink(reference_fa, out_resources_ref_file)
-    d['reference'] = out_resources_ref_file
+			return ', '.join(parts)
 
-    #region
-    d['region'] = region_str
+	def _get_default_metavar_for_optional(self, action):
 
-    #samples
-    d['samples'] = out_samples
-
-    #dump
-    yml_out=open(out_yaml, 'w')
-    yaml.dump(d,yml_out)
-    yml_out.close()
-
-    #write blacklist
-    os.makedirs('resources/extra', exist_ok=True)
-        
-    with open('resources/extra/bad_samples.txt', 'w') as outblck:
-
-        for b in blacklist:
-
-            outblck.write(b +'\n')
+		return action.dest.upper()
 
 
-    #singularity
-    with open('singularity_bind_paths.csv', 'w') as singpath:
 
-        singpath.write(','.join([cram_folder,os.path.dirname(graph_gfa),os.path.dirname(reference_fa),'/localscratch']) + '\n')
-    
+def double_quote(time):
+
+	return '"%s"' % time
+
+def default_parameters(args):
+
+	d=dict()
+
+	#bwa-mem2
+	d['bwa-mem2']=dict()
+	d['bwa-mem2']['threads'] = args.threads
+	d['bwa-mem2']['mem_mb'] = args.memory
+	d['bwa-mem2']['time'] = double_quote(args.time)
+
+	#bwa-mem
+	d['bwa']=dict()
+	d['bwa']['threads'] = args.threads
+	d['bwa']['mem_mb'] = args.memory
+	d['bwa']['time'] = double_quote(args.time)
+
+	#minimap2
+	d['minimap2']=dict()
+	d['minimap2']['threads'] = args.threads
+	d['minimap2']['mem_mb'] = args.memory
+	d['minimap2']['time'] = double_quote(args.time)
+
+
+	#compute half the time resources
+	h,m,s = args.time.split(':')
+	total = int(h)*3600 + int(m) * 60 + int(s)
+	half= total/2
+
+	#samtools
+	d['samtools']=dict()
+	d['samtools']['threads'] = int(args.threads/2)
+	d['samtools']['mem_mb'] = int(args.memory/2)
+	d['samtools']['time'] =  double_quote(str(timedelta(seconds=half)))
+
+	return d
+
+
+def main():
+
+	'''
+	parse arguments and organize inputs for running cosigt properly without additional efforts from the users
+	'''
+
+	parser = argparse.ArgumentParser(prog='cosigt', description='''COsine SImilarity-based GenoTyper''', epilog='''This program was developed by Davide Bolognini at Human Technopole.''', formatter_class=CustomFormat) 
+
+	required = parser.add_argument_group('Required I/O arguments')
+
+	required.add_argument('-r','--reference', help='reference genome in FASTA format', metavar='FASTA', required=True)
+	required.add_argument('-g', '--graph', help='pangenome graph in GFA format', metavar='GFA', required=True)
+	required.add_argument('-a', '--alignment', help='folder with alignment files (bam,cram) - and their index - to use', metavar='FOLDER', required=True)
+	required.add_argument('--roi', help='one or more regions of interest in BED format', metavar='BED', required=True)
+	required.add_argument('-o', '--output', help='name of the output folder', metavar='FOLDER', required=True)
+
+	additional = parser.add_argument_group('Additional I/O arguments')
+
+	additional.add_argument('--blacklist', help='blacklist of samples (one per line) that should not be included in the analysis [None]', metavar='', required=False, default=None)
+	additional.add_argument('--threads', help='threads for the alignment step - the most time- and memory-consuming one in cosigt. Threads required by other processes will be scaled down accordingly [10]',type=int, default=10)
+	additional.add_argument('--time', help='time (hh:mm:ss) for the alignment step - the most time and memory-consuming one in cosigt. Time required by other other processes will be scaled down accordingly. Only used if running on cluster ["00:15:00"]',type=str, default="00:15:00")
+	additional.add_argument('--memory', help='memory (mb) for the alignment step - the most time and memory-consuming one in cosigt. Memory required by other other processes will be scaled down accordingly. Only used if running on cluster [10000]',type=int, default=10000)
+
+	args = parser.parse_args()
+
+	#wd
+	wd=os.getcwd()
+
+	#default parameters
+	d=default_parameters(args)
+
+
+	#create all the output paths
+
+	#config
+	out_config_path=os.path.join(wd,'config')
+	out_yaml_tmp=os.path.join(out_config_path, 'config.yaml.tmp')
+	out_yaml=os.path.join(out_config_path, 'config.yaml')
+	out_samples=os.path.join(out_config_path, 'samples.tsv')
+
+	#resources
+	out_resources=os.path.join(wd,'resources')
+	out_aln=os.path.join(out_resources, 'alignment')
+	os.makedirs(out_aln, exist_ok=True)
+	out_graph=os.path.join(out_resources, 'graph')
+	os.makedirs(out_graph, exist_ok=True)
+	out_ref=os.path.join(out_resources, 'reference')
+	os.makedirs(out_ref, exist_ok=True)
+	out_extra=os.path.join(out_resources, 'extra')
+	os.makedirs(out_extra,exist_ok=True)
+	blcklst_out=os.path.join(out_extra, 'bad_samples.txt')
+	out_otuput=os.path.join(wd, 'output', args.output)
+
+	#sing
+	out_sing=os.path.join(wd, 'singularity_bind_paths.csv')
+
+	#blacklist of samples to exclude
+
+	blcklst=[]
+
+	if args.blacklist is not None:
+
+		with open(args.blacklist, 'r') as bad_samples_in, open(blcklst_out, 'w') as bad_samples_out:
+
+			for line in bad_samples_in:
+				
+				blcklst.append(line.rstrip())
+				bad_samples_out.write(line)
+		
+	else:
+
+		with open(blcklst_out, 'w') as bad_samples_out:
+
+			pass
+
+	#symlink alignments
+	alns=sorted(glob.glob(args.alignment+'/*am*'))
+
+	with open(out_samples, 'w') as samples_out:
+
+		samples_out.write('sample_id\talignment\n')
+
+		for aln in alns:
+
+			if any(x.lower() in aln.lower() for x in blcklst):
+
+				continue #skip blacklisted
+
+			bnaln=os.path.basename(aln)
+			out_aln_file=os.path.join(out_aln, bnaln)
+
+			try:
+
+				os.symlink(os.path.abspath(aln), out_aln_file)
+			
+			except:
+
+				pass #do not symlink again if exists
+
+			if aln.endswith('am'): #this is not an index, rather a true alignment
+
+				sample_name=bnaln.split('.')[0]
+				samples_out.write(sample_name + '\t' + out_aln_file + '\n')
+
+	#add to config
+	d['samples'] = out_samples
+
+	#symlink graph 
+	out_graph_file=os.path.join(out_graph, os.path.basename(args.graph))
+
+	try:
+
+		os.symlink(os.path.abspath(args.graph), out_graph_file)
+	
+	except:
+
+		pass
+
+	#add to config
+	d['graph'] = out_graph_file
+
+	#symlink reference
+	out_reference_file=os.path.join(out_ref, os.path.basename(args.reference))
+
+	try:
+
+		os.symlink(os.path.abspath(args.reference), out_reference_file)
+	
+	except:
+
+		pass
+
+	#add to config
+	d['reference'] = out_reference_file
+
+	#add to config
+	d['region'] = list()
+	with open(args.roi) as bed_in:
+
+		for line in bed_in:
+
+			l=line.rstrip().split('\t')
+
+			d['region'].append(l[0] + ':' + l[1] + '-' + l[2])
+
+
+	d["output"] = out_otuput
+	
+	#dump config
+	yml_out=open(out_yaml_tmp, 'w')
+	yaml.dump(d,yml_out)
+	yml_out.close()
+
+
+	#remove single quotes
+
+	with open(out_yaml_tmp) as filein, open(out_yaml, 'w') as fileout:
+
+		for line in filein:
+	
+			line=line.replace("'","")
+			fileout.write(line)
+
+	os.remove(out_yaml_tmp)
+
+	#write singularity paths for those using singularity
+	with open(out_sing, 'w') as singpath:
+
+		singpath.write(','.join([os.path.abspath(args.alignment),os.path.dirname(os.path.abspath(args.graph)),os.path.dirname(os.path.abspath(args.reference)),'/localscratch']) + '\n')
+
 
 if __name__ == '__main__':
-
-    cram_folder=os.path.abspath(sys.argv[1])
-    graph_gfa=os.path.abspath(sys.argv[2])
-    reference_fa=os.path.abspath(sys.argv[3])
-    region_str=sys.argv[4]
-    
-    try:
-
-        blacklist_file=os.path.abspath(sys.argv[5])
-        fin = open(blacklist_file)
-        blacklist=[line.rstrip() for line in fin]
-        fin.close()
-
-    except:
-
-        blacklist=[]
-
-    main(cram_folder,graph_gfa,reference_fa,region_str,blacklist)
+	
+	main()
