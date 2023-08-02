@@ -5,7 +5,7 @@ go.mod
 cosigt
 cosigt_smk/results/*
 cosigt_smk/resources/*
-cosigt_smk/resources/extra/*
+!cosigt_smk/resources/extra/*
 cosigt_smk/logs/*
 cosigt_smk/.snakemake/*
 cosigt_smk/singularity_bind_paths.csv
