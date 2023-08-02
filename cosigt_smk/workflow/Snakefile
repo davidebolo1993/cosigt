@@ -14,18 +14,17 @@ include: 'rules/gfainject.smk'
 include: 'rules/gafpack.smk'
 include: 'rules/cosigt.smk'
 
-
 rule all:
 	input:
-		expand('results/cosigt_results/{sample}/best_genotype.tsv', sample=df['sample_id'].tolist()),
-		'results/cosigt_results/evaluation/evaluation.jaccard.pdf',
-		'results/cosigt_results/evaluation/evaluation.pdf'
+		expand('results/cosigt/{sample}/{region}/best_genotype.tsv', sample=df['sample_id'].tolist(), region=config['region']),
+		expand('results/cosigt/evaluation/{region}/evaluation.pdf', region=config['region']),
+		expand('results/cosigt/evaluation/{region}/evaluation.jaccard.pdf', region=config['region'])
 
 rule cosigt:
 	input:
-		expand('results/cosigt_results/{sample}/best_genotype.tsv', sample=df['sample_id'].tolist())
+		expand('results/cosigt/{sample}/{region}/best_genotype.tsv', sample=df['sample_id'].tolist(), region=config['region']),
 
 rule evaluation:
 	input:
-		'results/cosigt_results/evaluation/evaluation.pdf',
-		'results/cosigt_results/evaluation/evaluation.jaccard.pdf'
+		expand('results/cosigt/evaluation/{region}/evaluation.pdf', region=config['region']),
+		expand('results/cosigt/evaluation/{region}/evaluation.jaccard.pdf', region=config['region'])

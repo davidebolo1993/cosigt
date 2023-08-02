@@ -5,16 +5,17 @@ rule samtools_view:
 	samtools view to extract the region
 	'''
 	input:
-		lambda wildcards: glob('resources/cram/{sample}.*am'.format(sample=wildcards.sample))
+		sample=lambda wildcards: glob('resources/alignment/{sample}.*am'.format(sample=wildcards.sample)),
+		region=lambda wildcards: glob('resources/regions/{region}.bed'.format(region=wildcards.region))
 	output:
-		'results/cosigt_results/{sample}/{sample}.region.bam'
+		'results/samtools/view/{sample}/{region}.bam'
 	threads:
 		config['samtools']['threads']
 	container:
 		'docker://davidebolo1993/graph_genotyper:latest'
 	params:
 		ref=config['reference'],
-		region=config['region']
+		region='{region}'
 	resources:
 		mem_mb=config['samtools']['mem_mb'],
 		time=config['samtools']['time']
@@ -25,7 +26,7 @@ rule samtools_view:
 		-o {output} \
 		-T {params.ref} \
 		-@ {threads} \
-		{input} \
+		{input.sample} \
 		{params.region}
 		'''
 
@@ -36,7 +37,7 @@ rule samtools_fasta:
 	input:
 		rules.samtools_view.output
 	output:
-		'results/cosigt_results/{sample}/{sample}.region.fasta.gz'
+		'results/samtools/fasta/{sample}/{region}.fasta.gz'
 	threads:
 		config['samtools']['threads']
 	container:

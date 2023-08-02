@@ -3,10 +3,10 @@ rule gafpack_coverage:
 	gafpack
 	'''
 	input:
-		gfa=rules.odgi_chop.output,
+		gfa=rules.odgi_view.output,
 		gaf=rules.gfa_inject.output
 	output:
-		'results/cosigt_results/{sample}/{sample}.x.gafpack.gz'
+		'results/gafpack/{sample}/{region}.gafpack.gz'
 	threads:
 		1
 	container:

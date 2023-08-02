@@ -10,17 +10,17 @@ rule cosigt_genotype:
 	cosigt genotype
 	'''
 	input:
-		zpath=rules.odgi_build.output,
+		zpath=rules.odgi_paths_matrix.output,
 		xpack=rules.gafpack_coverage.output
 	output:
-		geno='results/cosigt_results/{sample}/best_genotype.tsv',
-		combo='results/cosigt_results/{sample}/combos.tsv'
+		geno='results/cosigt/{sample}/{region}/best_genotype.tsv',
+		combo='results/cosigt/{sample}/{region}/combos.tsv'
 	threads:
 		1
 	container:
 		'docker://davidebolo1993/graph_genotyper:latest'
 	params:
-		prefix='results/cosigt_results/{sample}'
+		prefix='results/cosigt/{sample}/{region}'
 	shell:
 		'''
 		cosigt {input.zpath} {input.xpack} resources/extra/bad_samples.txt {params.prefix}
@@ -33,31 +33,34 @@ rule evaluate_cosigt:
 	input:
 		rules.cosigt_genotype.output.combo
 	output:
-		'results/cosigt_results/{sample}/evaluation.tsv'
+		'results/cosigt/{sample}/{region}/evaluation.tsv'
 	threads:
 		1
 	params:
 		samplename='{sample}'
 	shell:
 		'''
-		sort -k 2 -n -r {input} | awk -v var="{params.samplename}" -F '{params.samplename}' '{{print NR "\t" NF-1 "\t" var "\t" $0}}' | sed 's/haplotype1-/haplotype1_/g' | sed 's/haplotype2-/haplotype2_/g' | tr '-' '\t' | sed 's/haplotype1_/haplotype1-/g' | sed 's/haplotype2_/haplotype2-/g'  > {output}
+		sort -k 2 -n -r {input} | awk -v var="{params.samplename}" -F '{params.samplename}' '{{print NR "\t" NF-1 "\t" var "\t" $0}}' | sed 's/haplotype1-/haplotype1_/g' | sed 's/haplotype2-/haplotype2_/g' | sed 's/[0-9]-[0-9]/_/g' |tr '-' '\t' | sed 's/haplotype1_/haplotype1-/g' | sed 's/haplotype2_/haplotype2-/g'  > {output}
 		'''
 
 rule plot_evaluation:
 	'''
-	plot evaluation
+	plot evaluation. Need to wait for all the evaluations table to be there
 	'''
 	input:
-		expand('results/cosigt_results/{sample}/evaluation.tsv', sample=df['sample_id'].tolist())
+		expand('results/cosigt/{sample}/{region}/evaluation.tsv', sample=df['sample_id'].tolist(),region=config['region']),
+		lambda wildcards: glob('results/cosigt/*/{region}/evaluation.tsv'.format(region=wildcards.region))
 	output:
-		'results/cosigt_results/evaluation/evaluation.pdf'
+		'results/cosigt/evaluation/{region}/evaluation.pdf'
 	threads:
 		1
 	conda:
 		'../envs/python.yml'
+	params:
+		region='{region}'
 	shell:
 		'''
-		python workflow/scripts/tpr.py results/cosigt_results '' {output}
+		python workflow/scripts/tpr.py results/cosigt '' {output} {params.region}
 		'''
 
 rule get_best_n_clusters:
@@ -65,17 +68,18 @@ rule get_best_n_clusters:
 	cluster haplotypes by similarity
 	'''
 	input:
-		files=expand('results/cosigt_results/{sample}/evaluation.tsv', sample=df['sample_id'].tolist()),
 		mtx=rules.odgi_similarity.output
 	output:
-		'results/cosigt_results/evaluation/dendrogram.jaccard.bestcut.json'
+		'results/cosigt/evaluation/{region}/dendrogram.jaccard.bestcut.json'
 	threads:
 		1
 	conda:
 		'../envs/python.yml'
+	params:
+		region='{region}'	
 	shell:
 		'''
-		python workflow/scripts/cluster.py {input.mtx} results/cosigt_results/evaluation
+		python workflow/scripts/cluster.py {input.mtx} results/cosigt/evaluation/{params.region}
 		'''
 
 rule plot_evaluation_dendro_jaccard:
@@ -83,14 +87,18 @@ rule plot_evaluation_dendro_jaccard:
 	plot evaluation using helper dendrogram - based on jaccard distance
 	'''
 	input:
-		rules.get_best_n_clusters.output
+		expand('results/cosigt/{sample}/{region}/evaluation.tsv', sample=df['sample_id'].tolist(),region=config['region']),
+		lambda wildcards: glob('results/cosigt/*/{region}/evaluation.tsv'.format(region=wildcards.region)),
+		json=rules.get_best_n_clusters.output
 	output:
-		'results/cosigt_results/evaluation/evaluation.jaccard.pdf'
+		'results/cosigt/evaluation/{region}/evaluation.jaccard.pdf'
 	threads:
 		1
 	conda:
 		'../envs/python.yml'
+	params:
+		region='{region}'
 	shell:
 		'''
-		python workflow/scripts/tpr.py results/cosigt_results {input} {output}
+		python workflow/scripts/tpr.py results/cosigt {input.json} {output} {params.region}
 		'''

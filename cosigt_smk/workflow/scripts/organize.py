@@ -9,7 +9,6 @@ import yaml
 import shutil
 import argparse
 from argparse import HelpFormatter
-from datetime import timedelta
 
 
 class CustomFormat(HelpFormatter):
@@ -64,33 +63,33 @@ def default_parameters(args):
 
 	#bwa-mem2
 	d['bwa-mem2']=dict()
-	d['bwa-mem2']['threads'] = args.threads
-	d['bwa-mem2']['mem_mb'] = args.memory
-	d['bwa-mem2']['time'] = double_quote(args.time)
+	d['bwa-mem2']['threads'] = args.aln_threads
+	d['bwa-mem2']['mem_mb'] = args.aln_memory
+	d['bwa-mem2']['time'] = double_quote(args.aln_time)
 
 	#bwa-mem
 	d['bwa']=dict()
-	d['bwa']['threads'] = args.threads
-	d['bwa']['mem_mb'] = args.memory
-	d['bwa']['time'] = double_quote(args.time)
+	d['bwa']['threads'] = args.aln_threads
+	d['bwa']['mem_mb'] = args.aln_memory
+	d['bwa']['time'] = double_quote(args.aln_time)
 
 	#minimap2
 	d['minimap2']=dict()
-	d['minimap2']['threads'] = args.threads
-	d['minimap2']['mem_mb'] = args.memory
-	d['minimap2']['time'] = double_quote(args.time)
-
-
-	#compute half the time resources
-	h,m,s = args.time.split(':')
-	total = int(h)*3600 + int(m) * 60 + int(s)
-	half= total/2
+	d['minimap2']['threads'] = args.aln_threads
+	d['minimap2']['mem_mb'] = args.aln_memory
+	d['minimap2']['time'] = double_quote(args.aln_time)
 
 	#samtools
 	d['samtools']=dict()
-	d['samtools']['threads'] = int(args.threads/2)
-	d['samtools']['mem_mb'] = int(args.memory/2)
-	d['samtools']['time'] =  double_quote(str(timedelta(seconds=half)))
+	d['samtools']['threads'] = args.sam_threads
+	d['samtools']['mem_mb'] = args.sam_memory
+	d['samtools']['time'] =  double_quote(args.sam_time)
+
+	#odgi
+	d['odgi']=dict()
+	d['odgi']['threads'] = args.odgi_threads
+	d['odgi']['mem_mb'] = args.odgi_memory
+	d['odgi']['time'] =  double_quote(args.odgi_time)
 
 	return d
 
@@ -109,14 +108,29 @@ def main():
 	required.add_argument('-g', '--graph', help='pangenome graph in GFA format', metavar='GFA', required=True)
 	required.add_argument('-a', '--alignment', help='folder with alignment files (bam,cram) - and their index - to use', metavar='FOLDER', required=True)
 	required.add_argument('--roi', help='one or more regions of interest in BED format', metavar='BED', required=True)
-	required.add_argument('-o', '--output', help='name of the output folder', metavar='FOLDER', required=True)
 
 	additional = parser.add_argument_group('Additional I/O arguments')
 
 	additional.add_argument('--blacklist', help='blacklist of samples (one per line) that should not be included in the analysis [None]', metavar='', required=False, default=None)
-	additional.add_argument('--threads', help='threads for the alignment step - the most time- and memory-consuming one in cosigt. Threads required by other processes will be scaled down accordingly [10]',type=int, default=10)
-	additional.add_argument('--time', help='time (hh:mm:ss) for the alignment step - the most time and memory-consuming one in cosigt. Time required by other other processes will be scaled down accordingly. Only used if running on cluster ["00:15:00"]',type=str, default="00:15:00")
-	additional.add_argument('--memory', help='memory (mb) for the alignment step - the most time and memory-consuming one in cosigt. Memory required by other other processes will be scaled down accordingly. Only used if running on cluster [10000]',type=int, default=10000)
+	additional.add_argument('--path', help='path in the graph to use as a reference [grch38]',type=str, default="grch38")
+
+	metrics = parser.add_argument_group('Specify #threads, memory and time requirements')
+
+	#alignment
+	metrics.add_argument('--aln_threads', help='threads - aligner [10]',type=int, default=10)
+	metrics.add_argument('--aln_time', help='max time (hh:mm:ss) - aligner ["00:30:00"]',type=str, default="00:30:00")
+	metrics.add_argument('--aln_memory', help='max memory (mb) - aligner[10000]',type=int, default=10000)
+
+	#samtools extraction and sort
+	metrics.add_argument('--sam_threads', help='threads - samtools (view/sort) commands [5]',type=int, default=5)
+	metrics.add_argument('--sam_time', help='max time (hh:mm:ss) - samtools (view/sort) commands ["00:10:00"]',type=str, default="00:15:00")
+	metrics.add_argument('--sam_memory', help='max memory (mb) - samtools (view/sort) commands [5000]',type=int, default=5000)
+
+	#odgi
+	metrics.add_argument('--odgi_threads', help='threads - odgi (build/extract) commands [10]',type=int, default=10)
+	metrics.add_argument('--odgi_time', help='max time (hh:mm:ss) - odgi (build/extract) commands ["00:30:00"]',type=str, default="00:30:00")
+	metrics.add_argument('--odgi_memory', help='max memory (mb) - odgi (build/extract) commands [30000]',type=int, default=30000)
+
 
 	args = parser.parse_args()
 
@@ -146,7 +160,8 @@ def main():
 	out_extra=os.path.join(out_resources, 'extra')
 	os.makedirs(out_extra,exist_ok=True)
 	blcklst_out=os.path.join(out_extra, 'bad_samples.txt')
-	out_otuput=os.path.join(wd, 'output', args.output)
+	out_regions=os.path.join(out_resources, 'regions')
+	os.makedirs(out_regions,exist_ok=True)
 
 	#sing
 	out_sing=os.path.join(wd, 'singularity_bind_paths.csv')
@@ -232,22 +247,29 @@ def main():
 
 	#add to config
 	d['region'] = list()
+
 	with open(args.roi) as bed_in:
 
 		for line in bed_in:
 
 			l=line.rstrip().split('\t')
+			region=l[0] + ':' + l[1] + '-' + l[2]
 
-			d['region'].append(l[0] + ':' + l[1] + '-' + l[2])
+			#put regions in the config fille
+			d['region'].append(region)
+		      
+			#also write in the dedicated space
+			region_out=os.path.join(out_regions, region+'.bed')
 
+			with open(region_out, 'w') as out_region:
 
-	d["output"] = out_otuput
+				out_region.write(args.path +'#' + l[0] + '\t' + l[1] + '\t' + l[2] + '\n')
+
 	
 	#dump config
 	yml_out=open(out_yaml_tmp, 'w')
 	yaml.dump(d,yml_out)
 	yml_out.close()
-
 
 	#remove single quotes
 

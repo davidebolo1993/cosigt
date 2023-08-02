@@ -1,11 +1,62 @@
+import os
+
+rule odgi_build:
+	'''
+	odgi build
+	'''
+	input:
+		config['graph'],
+	output:
+		'results/odgi/build/' + os.path.basename(config['graph']).replace('.gfa', '.og')
+	threads:
+		config['odgi']['threads']
+	container:
+		'docker://davidebolo1993/graph_genotyper:latest'
+	resources:
+		mem_mb=config['odgi']['mem_mb'],
+		time=config['odgi']['time']
+	shell:
+		'''
+		odgi build \
+			-g {input} \
+			-o {output} \
+			-t {threads}
+		'''
+
+rule odgi_extract:
+	'''
+	odgi extract
+	'''
+	input:
+		graph=rules.odgi_build.output,
+		region=lambda wildcards: glob('resources/regions/{region}.bed'.format(region=wildcards.region))
+	output:
+		'results/odgi/extract/{region}.og'
+	threads:
+		config['odgi']['threads']
+	container:
+		'docker://davidebolo1993/graph_genotyper:latest'
+	resources:
+		mem_mb=config['odgi']['mem_mb'],
+		time=config['odgi']['time']
+	shell:
+		'''
+		odgi extract \
+			-i {input.graph} \
+			-o {output} \
+			-b {input.region} \
+			-d 10000 \
+			-t {threads}
+		'''
+	
 rule odgi_chop:
 	'''
 	odgi chop
 	'''
 	input:
-		config['graph']
+		rules.odgi_extract.output
 	output:
-		'resources/odgi/z.gfa'
+		'results/odgi/chop/{region}.og'
 	threads:
 		1
 	container:
@@ -15,29 +66,44 @@ rule odgi_chop:
 		odgi chop  \
 		-i {input} \
 		-c 32 \
-		-o - | odgi view \
-		-i - \
-		-g > {output}
+		-o {output}
 		'''
 
-rule odgi_build:
+rule odgi_view:
 	'''
-	odgi build non-binary haplotype matrix
+	odgi view
 	'''
 	input:
 		rules.odgi_chop.output
 	output:
-		'resources/odgi/z.paths.tsv.gz'
+		'results/odgi/view/{region}.gfa'
 	threads:
 		1
 	container:
 		'docker://davidebolo1993/graph_genotyper:latest'
 	shell:
 		'''
-		odgi build \
-		-g {input} \
-		-o - | odgi paths \
-		-i - \
+		odgi view \
+		-i {input} \
+		-g > {output}
+		'''
+
+rule odgi_paths_matrix:
+	'''
+	odgi build non-binary haplotype matrix
+	'''
+	input:
+		rules.odgi_chop.output
+	output:
+		'results/odgi/paths/matrix/{region}.tsv.gz'
+	threads:
+		1
+	container:
+		'docker://davidebolo1993/graph_genotyper:latest'
+	shell:
+		'''
+		odgi paths \
+		-i {input} \
 		-H | cut -f 1,4- | pigz > {output}
 		'''
 
@@ -46,9 +112,9 @@ rule odgi_paths:
 	odgi paths
 	'''
 	input:
-		config['graph']
+		rules.odgi_extract.output
 	output:
-		'resources/odgi/z.fa'
+		'results/odgi/paths/fasta/{region}.fasta'
 	threads:
 		1
 	container:
@@ -65,17 +131,15 @@ rule odgi_similarity:
 	odgi similarity
 	'''
 	input:
-		config['graph']
+		rules.odgi_extract.output
 	output:
-		'resources/odgi/hapdiff.tsv'
+		'results/odgi/similarity/{region}.tsv'
 	threads:
 		1
 	container:
 		'docker://davidebolo1993/graph_genotyper:latest'
 	shell:
 		'''
-		odgi build \
-		-g {input} \
-		-o - | odgi similarity \
-		-i - > {output}
+		odgi similarity \
+		-i {input} > {output}
 		'''	

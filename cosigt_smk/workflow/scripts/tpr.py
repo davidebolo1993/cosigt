@@ -8,13 +8,13 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-def infiles(infolder):
+def infiles(infolder,region):
 
 	'''
 	find evaluation tables
 	'''
 
-	return glob.glob(infolder + '/*/evaluation.tsv')
+	return glob.glob(infolder + '/*/' + region +'/evaluation.tsv')
 
 
 def read_json(injson):
@@ -34,8 +34,6 @@ def read_json(injson):
 	except:
 
 		return None
-
-
 
 def GetHaplotypes(sample,df):
 
@@ -108,7 +106,8 @@ def main():
 	calculate true positive rate
 	'''
 
-	eval_files=infiles(os.path.abspath(sys.argv[1]))
+	#parallelize at region level
+	eval_files=infiles(os.path.abspath(sys.argv[1]),sys.argv[4])
 	jsonfile=read_json(os.path.abspath(sys.argv[2]))   
 	vectors,samples=[],[]
 

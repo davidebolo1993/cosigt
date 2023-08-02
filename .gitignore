@@ -5,10 +5,9 @@ go.mod
 cosigt
 cosigt_smk/results/*
 cosigt_smk/resources/*
-!cosigt_smk/resources/extra/
+cosigt_smk/resources/extra/*
 cosigt_smk/logs/*
 cosigt_smk/.snakemake/*
-genotype_old.sh
 cosigt_smk/singularity_bind_paths.csv
 cosigt_smk/config/config.yaml
 cosigt_smk/config/samples.tsv

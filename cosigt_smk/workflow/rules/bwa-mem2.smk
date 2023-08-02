@@ -5,7 +5,7 @@ rule bwa_mem2_index:
 	input:
 		rules.odgi_paths.output
 	output:
-		multiext('resources/odgi/z.fa', '.bwt.2bit.64', '.pac', '.ann', '.amb', '.0123')	
+		multiext('results/odgi/paths/fasta/{region}.fasta', '.bwt.2bit.64', '.pac', '.ann', '.amb', '.0123')	
 	threads:
 		1
 	resources:
@@ -28,7 +28,7 @@ rule bwa_mem2_samtools_sort:
 		idx=rules.bwa_mem2_index.output,
 		sample=rules.samtools_fasta.output
 	output:
-		'results/cosigt_results/{sample}/{sample}.region.realigned.bam'
+		'results/bwa-mem2/{sample}/{region}.realigned.bam'
 	threads:
 		config['bwa-mem2']['threads']
 	resources:

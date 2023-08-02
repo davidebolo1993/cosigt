@@ -11,13 +11,13 @@ cluster:
 default-resources:
   - partition=cpuq
   - mem_mb=1000
-  - time="00:20:00"
+  - time="00:10:00"
   - gpu=0
-max-jobs-per-second: 20
+max-jobs-per-second: 100
 max-status-checks-per-second: 20
 local-cores: 1
 latency-wait: 90
-jobs: 1000
+jobs: 800
 keep-going: True
 rerun-incomplete: True
 printshellcmds: True
