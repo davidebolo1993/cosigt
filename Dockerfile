@@ -34,7 +34,8 @@ RUN apt-get -y install build-essential \
 	pkg-config \
 	pigz \
 	clang-14 \ 
-	libomp5 libomp-dev libssl-dev libssl3 pkg-config
+	libomp5 libomp-dev libssl-dev libssl3 pkg-config \
+	zip unzip
 
 #install golang
 RUN add-apt-repository ppa:longsleep/golang-backports
