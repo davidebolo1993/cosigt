@@ -7,6 +7,9 @@ LABEL about.license="GPLv3"
 
 ARG DEBIAN_FRONTEND=noninteractive
 #install basic libraries and python
+#this is useful for having all the dependencies for which no official docker exist
+#odgi is out there
+#pggb same
 
 WORKDIR /opt
 
@@ -29,7 +32,9 @@ RUN apt-get -y install build-essential \
 	autoconf \
 	libatomic-ops-dev \
 	pkg-config \
-	pigz 
+	pigz \
+	clang-14 \ 
+	libomp5 libomp-dev libssl-dev libssl3 pkg-config
 
 #install golang
 RUN add-apt-repository ppa:longsleep/golang-backports
@@ -46,31 +51,20 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 #and update
 RUN rustup update
 
+#and pgr-tk dependency
+RUN cargo install --locked maturin
+
+#pgr-tk installation
+RUN wget https://github.com/GeneDx/pgr-tk/releases/download/v0.5.1/pgr-tk-v0.5.1.zip \
+	&& unzip pgr-tk-v0.5.1.zip \
+	&& rm pgr-tk-v0.5.1.zip \
+	&& chmod +x release/* \
+	&& chmod +x wheels/*
+
+ENV PATH /opt/release:$PATH
+
 #ln python to python3 -not used right now but, who knows?
 RUN ln -s /usr/bin/python3 /usr/bin/python
-
-##install odgi
-
-RUN git clone --recursive https://github.com/pangenome/odgi.git
-RUN cd odgi \
-    && cmake -H. -DCMAKE_BUILD_TYPE=Generic -Bbuild \
-    && cmake --build build -- -j $(nproc) \
-    && rm -rf deps \
-    && rm -rf .git \
-    && rm -rf build \
-    && apt-get -y clean all \
-    && rm -rf /var/cache
-
-ENV PATH /opt/odgi/bin:$PATH
-
-##install vg
-
-#RUN mkdir -p vg \
-#	&& cd vg \
-#	&& wget https://github.com/vgteam/vg/releases/download/v1.43.0/vg \
-#	&& chmod +x vg
-
-#ENV PATH /opt/vg:$PATH
 
 ##install samtools
 RUN wget https://github.com/samtools/samtools/releases/download/1.18/samtools-1.18.tar.bz2 \
@@ -82,7 +76,6 @@ RUN wget https://github.com/samtools/samtools/releases/download/1.18/samtools-1.
 	&& make install
 
 #no need to env path, because of make install - should be sufficient
-
 ##install bwa-mem
 
 RUN git clone https://github.com/lh3/bwa.git \

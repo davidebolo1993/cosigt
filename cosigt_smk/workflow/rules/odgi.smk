@@ -11,7 +11,7 @@ rule odgi_build:
 	threads:
 		config['odgi']['threads']
 	container:
-		'docker://davidebolo1993/graph_genotyper:latest'
+		'docker://pangenome/odgi:1689324294'
 	resources:
 		mem_mb=config['odgi']['mem_mb'],
 		time=config['odgi']['time']
@@ -35,7 +35,7 @@ rule odgi_extract:
 	threads:
 		config['odgi']['threads']
 	container:
-		'docker://davidebolo1993/graph_genotyper:latest'
+		'docker://pangenome/odgi:1689324294'
 	resources:
 		mem_mb=config['odgi']['mem_mb'],
 		time=config['odgi']['time']
@@ -60,7 +60,7 @@ rule odgi_chop:
 	threads:
 		1
 	container:
-		'docker://davidebolo1993/graph_genotyper:latest'
+		'docker://pangenome/odgi:1689324294'
 	shell:
 		'''
 		odgi chop  \
@@ -80,7 +80,7 @@ rule odgi_view:
 	threads:
 		1
 	container:
-		'docker://davidebolo1993/graph_genotyper:latest'
+		'docker://pangenome/odgi:1689324294'
 	shell:
 		'''
 		odgi view \
@@ -99,7 +99,7 @@ rule odgi_paths_matrix:
 	threads:
 		1
 	container:
-		'docker://davidebolo1993/graph_genotyper:latest'
+		'docker://pangenome/odgi:1689324294'
 	shell:
 		'''
 		odgi paths \
@@ -118,7 +118,7 @@ rule odgi_paths:
 	threads:
 		1
 	container:
-		'docker://davidebolo1993/graph_genotyper:latest'
+		'docker://pangenome/odgi:1689324294'
 	shell:
 		'''
 		odgi paths \
@@ -137,7 +137,7 @@ rule odgi_similarity:
 	threads:
 		1
 	container:
-		'docker://davidebolo1993/graph_genotyper:latest'
+		'docker://pangenome/odgi:1689324294'
 	shell:
 		'''
 		odgi similarity \
