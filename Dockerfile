@@ -61,7 +61,7 @@ RUN wget https://github.com/GeneDx/pgr-tk/releases/download/v0.5.1/pgr-tk-v0.5.1
 	&& rm pgr-tk-v0.5.1.zip \
 	&& chmod +x release/* \
 	&& chmod +x wheels/* \
-	pip3 install wheels/*
+	pip3 install wheels/pgrtk-0.5.1-cp310-cp310-linux_x86_64.whl
 
 ENV PATH /opt/release:$PATH
 
