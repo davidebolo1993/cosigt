@@ -60,9 +60,13 @@ RUN wget https://github.com/GeneDx/pgr-tk/releases/download/v0.5.1/pgr-tk-v0.5.1
 	&& unzip pgr-tk-v0.5.1.zip \
 	&& rm pgr-tk-v0.5.1.zip \
 	&& chmod +x release/* \
-	&& chmod +x wheels/*
+	&& chmod +x wheels/* \
+	pip3 install wheels/*
 
 ENV PATH /opt/release:$PATH
+
+#install wheels
+
 
 #ln python to python3 -not used right now but, who knows?
 RUN ln -s /usr/bin/python3 /usr/bin/python
