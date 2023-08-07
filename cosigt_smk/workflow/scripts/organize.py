@@ -88,6 +88,7 @@ def default_parameters(args):
 	#pgrtk
 	d['pgrtk']=dict()
 	d['pgrtk']['padding'] = args.pgrtk_padding
+	d['pgrtk']['threads'] = args.pgrtk_threads
 	d['pgrtk']['mem_mb'] = args.pgrtk_memory
 	d['pgrtk']['time'] =  double_quote(args.pgrtk_time)
 
@@ -134,12 +135,13 @@ def main():
 
 	#pgrtk
 	metrics.add_argument('--pgrtk_padding', help='padding (#bps) - pgrtk commands [100000]',type=int, default=100000)
+	metrics.add_argument('--pgrtk_threads', help='threads - pgrtk commands [10]',type=int, default=10)
 	metrics.add_argument('--pgrtk_time', help='max time (hh:mm:ss) - pgrtk commands ["00:05:00"]',type=str, default='00:05:00')
 	metrics.add_argument('--pgrtk_memory', help='max memory (mb) - samtools (view/sort) commands [30000]',type=int, default=30000)
 
 	#pggb
 	metrics.add_argument('--pggb_threads', help='threads - pggb command [32]',type=int, default=32)
-	metrics.add_argument('--pggb_time', help='max time (hh:mm:ss) - odgi (build) commands ["00:15:00"]',type=str, default='00:15:00')
+	metrics.add_argument('--pggb_time', help='max time (hh:mm:ss) - odgi (build) commands ["00:25:00"]',type=str, default='00:25:00')
 	metrics.add_argument('--pggb_memory', help='max memory (mb) - odgi (build) commands [5000]',type=int, default=5000)
 
 	args = parser.parse_args()

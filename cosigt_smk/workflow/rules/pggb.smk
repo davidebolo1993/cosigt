@@ -3,7 +3,8 @@ rule pggb:
     pggb
     '''
 	input:
-		rules.pgrtk_get_seq.output,
+		fasta=rules.pgrtk_get_seq.output,
+		index=rules.faidx.output
 	output:
 		'results/pggb/{region}.og'
 	threads:
@@ -18,7 +19,7 @@ rule pggb:
 	shell:
 		'''
         pggb \
-            -i {input} \
+            -i {input.fasta} \
             -o {params.prefix} \
             -p 90 \
             -s 5k \
