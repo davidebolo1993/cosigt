@@ -11,7 +11,7 @@ cluster:
 default-resources:
   - partition=cpuq
   - mem_mb=1000
-  - time="00:10:00"
+  - time="00:05:00"
   - gpu=0
 max-jobs-per-second: 100
 max-status-checks-per-second: 20

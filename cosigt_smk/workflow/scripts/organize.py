@@ -85,11 +85,17 @@ def default_parameters(args):
 	d['samtools']['mem_mb'] = args.sam_memory
 	d['samtools']['time'] =  double_quote(args.sam_time)
 
-	#odgi
-	d['odgi']=dict()
-	d['odgi']['threads'] = args.odgi_threads
-	d['odgi']['mem_mb'] = args.odgi_memory
-	d['odgi']['time'] =  double_quote(args.odgi_time)
+	#pgrtk
+	d['pgrtk']=dict()
+	d['pgrtk']['padding'] = args.pgrtk_padding
+	d['pgrtk']['mem_mb'] = args.pgrtk_memory
+	d['pgrtk']['time'] =  double_quote(args.pgrtk_time)
+
+	#pggb
+	d['pggb']=dict()
+	d['pggb']['threads'] = args.pggb_threads
+	d['pggb']['mem_mb'] = args.pggb_memory
+	d['pggb']['time'] =  double_quote(args.pggb_time)
 
 	return d
 
@@ -105,32 +111,36 @@ def main():
 	required = parser.add_argument_group('Required I/O arguments')
 
 	required.add_argument('-r','--reference', help='reference genome in FASTA format', metavar='FASTA', required=True)
-	required.add_argument('-g', '--graph', help='pangenome graph in GFA format', metavar='GFA', required=True)
+	required.add_argument('--agc', help='agc file from pgrtk - available at https://giab-data.s3.amazonaws.com/PGR-TK-Files/pgr-tk-HGRP-y1-evaluation-set-v0.tar', metavar='AGC', required=True)
 	required.add_argument('-a', '--alignment', help='folder with alignment files (bam,cram) - and their index - to use', metavar='FOLDER', required=True)
 	required.add_argument('--roi', help='one or more regions of interest in BED format', metavar='BED', required=True)
 
 	additional = parser.add_argument_group('Additional I/O arguments')
 
 	additional.add_argument('--blacklist', help='blacklist of samples (one per line) that should not be included in the analysis [None]', metavar='', required=False, default=None)
-	additional.add_argument('--path', help='path in the graph to use as a reference [grch38]',type=str, default="grch38")
+	additional.add_argument('--path', help='path name in the graph to use as a reference [hg38]',type=str, default='hg38')
 
 	metrics = parser.add_argument_group('Specify #threads, memory and time requirements')
 
 	#alignment
 	metrics.add_argument('--aln_threads', help='threads - aligner [10]',type=int, default=10)
-	metrics.add_argument('--aln_time', help='max time (hh:mm:ss) - aligner ["00:30:00"]',type=str, default="00:30:00")
+	metrics.add_argument('--aln_time', help='max time (hh:mm:ss) - aligner ["00:05:00"]',type=str, default='00:05:00')
 	metrics.add_argument('--aln_memory', help='max memory (mb) - aligner[10000]',type=int, default=10000)
 
 	#samtools extraction and sort
 	metrics.add_argument('--sam_threads', help='threads - samtools (view/sort) commands [5]',type=int, default=5)
-	metrics.add_argument('--sam_time', help='max time (hh:mm:ss) - samtools (view/sort) commands ["00:10:00"]',type=str, default="00:15:00")
-	metrics.add_argument('--sam_memory', help='max memory (mb) - samtools (view/sort) commands [5000]',type=int, default=5000)
+	metrics.add_argument('--sam_time', help='max time (hh:mm:ss) - samtools (view/sort) commands ["00:01:00"]',type=str, default='00:01:000')
+	metrics.add_argument('--sam_memory', help='max memory (mb) - samtools (view/sort) commands [2000]',type=int, default=2000)
 
-	#odgi
-	metrics.add_argument('--odgi_threads', help='threads - odgi (build/extract) commands [10]',type=int, default=10)
-	metrics.add_argument('--odgi_time', help='max time (hh:mm:ss) - odgi (build/extract) commands ["00:30:00"]',type=str, default="00:30:00")
-	metrics.add_argument('--odgi_memory', help='max memory (mb) - odgi (build/extract) commands [30000]',type=int, default=30000)
+	#pgrtk
+	metrics.add_argument('--pgrtk_padding', help='padding (#bps) - pgrtk commands [100000]',type=int, default=100000)
+	metrics.add_argument('--pgrtk_time', help='max time (hh:mm:ss) - pgrtk commands ["00:05:00"]',type=str, default='00:05:00')
+	metrics.add_argument('--pgrtk_memory', help='max memory (mb) - samtools (view/sort) commands [30000]',type=int, default=30000)
 
+	#pggb
+	metrics.add_argument('--pggb_threads', help='threads - pggb command [32]',type=int, default=32)
+	metrics.add_argument('--pggb_time', help='max time (hh:mm:ss) - odgi (build) commands ["00:15:00"]',type=str, default='00:15:00')
+	metrics.add_argument('--pggb_memory', help='max memory (mb) - odgi (build) commands [5000]',type=int, default=5000)
 
 	args = parser.parse_args()
 
@@ -139,7 +149,6 @@ def main():
 
 	#default parameters
 	d=default_parameters(args)
-
 
 	#create all the output paths
 
@@ -153,8 +162,8 @@ def main():
 	out_resources=os.path.join(wd,'resources')
 	out_aln=os.path.join(out_resources, 'alignment')
 	os.makedirs(out_aln, exist_ok=True)
-	out_graph=os.path.join(out_resources, 'graph')
-	os.makedirs(out_graph, exist_ok=True)
+	out_agc=os.path.join(out_resources, 'agc')
+	os.makedirs(out_agc, exist_ok=True)
 	out_ref=os.path.join(out_resources, 'reference')
 	os.makedirs(out_ref, exist_ok=True)
 	out_extra=os.path.join(out_resources, 'extra')
@@ -217,19 +226,27 @@ def main():
 	#add to config
 	d['samples'] = out_samples
 
-	#symlink graph 
-	out_graph_file=os.path.join(out_graph, os.path.basename(args.graph))
+	#symlink agc
+	agc=os.path.abspath(args.agc)
+	agc_dir=os.path.dirname(agc)
+	agc_file=os.path.basename(agc)
+	agc_pattern=agc_file.replace('.agc', '')
+	agc_files=glob.glob(agc_dir + '/' +agc_pattern+'*')
 
-	try:
+	for f in agc_files:
 
-		os.symlink(os.path.abspath(args.graph), out_graph_file)
-	
-	except:
+		try:
 
-		pass
+			os.symlink(f, os.path.join(out_agc, os.path.basename(f)))
+
+		except:
+
+			pass
+
+	out_agc_file=os.path.join(out_agc,agc_file)
 
 	#add to config
-	d['graph'] = out_graph_file
+	d['agc'] = out_agc_file
 
 	#symlink reference
 	out_reference_file=os.path.join(out_ref, os.path.basename(args.reference))
@@ -263,7 +280,7 @@ def main():
 
 			with open(region_out, 'w') as out_region:
 
-				out_region.write(args.path +'#' + l[0] + '\t' + l[1] + '\t' + l[2] + '\n')
+				out_region.write(args.path +'_tagged.fa' + '\t' + l[0] + '_' + args.path + '\t' + l[1] + '\t' + l[2] + '\n')
 
 	
 	#dump config
@@ -285,7 +302,7 @@ def main():
 	#write singularity paths for those using singularity
 	with open(out_sing, 'w') as singpath:
 
-		singpath.write(','.join([os.path.abspath(args.alignment),os.path.dirname(os.path.abspath(args.graph)),os.path.dirname(os.path.abspath(args.reference)),'/localscratch']) + '\n')
+		singpath.write(','.join([os.path.abspath(args.alignment),os.path.dirname(os.path.abspath(args.agc)),os.path.dirname(os.path.abspath(args.reference)),'/localscratch']) + '\n')
 
 
 if __name__ == '__main__':

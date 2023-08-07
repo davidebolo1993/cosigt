@@ -1,60 +1,11 @@
 import os
 
-rule odgi_build:
-	'''
-	odgi build
-	'''
-	input:
-		config['graph'],
-	output:
-		'results/odgi/build/' + os.path.basename(config['graph']).replace('.gfa', '.og')
-	threads:
-		config['odgi']['threads']
-	container:
-		'docker://pangenome/odgi:1689324294'
-	resources:
-		mem_mb=config['odgi']['mem_mb'],
-		time=config['odgi']['time']
-	shell:
-		'''
-		odgi build \
-			-g {input} \
-			-o {output} \
-			-t {threads}
-		'''
-
-rule odgi_extract:
-	'''
-	odgi extract
-	'''
-	input:
-		graph=rules.odgi_build.output,
-		region=lambda wildcards: glob('resources/regions/{region}.bed'.format(region=wildcards.region))
-	output:
-		'results/odgi/extract/{region}.og'
-	threads:
-		config['odgi']['threads']
-	container:
-		'docker://pangenome/odgi:1689324294'
-	resources:
-		mem_mb=config['odgi']['mem_mb'],
-		time=config['odgi']['time']
-	shell:
-		'''
-		odgi extract \
-			-i {input.graph} \
-			-o {output} \
-			-b {input.region} \
-			-d 10000 \
-			-t {threads}
-		'''
-	
 rule odgi_chop:
 	'''
 	odgi chop
 	'''
 	input:
-		rules.odgi_extract.output
+		rules.pggb.output
 	output:
 		'results/odgi/chop/{region}.og'
 	threads:
@@ -112,7 +63,7 @@ rule odgi_paths:
 	odgi paths
 	'''
 	input:
-		rules.odgi_extract.output
+		rules.pggb.output
 	output:
 		'results/odgi/paths/fasta/{region}.fasta'
 	threads:
@@ -131,7 +82,7 @@ rule odgi_similarity:
 	odgi similarity
 	'''
 	input:
-		rules.odgi_extract.output
+		rules.pggb.output
 	output:
 		'results/odgi/similarity/{region}.tsv'
 	threads:

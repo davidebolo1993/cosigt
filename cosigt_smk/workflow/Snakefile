@@ -8,11 +8,18 @@ df=(pd.read_table(config['samples'], dtype={'sample_id': str, 'cram':str})
 )
 
 include: 'rules/extract.smk'
+include: 'rules/pgrtk.smk'
+include: 'rules/pggb.smk'
 include: 'rules/odgi.smk'
 include: 'rules/bwa-mem2.smk'
 include: 'rules/gfainject.smk'
 include: 'rules/gafpack.smk'
 include: 'rules/cosigt.smk'
+include: 'rules/evaluate.smk'
+
+rule test:
+	input:
+		expand('results/pggb/{region}.og', region=config['region'])
 
 rule cosigt:
 	input:

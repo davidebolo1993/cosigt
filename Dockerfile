@@ -55,6 +55,9 @@ RUN rustup update
 #and pgr-tk dependency
 RUN cargo install --locked maturin
 
+#install numpy
+RUN pip3 install numpy
+
 #pgr-tk installation
 RUN wget https://github.com/GeneDx/pgr-tk/releases/download/v0.5.1/pgr-tk-v0.5.1.zip \
 	&& unzip pgr-tk-v0.5.1.zip \
