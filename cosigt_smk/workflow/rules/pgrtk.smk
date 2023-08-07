@@ -12,5 +12,5 @@ rule pgrtk_get_seq:
 		padding=config['pgrtk']['padding']
 	shell:
 		'''
-		python workflow/scripts/pgrtk.py {input.agc} {input.region} {params.padding} {output}
+		pgrtk.py {input.agc} {input.region} {params.padding} {output}
 		'''
