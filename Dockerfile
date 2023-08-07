@@ -134,11 +134,3 @@ RUN git clone https://github.com/davidebolo1993/cosigt.git \
 	&& go build cosigt
 
 ENV PATH /opt/cosigt:$PATH
-
-RUN mkdir -p pyscripts \
-	&& cd pyscripts \
-	&& wget https://raw.githubusercontent.com/davidebolo1993/cosigt/master/cosigt_smk/workflow/scripts/pgrtk.py \
-	&& chmod +x pgrtk.py
-
-ENV PATH /opt/pyscripts:$PATH
-

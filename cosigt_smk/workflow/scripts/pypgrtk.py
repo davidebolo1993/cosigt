@@ -6,7 +6,7 @@ import sys
 
 def main(agc_file,bed_file,padding,out_file):
 
-    #load acg_file
+    #load agc_file
     ref_db=pgrtk.AGCFile(agc_file)
 
     #load region
@@ -73,7 +73,9 @@ if __name__ == '__main__':
     bed_file=os.path.abspath(sys.argv[2])
     padding=int(sys.argv[3])
     out_file=os.path.abspath(sys.argv[4])
+    print(agc_file,bed_file,padding,out_file)
     main(agc_file,bed_file,padding,out_file)
+
 
 
 
