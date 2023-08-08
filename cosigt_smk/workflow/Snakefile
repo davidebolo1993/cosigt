@@ -17,10 +17,6 @@ include: 'rules/gafpack.smk'
 include: 'rules/cosigt.smk'
 include: 'rules/evaluate.smk'
 
-rule test:
-	input:
-		expand('results/pggb/{region}.og', region=config['region'])
-
 rule cosigt:
 	input:
 		expand('results/cosigt/{sample}/{region}/best_genotype.tsv', sample=df['sample_id'].tolist(), region=config['region']),
