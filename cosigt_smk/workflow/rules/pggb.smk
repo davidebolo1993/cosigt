@@ -26,5 +26,5 @@ rule pggb:
             -k 419 \
             -t {threads} \
             -n 200 \
-		&& mv {params.prefix}/*smooth.fix.og {output}
+		&& mv {params.prefix}/*smooth.final.og {output}
 		'''
