@@ -87,8 +87,7 @@ def default_parameters(args):
 
 	#pgrtk
 	d['pgrtk']=dict()
-	d['pgrtk']['padding'] = args.pgrtk_padding
-	d['pgrtk']['threads'] = args.pgrtk_threads
+	#d['pgrtk']['padding'] = args.pgrtk_padding
 	d['pgrtk']['mem_mb'] = args.pgrtk_memory
 	d['pgrtk']['time'] =  double_quote(args.pgrtk_time)
 
@@ -130,14 +129,13 @@ def main():
 
 	#samtools extraction and sort
 	metrics.add_argument('--sam_threads', help='threads - samtools (view/sort) commands [5]',type=int, default=5)
-	metrics.add_argument('--sam_time', help='max time (hh:mm:ss) - samtools (view/sort) commands ["00:01:00"]',type=str, default='00:01:000')
+	metrics.add_argument('--sam_time', help='max time (hh:mm:ss) - samtools (view/sort) commands ["00:02:00"]',type=str, default='00:02:00')
 	metrics.add_argument('--sam_memory', help='max memory (mb) - samtools (view/sort) commands [2000]',type=int, default=2000)
 
 	#pgrtk
-	metrics.add_argument('--pgrtk_padding', help='padding (#bps) - pgrtk commands [100000]',type=int, default=100000)
-	metrics.add_argument('--pgrtk_threads', help='threads - pgrtk commands [10]',type=int, default=10)
-	metrics.add_argument('--pgrtk_time', help='max time (hh:mm:ss) - pgrtk commands ["00:05:00"]',type=str, default='00:05:00')
-	metrics.add_argument('--pgrtk_memory', help='max memory (mb) - samtools (view/sort) commands [30000]',type=int, default=30000)
+	metrics.add_argument('--pgrtk_padding', help='padding - pgrtk commands [200000]',type=int, default=200000)
+	metrics.add_argument('--pgrtk_time', help='max time (hh:mm:ss) - pgrtk commands ["00:10:00"]',type=str, default='00:10:00')
+	metrics.add_argument('--pgrtk_memory', help='max memory (mb) - samtools (view/sort) commands [35000]',type=int, default=35000)
 
 	#pggb
 	metrics.add_argument('--pggb_threads', help='threads - pggb command [32]',type=int, default=32)
@@ -263,16 +261,18 @@ def main():
 
 	#add to config
 	d['reference'] = out_reference_file
+	d['path'] = args.path
 
 	#add to config
 	d['region'] = list()
+
 
 	with open(args.roi) as bed_in:
 
 		for line in bed_in:
 
 			l=line.rstrip().split('\t')
-			region=l[0] + ':' + l[1] + '-' + l[2]
+			region=l[0] + '_' + str(int(l[1])-args.pgrtk_padding) + '_' + str(int(l[2])+args.pgrtk_padding)
 
 			#put regions in the config fille
 			d['region'].append(region)
@@ -282,7 +282,7 @@ def main():
 
 			with open(region_out, 'w') as out_region:
 
-				out_region.write(args.path +'_tagged.fa' + '\t' + l[0] + '_' + args.path + '\t' + l[1] + '\t' + l[2] + '\n')
+				out_region.write(region + '\t' + args.path +'_tagged.fa' + '\t' + l[0] + '_' + args.path + '\t' + str(int(l[1])-args.pgrtk_padding) + '\t' + str(int(l[2])+args.pgrtk_padding) + '\t0\n')
 
 	
 	#dump config

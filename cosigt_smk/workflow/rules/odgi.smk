@@ -55,26 +55,7 @@ rule odgi_paths_matrix:
 		'''
 		odgi paths \
 		-i {input} \
-		-H | cut -f 1,4- | pigz > {output}
-		'''
-
-rule odgi_paths:
-	'''
-	odgi paths
-	'''
-	input:
-		rules.pggb.output
-	output:
-		'results/odgi/paths/fasta/{region}.fasta'
-	threads:
-		1
-	container:
-		'docker://pangenome/odgi:1689324294'
-	shell:
-		'''
-		odgi paths \
-		-i {input} \
-		-f > {output}
+		-H | cut -f 1,4- | gzip > {output}
 		'''
 
 rule odgi_similarity:

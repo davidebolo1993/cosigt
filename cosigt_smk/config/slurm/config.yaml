@@ -10,7 +10,7 @@ cluster:
     --gres=gpu:{resources.gpu}
 default-resources:
   - partition=cpuq
-  - mem_mb=1000
+  - mem_mb=3000
   - time="00:05:00"
   - gpu=0
 max-jobs-per-second: 100

@@ -1,12 +1,27 @@
 from glob import glob
 
+
+rule get_proper_region:
+	input:
+		rules.faidx.output
+	output:
+		'results/samtools/bed/{region}.bed'
+	threads:
+		1
+	params:
+		path=config['path']
+	shell:
+		'''
+		grep {params.path} {input} | cut -f 1 | cut -d "_" -f 1,3-4 | tr '_' '\t' > {output}
+		'''
+	
 rule samtools_view:
 	'''
 	samtools view to extract the region
 	'''
 	input:
 		sample=lambda wildcards: glob('resources/alignment/{sample}.*am'.format(sample=wildcards.sample)),
-		region=lambda wildcards: glob('resources/regions/{region}.bed'.format(region=wildcards.region))
+		bed=rules.get_proper_region.output
 	output:
 		'results/samtools/view/{sample}/{region}.bam'
 	threads:
@@ -26,8 +41,9 @@ rule samtools_view:
 		-o {output} \
 		-T {params.ref} \
 		-@ {threads} \
+		-L {input.bed} \
+		-M \
 		{input.sample} \
-		{params.region}
 		'''
 
 rule samtools_fasta:

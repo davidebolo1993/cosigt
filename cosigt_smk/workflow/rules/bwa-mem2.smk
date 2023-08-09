@@ -3,9 +3,9 @@ rule bwa_mem2_index:
 	bwa index
 	'''
 	input:
-		rules.odgi_paths.output
+		rules.pgrtk_filter.output
 	output:
-		multiext('results/odgi/paths/fasta/{region}.fasta', '.bwt.2bit.64', '.pac', '.ann', '.amb', '.0123')	
+		multiext('results/pgrtk/fasta/{region}.fa', '.bwt.2bit.64', '.pac', '.ann', '.amb', '.0123')	
 	threads:
 		1
 	resources:
@@ -23,7 +23,7 @@ rule bwa_mem2_samtools_sort:
 	bwa-mem2 and sam-to-bam conversion with samtools
 	'''
 	input:
-		ref=rules.odgi_paths.output,
+		ref=rules.pgrtk_filter.output,
 		idx=rules.bwa_mem2_index.output,
 		sample=rules.samtools_fasta.output
 	output:

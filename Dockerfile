@@ -113,6 +113,7 @@ ENV PATH /opt/minimap2-2.26_x64-linux:$PATH
 
 RUN git clone https://github.com/ekg/gafpack.git \
 	&& cd gafpack \
+	&& git checkout ad31875b6914d964c6fd72d1bf334f0843538fb6 \
 	&& cargo install --force --path .
 
 ENV PATH /opt/gafpack/target/release:$PATH

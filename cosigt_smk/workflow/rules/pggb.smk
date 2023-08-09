@@ -3,7 +3,7 @@ rule pggb:
     pggb
     '''
 	input:
-		fasta=rules.pgrtk_get_seq.output,
+		fasta=rules.pgrtk_filter.output,
 		index=rules.faidx.output
 	output:
 		'results/pggb/{region}.og'
@@ -26,5 +26,6 @@ rule pggb:
             -k 419 \
             -t {threads} \
             -n 200 \
+			-A \
 		&& mv {params.prefix}/*smooth.final.og {output}
 		'''
