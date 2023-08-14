@@ -123,24 +123,24 @@ def main():
 	metrics = parser.add_argument_group('Specify #threads, memory and time requirements')
 
 	#alignment
-	metrics.add_argument('--aln_threads', help='threads - aligner [10]',type=int, default=10)
-	metrics.add_argument('--aln_time', help='max time (hh:mm:ss) - aligner ["00:05:00"]',type=str, default='00:05:00')
-	metrics.add_argument('--aln_memory', help='max memory (mb) - aligner[10000]',type=int, default=10000)
+	metrics.add_argument('--aln_threads', help='threads - aligner [5]',type=int, default=5)
+	metrics.add_argument('--aln_time', help='max time (hh:mm:ss) - aligner ["00:02:30"]',type=str, default='00:02:30')
+	metrics.add_argument('--aln_memory', help='max memory (mb) - aligner[6000]',type=int, default=6000)
 
 	#samtools extraction and sort
-	metrics.add_argument('--sam_threads', help='threads - samtools (view/sort) commands [5]',type=int, default=5)
-	metrics.add_argument('--sam_time', help='max time (hh:mm:ss) - samtools (view/sort) commands ["00:02:00"]',type=str, default='00:02:00')
-	metrics.add_argument('--sam_memory', help='max memory (mb) - samtools (view/sort) commands [2000]',type=int, default=2000)
+	metrics.add_argument('--sam_threads', help='threads - samtools (view/sort) commands [1]',type=int, default=1)
+	metrics.add_argument('--sam_time', help='max time (hh:mm:ss) - samtools (view/sort) commands ["00:08:00"]',type=str, default='00:08:00')
+	metrics.add_argument('--sam_memory', help='max memory (mb) - samtools (view/sort) commands [1000]',type=int, default=1000)
 
 	#pgrtk
 	metrics.add_argument('--pgrtk_padding', help='padding - pgrtk commands [200000]',type=int, default=200000)
 	metrics.add_argument('--pgrtk_time', help='max time (hh:mm:ss) - pgrtk commands ["00:10:00"]',type=str, default='00:10:00')
-	metrics.add_argument('--pgrtk_memory', help='max memory (mb) - samtools (view/sort) commands [35000]',type=int, default=35000)
+	metrics.add_argument('--pgrtk_memory', help='max memory (mb) - pgrtk commands [35000]',type=int, default=35000)
 
 	#pggb
 	metrics.add_argument('--pggb_threads', help='threads - pggb command [32]',type=int, default=32)
-	metrics.add_argument('--pggb_time', help='max time (hh:mm:ss) - odgi (build) commands ["00:25:00"]',type=str, default='00:25:00')
-	metrics.add_argument('--pggb_memory', help='max memory (mb) - odgi (build) commands [5000]',type=int, default=5000)
+	metrics.add_argument('--pggb_time', help='max time (hh:mm:ss) - pggb commands ["00:25:00"]',type=str, default='00:25:00')
+	metrics.add_argument('--pggb_memory', help='max memory (mb) - pggb commands [2000]',type=int, default=2000)
 
 	args = parser.parse_args()
 

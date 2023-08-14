@@ -1,6 +1,5 @@
 from glob import glob
 
-
 rule get_proper_region:
 	input:
 		rules.faidx.output

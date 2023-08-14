@@ -3,7 +3,7 @@
 go.sum
 go.mod
 cosigt
-cosigt_smk/results/*
+cosigt_smk/*results*/*
 cosigt_smk/resources/*
 !cosigt_smk/resources/extra/*
 cosigt_smk/logs/*

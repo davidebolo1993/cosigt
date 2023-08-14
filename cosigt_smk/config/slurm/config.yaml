@@ -10,14 +10,14 @@ cluster:
     --gres=gpu:{resources.gpu}
 default-resources:
   - partition=cpuq
-  - mem_mb=3000
-  - time="00:05:00"
+  - mem_mb=1000
+  - time="00:10:00"
   - gpu=0
-max-jobs-per-second: 100
+max-jobs-per-second: 10
 max-status-checks-per-second: 20
 local-cores: 1
 latency-wait: 90
-jobs: 800
+jobs: 600
 keep-going: True
 rerun-incomplete: True
 printshellcmds: True

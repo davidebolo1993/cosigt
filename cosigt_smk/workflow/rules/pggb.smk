@@ -1,7 +1,7 @@
 rule pggb:
-    '''
-    pggb
-    '''
+	'''
+	pggb
+	'''
 	input:
 		fasta=rules.pgrtk_filter.output,
 		index=rules.faidx.output
@@ -18,14 +18,15 @@ rule pggb:
 		prefix='results/pggb/{region}'
 	shell:
 		'''
-        pggb \
-            -i {input.fasta} \
-            -o {params.prefix} \
-            -p 90 \
-            -s 5k \
-            -k 419 \
-            -t {threads} \
-            -n 200 \
+		pggb \
+			-i {input.fasta} \
+			-o {params.prefix} \
+			-t {threads} \
+			-n 200 \
+			-S \
 			-A \
+			-p 90 \
+			-s 5k \
+			-k 419 \
 		&& mv {params.prefix}/*smooth.final.og {output}
 		'''
