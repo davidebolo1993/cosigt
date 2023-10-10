@@ -184,6 +184,8 @@ func main() {
 	smpl, bcov := ReadGz(os.Args[2])
 	//read blacklist - it can be empty or not
 	blck := ReadBlacklist(os.Args[3])
+	//trace combinations we already use
+	seen:=make(map[int]bool)
 
 	//store results in map
 	m := make(map[string]float64)
@@ -201,6 +203,32 @@ func main() {
 			sum := SumSlices(gcov[h1], gcov[h2])
 			indiv := (hapid[h1] + "-" + hapid[h2])
 			m[indiv] = GetCosineSimilarity(sum, bcov[0])
+
+			//comment the following if we don't need to add homo
+
+			_,ok:=seen[h1]
+
+			if !ok {
+
+				sum=SumSlices(gcov[h1], gcov[h1])
+				indiv= (hapid[h1] + "-" + hapid[h1])
+				m[indiv] = GetCosineSimilarity(sum, bcov[0])
+				seen[h1] = true
+
+			}
+
+			_,ok=seen[h2]
+
+			if !ok {
+
+				sum=SumSlices(gcov[h2], gcov[h2])
+				indiv= (hapid[h2] + "-" + hapid[h2])
+				m[indiv] = GetCosineSimilarity(sum, bcov[0])
+				seen[h2] = true
+
+			}
+
+			//comment above if we don't need to add homo
 
 		}
 
