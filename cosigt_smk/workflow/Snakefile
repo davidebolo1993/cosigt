@@ -7,21 +7,14 @@ df=(pd.read_table(config['samples'], dtype={'sample_id': str, 'cram':str})
 	.sort_index()
 )
 
-include: 'rules/pgrtk.smk'
-include: 'rules/pggb.smk'
 include: 'rules/extract.smk'
+include: 'rules/pggb.smk'
 include: 'rules/odgi.smk'
 include: 'rules/bwa-mem2.smk'
 include: 'rules/gfainject.smk'
 include: 'rules/gafpack.smk'
 include: 'rules/cosigt.smk'
-include: 'rules/evaluate.smk'
 
 rule cosigt:
 	input:
-		expand('results/cosigt/{sample}/{region}/best_genotype.tsv', sample=df['sample_id'].tolist(), region=config['region']),
-
-rule evaluation:
-	input:
-		expand('results/cosigt/evaluation/{region}/evaluation.pdf', region=config['region']),
-		expand('results/cosigt/evaluation/{region}/evaluation.jaccard.pdf', region=config['region'])
+		expand('results/cosigt/{sample}/{region}/best_genotype.tsv', sample=df['sample_id'].tolist(), region=config['region'])

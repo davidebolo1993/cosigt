@@ -1,0 +1,1 @@
+snakemake --profile config/slurm --singularity-args "-B /group/soranzo/davide.bolognini/working/crams,/group/soranzo/davide.bolognini/working/graph,/ssu/gassu/reference_data/human_genomes/GRCh38,/localscratch" cosigt 

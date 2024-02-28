@@ -3,7 +3,7 @@ rule pggb:
 	pggb
 	'''
 	input:
-		fasta=rules.pgrtk_filter.output,
+		fasta=rules.odgi_paths_fasta.output,
 		index=rules.faidx.output
 	output:
 		'results/pggb/{region}.og'
@@ -12,8 +12,8 @@ rule pggb:
 	container:
 		'docker://pangenome/pggb:latest'
 	resources:
-		mem_mb=config['pggb']['mem_mb'],
-		time=config['pggb']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['pggb']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['pggb']['time']
 	params:
 		prefix='results/pggb/{region}'
 	shell:
@@ -22,11 +22,7 @@ rule pggb:
 			-i {input.fasta} \
 			-o {params.prefix} \
 			-t {threads} \
-			-n 200 \
-			-S \
-			-A \
-			-p 90 \
-			-s 5k \
-			-k 419 \
+			-n 94 \
+			-c 2 \
 		&& mv {params.prefix}/*smooth.final.og {output}
 		'''

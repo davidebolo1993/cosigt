@@ -1,12 +1,9 @@
 #!/usr/bin/python3 env
 
 #standard libraries
-
 import os
-import sys
 import glob
 import yaml
-import shutil
 import argparse
 from argparse import HelpFormatter
 
@@ -65,37 +62,37 @@ def default_parameters(args):
 	d['bwa-mem2']=dict()
 	d['bwa-mem2']['threads'] = args.aln_threads
 	d['bwa-mem2']['mem_mb'] = args.aln_memory
-	d['bwa-mem2']['time'] = double_quote(args.aln_time)
+	d['bwa-mem2']['time'] = args.aln_time
 
 	#bwa-mem
 	d['bwa']=dict()
 	d['bwa']['threads'] = args.aln_threads
 	d['bwa']['mem_mb'] = args.aln_memory
-	d['bwa']['time'] = double_quote(args.aln_time)
+	d['bwa']['time'] =  args.aln_time
 
 	#minimap2
 	d['minimap2']=dict()
 	d['minimap2']['threads'] = args.aln_threads
 	d['minimap2']['mem_mb'] = args.aln_memory
-	d['minimap2']['time'] = double_quote(args.aln_time)
+	d['minimap2']['time'] =  args.aln_time
 
 	#samtools
 	d['samtools']=dict()
 	d['samtools']['threads'] = args.sam_threads
 	d['samtools']['mem_mb'] = args.sam_memory
-	d['samtools']['time'] =  double_quote(args.sam_time)
+	d['samtools']['time'] =   args.sam_time
 
-	#pgrtk
-	d['pgrtk']=dict()
-	#d['pgrtk']['padding'] = args.pgrtk_padding
-	d['pgrtk']['mem_mb'] = args.pgrtk_memory
-	d['pgrtk']['time'] =  double_quote(args.pgrtk_time)
+	#odgi
+	d['odgi']=dict()
+	d['odgi']['threads'] = args.odgi_threads
+	d['odgi']['mem_mb'] = args.odgi_memory
+	d['odgi']['time'] =  args.odgi_time
 
 	#pggb
 	d['pggb']=dict()
 	d['pggb']['threads'] = args.pggb_threads
 	d['pggb']['mem_mb'] = args.pggb_memory
-	d['pggb']['time'] =  double_quote(args.pggb_time)
+	d['pggb']['time'] =  args.pggb_time
 
 	return d
 
@@ -106,41 +103,41 @@ def main():
 	parse arguments and organize inputs for running cosigt properly without additional efforts from the users
 	'''
 
-	parser = argparse.ArgumentParser(prog='cosigt', description='''COsine SImilarity-based GenoTyper''', epilog='''This program was developed by Davide Bolognini at Human Technopole.''', formatter_class=CustomFormat) 
+	parser = argparse.ArgumentParser(prog='cosigt', description='''COsine SImilarity-based GenoTyper''', epilog='''Developed by Davide Bolognini @ Human Technopole''', formatter_class=CustomFormat) 
 
 	required = parser.add_argument_group('Required I/O arguments')
 
 	required.add_argument('-r','--reference', help='reference genome in FASTA format', metavar='FASTA', required=True)
-	required.add_argument('--agc', help='agc file from pgrtk - available at https://giab-data.s3.amazonaws.com/PGR-TK-Files/pgr-tk-HGRP-y1-evaluation-set-v0.tar', metavar='AGC', required=True)
+	required.add_argument('--gfa', help='variation graph in .gfa format', metavar='GFA', required=True)
 	required.add_argument('-a', '--alignment', help='folder with alignment files (bam,cram) - and their index - to use', metavar='FOLDER', required=True)
 	required.add_argument('--roi', help='one or more regions of interest in BED format', metavar='BED', required=True)
 
 	additional = parser.add_argument_group('Additional I/O arguments')
-
 	additional.add_argument('--blacklist', help='blacklist of samples (one per line) that should not be included in the analysis [None]', metavar='', required=False, default=None)
-	additional.add_argument('--path', help='path name in the graph to use as a reference [hg38]',type=str, default='hg38')
+	additional.add_argument('--path', help='path name in the pangenome graph to be used as a reference [grch38]',type=str, default='grch38')
+	additional.add_argument('--binds', help='additional paths to bind for singularity in /path/1,/path/2 format', type=str, default='/localscratch')
 
 	metrics = parser.add_argument_group('Specify #threads, memory and time requirements')
 
 	#alignment
 	metrics.add_argument('--aln_threads', help='threads - aligner [5]',type=int, default=5)
-	metrics.add_argument('--aln_time', help='max time (hh:mm:ss) - aligner ["00:02:30"]',type=str, default='00:02:30')
-	metrics.add_argument('--aln_memory', help='max memory (mb) - aligner[6000]',type=int, default=6000)
+	metrics.add_argument('--aln_time', help='max time (minutes) - aligner [2]',type=int, default=2)
+	metrics.add_argument('--aln_memory', help='max memory (mb) - aligner[5000]',type=int, default=5000)
 
 	#samtools extraction and sort
-	metrics.add_argument('--sam_threads', help='threads - samtools (view/sort) commands [1]',type=int, default=1)
-	metrics.add_argument('--sam_time', help='max time (hh:mm:ss) - samtools (view/sort) commands ["00:08:00"]',type=str, default='00:08:00')
+	metrics.add_argument('--sam_threads', help='threads - samtools (view/sort) commands [2]',type=int, default=2)
+	metrics.add_argument('--sam_time', help='max time (minutes) - samtools (view/sort) commands [8]',type=int, default=8)
 	metrics.add_argument('--sam_memory', help='max memory (mb) - samtools (view/sort) commands [1000]',type=int, default=1000)
 
-	#pgrtk
-	metrics.add_argument('--pgrtk_padding', help='padding - pgrtk commands [200000]',type=int, default=200000)
-	metrics.add_argument('--pgrtk_time', help='max time (hh:mm:ss) - pgrtk commands ["00:10:00"]',type=str, default='00:10:00')
-	metrics.add_argument('--pgrtk_memory', help='max memory (mb) - pgrtk commands [35000]',type=int, default=35000)
-
 	#pggb
-	metrics.add_argument('--pggb_threads', help='threads - pggb command [32]',type=int, default=32)
-	metrics.add_argument('--pggb_time', help='max time (hh:mm:ss) - pggb commands ["00:25:00"]',type=str, default='00:25:00')
-	metrics.add_argument('--pggb_memory', help='max memory (mb) - pggb commands [2000]',type=int, default=2000)
+	metrics.add_argument('--pggb_threads', help='threads - pggb command [24]',type=int, default=24)
+	metrics.add_argument('--pggb_time', help='max time (minutes) - pggb commands [35]',type=int, default=35)
+	metrics.add_argument('--pggb_memory', help='max memory (mb) - pggb commands [20000]',type=int, default=20000)
+
+	#odgi build and extract
+	metrics.add_argument('--odgi_threads', help='threads - odgi (build/extract) commands [10]',type=int, default=10)
+	metrics.add_argument('--odgi_time', help='max time (minutes) - odgi (build/extract) commands [10]',type=int, default=10)
+	metrics.add_argument('--odgi_memory', help='max memory (mb) - odgi (build/extract) commands [30000]',type=int, default=30000)
 
 	args = parser.parse_args()
 
@@ -162,13 +159,15 @@ def main():
 	out_resources=os.path.join(wd,'resources')
 	out_aln=os.path.join(out_resources, 'alignment')
 	os.makedirs(out_aln, exist_ok=True)
-	out_agc=os.path.join(out_resources, 'agc')
-	os.makedirs(out_agc, exist_ok=True)
+	#out_agc=os.path.join(out_resources, 'agc')
+	#os.makedirs(out_agc, exist_ok=True)
+	out_gfa=os.path.join(out_resources, 'graph')
+	os.makedirs(out_gfa, exist_ok=True)
 	out_ref=os.path.join(out_resources, 'reference')
 	os.makedirs(out_ref, exist_ok=True)
 	out_extra=os.path.join(out_resources, 'extra')
 	os.makedirs(out_extra,exist_ok=True)
-	blcklst_out=os.path.join(out_extra, 'bad_samples.txt')
+	blcklst_out=os.path.join(out_extra, 'blacklist.txt')
 	out_regions=os.path.join(out_resources, 'regions')
 	os.makedirs(out_regions,exist_ok=True)
 
@@ -176,7 +175,6 @@ def main():
 	out_sing=os.path.join(wd, 'singularity_bind_paths.csv')
 
 	#blacklist of samples to exclude
-
 	blcklst=[]
 
 	if args.blacklist is not None:
@@ -190,9 +188,7 @@ def main():
 		
 	else:
 
-		with open(blcklst_out, 'w') as bad_samples_out:
-
-			pass
+		open(blcklst_out, 'w').close()
 
 	#symlink alignments
 	alns=sorted(glob.glob(args.alignment+'/*am*'))
@@ -220,33 +216,26 @@ def main():
 
 			if aln.endswith('am'): #this is not an index, rather a true alignment
 
-				sample_name=bnaln.split('.')[0]
+				sample_name='.'.join(bnaln.split('.')[:-1])
 				samples_out.write(sample_name + '\t' + out_aln_file + '\n')
 
 	#add to config
 	d['samples'] = out_samples
 
-	#symlink agc
-	agc=os.path.abspath(args.agc)
-	agc_dir=os.path.dirname(agc)
-	agc_file=os.path.basename(agc)
-	agc_pattern=agc_file.replace('.agc', '')
-	agc_files=glob.glob(agc_dir + '/' +agc_pattern+'*')
+	#symlink gfa
+	out_gfa_file=os.path.join(out_gfa, os.path.basename(args.gfa))
 
-	for f in agc_files:
+	try:
 
-		try:
+		os.symlink(os.path.abspath(args.gfa), out_gfa_file)
+	
+	except:
 
-			os.symlink(f, os.path.join(out_agc, os.path.basename(f)))
-
-		except:
-
-			pass
-
-	out_agc_file=os.path.join(out_agc,agc_file)
+		pass
 
 	#add to config
-	d['agc'] = out_agc_file
+	d['graph'] = out_gfa_file
+
 
 	#symlink reference
 	out_reference_file=os.path.join(out_ref, os.path.basename(args.reference))
@@ -266,13 +255,13 @@ def main():
 	#add to config
 	d['region'] = list()
 
-
 	with open(args.roi) as bed_in:
 
 		for line in bed_in:
 
 			l=line.rstrip().split('\t')
-			region=l[0] + '_' + str(int(l[1])-args.pgrtk_padding) + '_' + str(int(l[2])+args.pgrtk_padding)
+						
+			region=l[0] + '_' + l[1] + '_' + l[2]
 
 			#put regions in the config fille
 			d['region'].append(region)
@@ -282,7 +271,7 @@ def main():
 
 			with open(region_out, 'w') as out_region:
 
-				out_region.write(region + '\t' + args.path +'_tagged.fa' + '\t' + l[0] + '_' + args.path + '\t' + str(int(l[1])-args.pgrtk_padding) + '\t' + str(int(l[2])+args.pgrtk_padding) + '\t0\n')
+				out_region.write(args.path +'#'+ l[0] + '\t' + l[1] + '\t' + l[2] + '\t' + region+'\n')
 
 	
 	#dump config
@@ -291,7 +280,6 @@ def main():
 	yml_out.close()
 
 	#remove single quotes
-
 	with open(out_yaml_tmp) as filein, open(out_yaml, 'w') as fileout:
 
 		for line in filein:
@@ -301,10 +289,13 @@ def main():
 
 	os.remove(out_yaml_tmp)
 
-	#write singularity paths for those using singularity
-	with open(out_sing, 'w') as singpath:
+	#write command
+	singpath=','.join([os.path.abspath(args.alignment),os.path.dirname(os.path.abspath(args.gfa)),os.path.dirname(os.path.abspath(args.reference)),args.binds])
+	command_out=' '.join(['snakemake --profile config/slurm --singularity-args "-B '+ singpath + '" cosigt'])
+	
+	with open('snakemake.run.sh', 'w') as out:
 
-		singpath.write(','.join([os.path.abspath(args.alignment),os.path.dirname(os.path.abspath(args.agc)),os.path.dirname(os.path.abspath(args.reference)),'/localscratch']) + '\n')
+		out.write(command_out + '\n')
 
 
 if __name__ == '__main__':

@@ -16,6 +16,6 @@ rule cosigt_genotype:
 		prefix='results/cosigt/{sample}/{region}'
 	shell:
 		'''
-		cosigt {input.zpath} {input.xpack} resources/extra/bad_samples.txt {params.prefix}
+		cosigt -p {input.zpath} -g {input.xpack} -b resources/extra/blacklist.txt -o {params.prefix}
 		'''
 

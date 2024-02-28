@@ -1,5 +1,3 @@
-import os
-
 rule odgi_chop:
 	'''
 	odgi chop
@@ -11,7 +9,7 @@ rule odgi_chop:
 	threads:
 		1
 	container:
-		'docker://pangenome/odgi:1689324294'
+		'docker://pangenome/odgi:1707818641'
 	shell:
 		'''
 		odgi chop  \
@@ -31,7 +29,7 @@ rule odgi_view:
 	threads:
 		1
 	container:
-		'docker://pangenome/odgi:1689324294'
+		'docker://pangenome/odgi:1707818641'
 	shell:
 		'''
 		odgi view \
@@ -50,7 +48,7 @@ rule odgi_paths_matrix:
 	threads:
 		1
 	container:
-		'docker://pangenome/odgi:1689324294'
+		'docker://pangenome/odgi:1707818641'
 	shell:
 		'''
 		odgi paths \
@@ -69,7 +67,7 @@ rule odgi_similarity:
 	threads:
 		1
 	container:
-		'docker://pangenome/odgi:1689324294'
+		'docker://pangenome/odgi:1707818641'
 	shell:
 		'''
 		odgi similarity \

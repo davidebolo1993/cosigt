@@ -1,4 +1,93 @@
 from glob import glob
+import os
+
+rule odgi_build:
+	'''
+	odgi build
+	'''
+	input:
+		config['graph']
+	output:
+		'results/odgi/build/' + os.path.basename(config['graph'].replace('.gfa', '.og'))
+	threads:
+		config['odgi']['threads']
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['odgi']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['odgi']['time']
+	container:
+		'docker://pangenome/odgi:1707818641'
+	shell:
+		'''
+		odgi build \
+		-g {input} \
+		-o {output} \
+		-O \
+		-t {threads}
+		'''	
+
+rule odgi_extract:
+	'''
+	odgi extract
+	'''
+	input:
+		graph=rules.odgi_build.output,
+		region=lambda wildcards: glob('resources/regions/{region}.bed'.format(region=wildcards.region))
+	output:
+		'results/odgi/extract/{region}.og'
+	threads:
+		config['odgi']['threads']
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['odgi']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['odgi']['time']
+	container:
+		'docker://pangenome/odgi:1707818641'
+	shell:
+		'''
+		odgi extract \
+		-i {input.graph} \
+		-b {input.region} \
+		-t {threads} \
+		-O \
+		-o {output}
+		'''
+
+
+rule odgi_paths_fasta:
+	'''
+	odgi paths
+	'''
+	input:
+		rules.odgi_extract.output
+	output:
+		'results/odgi/paths/fasta/{region}.fa'
+	threads:
+		1
+	container:
+		'docker://pangenome/odgi:1707818641'
+	shell:
+		'''
+		odgi paths \
+		-i {input} \
+		-f > {output}
+		'''
+
+rule faidx:
+	'''
+	samtools faidx
+	'''
+	input:
+		rules.odgi_paths_fasta.output
+	output:
+		'results/odgi/paths/fasta/{region}.fa.fai'
+	threads:
+		1
+	container:
+		'docker://davidebolo1993/graph_genotyper:latest'
+	shell:
+		'''
+		samtools faidx {input}
+		'''
+
 
 rule get_proper_region:
 	input:
@@ -11,7 +100,7 @@ rule get_proper_region:
 		path=config['path']
 	shell:
 		'''
-		grep {params.path} {input} | cut -f 1 | cut -d "_" -f 1,3-4 | tr '_' '\t' > {output}
+		grep {params.path} {input} | cut -f 1 | cut -d "#" -f 2 | tr ':' '\t'| tr '-' '\t' > {output}
 		'''
 	
 rule samtools_view:
@@ -31,8 +120,8 @@ rule samtools_view:
 		ref=config['reference'],
 		region='{region}'
 	resources:
-		mem_mb=config['samtools']['mem_mb'],
-		time=config['samtools']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['samtools']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['samtools']['time']
 	shell:
 		'''
 		samtools view \
@@ -42,7 +131,7 @@ rule samtools_view:
 		-@ {threads} \
 		-L {input.bed} \
 		-M \
-		{input.sample} \
+		{input.sample}
 		'''
 
 rule samtools_fasta:
@@ -58,8 +147,8 @@ rule samtools_fasta:
 	container:
 		'docker://davidebolo1993/graph_genotyper:latest'
 	resources:
-		mem_mb=config['samtools']['mem_mb'],
-		time=config['samtools']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['samtools']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['samtools']['time']
 	shell:
 		'''
 		samtools fasta \

@@ -11,35 +11,18 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"path"
 
+	"github.com/akamensky/argparse"
 	"gonum.org/v1/gonum/stat/combin"
 )
 
-//all these functions assume no errors in input files
 
-func GetCosineSimilarity(A []float64, B []float64) float64 {
-
-	var eucl_magn, dot_product, similarity float64
-
-	eucl_magn = GetMagnitude(A, B)
-
-	if eucl_magn > 0 {
-
-		dot_product = GetDotProduct(A, B)
-		similarity = dot_product / eucl_magn
-
-	} else {
-
-		similarity = 0
-
-	}
-
-	return similarity
-}
 
 func GetMagnitude(A []float64, B []float64) float64 {
 
 	var A_len, B_len float64
+
 	A_len = 0
 	B_len = 0
 
@@ -66,9 +49,42 @@ func GetDotProduct(A []float64, B []float64) float64 {
 	return dot_product
 }
 
+
+func GetCosineSimilarity(A []float64, B []float64) float64 {
+
+	/*
+	Simple calculation of cosine similarity
+	*/
+
+
+	var eucl_magn, dot_product, similarity float64
+
+	eucl_magn = GetMagnitude(A, B)
+
+	if eucl_magn > 0 {
+
+		dot_product = GetDotProduct(A, B)
+		similarity = dot_product / eucl_magn
+
+	} else {
+
+		similarity = 0
+
+	}
+
+	return similarity
+}
+
+
+
 func ReadBlacklist(s string) []string {
 
-	ids := make([]string, 0, 10) //don't want to re-allocate too many times
+	/*
+	Samples we may want to exclude, one-per-line
+	*/
+
+
+	ids := make([]string, 0, 100)
 
 	f, _ := os.Open(s)
 	defer f.Close()
@@ -86,6 +102,10 @@ func ReadBlacklist(s string) []string {
 }
 
 func ReadGz(s string) ([]string, [][]float64) {
+
+	/*
+	Read the gzip-compressed files
+	*/
 
 	cov := make([][]float64, 0, 1000)
 	id := make([]string, 0, 1000)
@@ -124,6 +144,7 @@ func ReadGz(s string) ([]string, [][]float64) {
 		id = append(id, rec[0])
 
 	}
+
 	return id, cov
 }
 
@@ -176,22 +197,39 @@ func SumSlices(a []float64, b []float64) []float64 {
 
 func main() {
 
-	//I/O files
+	/*
+	Parsing of arguments with argparse
+	*/
+
+	parser := argparse.NewParser("cosigt", "genotyping loci in pangenome graphs using cosine distance")
+
+	p := parser.String("p", "paths", &argparse.Options{Required: true, Help: "gzip-compressed tsv file with path names and node coverages from odgi paths"})
+	g := parser.String("g", "gaf", &argparse.Options{Required: true, Help: "gzip-compressed gaf (graph alignment format) file for a sample from gafpack"})
+	b := parser.String("b", "blacklist", &argparse.Options{Required: false, Help: "txt file with names of paths to exclude (one per line)"})
+	o := parser.String("o", "output", &argparse.Options{Required: true, Help: "folder prefix for output files"})
+
+	err := parser.Parse(os.Args)
+
+	if err != nil  {
+
+		fmt.Print(parser.Usage(err))
+		os.Exit(1)
+
+	}
 
 	//read first table
-	hapid, gcov := ReadGz(os.Args[1])
+	hapid, gcov := ReadGz(*p)
 	//read second table
-	smpl, bcov := ReadGz(os.Args[2])
+	smpl, bcov := ReadGz(*g)
 	//read blacklist - it can be empty or not
-	blck := ReadBlacklist(os.Args[3])
-	//trace combinations we already use
+	blck := ReadBlacklist(*b)
+	//trace combinations we have already seen
 	seen:=make(map[int]bool)
-
 	//store results in map
 	m := make(map[string]float64)
-
+	//generate all possible diploid combination
 	n := len(hapid)
-	k := 2
+	k := 2 //fixed ploidy - this can be however adjusted
 	gen := combin.NewCombinationGenerator(n, k)
 
 	for gen.Next() {
@@ -203,8 +241,6 @@ func main() {
 			sum := SumSlices(gcov[h1], gcov[h2])
 			indiv := (hapid[h1] + "-" + hapid[h2])
 			m[indiv] = GetCosineSimilarity(sum, bcov[0])
-
-			//comment the following if we don't need to add homo
 
 			_,ok:=seen[h1]
 
@@ -228,7 +264,6 @@ func main() {
 
 			}
 
-			//comment above if we don't need to add homo
 
 		}
 
@@ -250,12 +285,19 @@ func main() {
 	})
 
 	//write combinations
-	_ = os.Mkdir(os.Args[4], os.ModePerm)
-	WriteMap(m, os.Args[4]+"/combos.tsv")
+	outpath:=path.Clean(*o)
+	_ = os.Mkdir(outpath, os.ModePerm)
+
+	combos:=path.Clean(outpath + "/combos.tsv")
+	WriteMap(m, combos)
 
 	//write best score
-	f, _ := os.Create(os.Args[4] + "/best_genotype.tsv")
+	best:=path.Clean(outpath + "/best_genotype.tsv")
+	f, _ := os.Create(best)
 	defer f.Close()
 	result := fmt.Sprintf("#sample\tbest_genotype\tbest_score\n%s\t%s\t%.16f\n", smpl[0], keys[0], m[keys[0]])
-	_, _ = f.WriteString(result)
+	_, _ = f.WriteString(result)	
+
+	//all done
+
 }
