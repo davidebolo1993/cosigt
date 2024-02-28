@@ -4,7 +4,7 @@ rule gfa_inject:
 	'''
 	input:
 		gfa=rules.odgi_view.output,
-		bam=rules.bwa_mem2_samtools_sort.output
+		bam=rules.bwa_samse_old_samtools_sort.output
 	output:
 		'results/gfainject/{sample}/{region}.gaf'
 	threads:
