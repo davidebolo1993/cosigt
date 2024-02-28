@@ -75,6 +75,7 @@ def default_parameters(args):
 	d['minimap2']['threads'] = args.aln_threads
 	d['minimap2']['mem_mb'] = args.aln_memory
 	d['minimap2']['time'] =  args.aln_time
+	d['minimap2']['preset'] =   args.aln_preset
 
 	#samtools
 	d['samtools']=dict()
@@ -123,6 +124,7 @@ def main():
 	metrics.add_argument('--aln_threads', help='threads - aligner [5]',type=int, default=5)
 	metrics.add_argument('--aln_time', help='max time (minutes) - aligner [2]',type=int, default=2)
 	metrics.add_argument('--aln_memory', help='max memory (mb) - aligner[5000]',type=int, default=5000)
+	metrics.add_argument('--aln_preset', help='long-read preset for minimap2 [map-ont] - ignore if not using the long branch',type=str, default='map-ont')
 
 	#samtools extraction and sort
 	metrics.add_argument('--sam_threads', help='threads - samtools (view/sort) commands [2]',type=int, default=2)
