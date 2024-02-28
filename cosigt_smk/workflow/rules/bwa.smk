@@ -3,7 +3,7 @@ rule bwa_index:
 	bwa index
 	'''
 	input:
-		rules.odgi_paths.output
+		rules.odgi_paths_fasta.output
 	output:
 		multiext('results/odgi/paths/fasta/{region}.fa', '.bwt', '.pac', '.ann', '.amb', '.sa')	
 	threads:
@@ -23,7 +23,7 @@ rule bwa_aln_old:
 	bwa aln
 	'''
 	input:
-		ref=rules.odgi_paths.output,
+		ref=rules.odgi_paths_fasta.output,
 		idx=rules.bwa_index.output,
 		sample=rules.samtools_fasta.output
 	output:
@@ -46,7 +46,7 @@ rule bwa_samse_old_samtools_sort:
 	'''
 	input:
 		sai=rules.bwa_aln_old.output,
-		ref=rules.odgi_paths.output,
+		ref=rules.odgi_paths_fasta.output,
 		sample=rules.samtools_fasta.output
 	output:
 		'results/bwa/{sample}/{region}.realigned.bam'
