@@ -6,23 +6,23 @@ rule pggb:
 		fasta=rules.odgi_paths_fasta.output,
 		index=rules.faidx.output
 	output:
-		'results/pggb/{region}.og'
+		config['output'] + '/pggb/{region}.og'
 	threads:
 		config['pggb']['threads']
-	container:
-		'docker://pangenome/pggb:latest'
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['pggb']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['pggb']['time']
+	container:
+		'docker://pangenome/pggb:latest'
 	params:
-		prefix='results/pggb/{region}'
+		prefix=config['output'] + '/pggb/{region}',
+		flags=config['pggb']['params']
 	shell:
 		'''
 		pggb \
 			-i {input.fasta} \
 			-o {params.prefix} \
 			-t {threads} \
-			-n 94 \
-			-c 2 \
+			{params.flags} \
 		&& mv {params.prefix}/*smooth.final.og {output}
 		'''

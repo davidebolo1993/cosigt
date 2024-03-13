@@ -5,12 +5,12 @@ rule bwa_mem2_index:
 	input:
 		rules.odgi_paths_fasta.output
 	output:
-		multiext('results/odgi/paths/fasta/{region}.fa', '.bwt.2bit.64', '.pac', '.ann', '.amb', '.0123')	
+		multiext(config['output'] + '/odgi/paths/fasta/{region}.fa', '.bwt.2bit.64', '.pac', '.ann', '.amb', '.0123')	
 	threads:
 		1
 	resources:
-		mem_mb=config['bwa-mem2']['mem_mb'],
-		time=config['bwa-mem2']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['bwa-mem2']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['bwa-mem2']['time']
 	container:
 		'docker://davidebolo1993/graph_genotyper:latest'
 	shell:
@@ -27,17 +27,15 @@ rule bwa_mem2_samtools_sort:
 		idx=rules.bwa_mem2_index.output,
 		sample=rules.samtools_fasta.output
 	output:
-		'results/bwa-mem2/{sample}/{region}.realigned.bam'
+		config['output'] + '/bwa-mem2/{sample}/{region}.realigned.bam'
 	threads:
 		config['bwa-mem2']['threads']
 	resources:
-		mem_mb=config['bwa-mem2']['mem_mb'],
-		time=config['bwa-mem2']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['bwa-mem2']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['bwa-mem2']['time']
 	container:
 		'docker://davidebolo1993/graph_genotyper:latest'
-	params:
-		samtools_threads=config['samtools']['threads']
 	shell:
 		'''
-		bwa-mem2 mem -t {threads} {input.ref} {input.sample} | samtools sort -@ {params.samtools_threads} - > {output}
+		bwa-mem2 mem -t {threads} {input.ref} {input.sample} | samtools sort -@ {threads} - > {output}
 		'''
