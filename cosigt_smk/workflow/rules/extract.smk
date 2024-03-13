@@ -8,7 +8,7 @@ rule odgi_build:
 	input:
 		config['graph']
 	output:
-		'results/odgi/build/' + os.path.basename(config['graph'].replace('.gfa', '.og'))
+		config['output'] + '/odgi/build/' + os.path.basename(config['graph'].replace('.gfa', '.og'))
 	threads:
 		config['odgi']['threads']
 	resources:
@@ -21,7 +21,6 @@ rule odgi_build:
 		odgi build \
 		-g {input} \
 		-o {output} \
-		-O \
 		-t {threads}
 		'''	
 
@@ -33,7 +32,7 @@ rule odgi_extract:
 		graph=rules.odgi_build.output,
 		region=lambda wildcards: glob('resources/regions/{region}.bed'.format(region=wildcards.region))
 	output:
-		'results/odgi/extract/{region}.og'
+		config['output'] + '/odgi/extract/{region}.og'
 	threads:
 		config['odgi']['threads']
 	resources:
@@ -59,9 +58,12 @@ rule odgi_paths_fasta:
 	input:
 		rules.odgi_extract.output
 	output:
-		'results/odgi/paths/fasta/{region}.fa'
+		config['output'] + '/odgi/paths/fasta/{region}.fa'
 	threads:
 		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://pangenome/odgi:1707818641'
 	shell:
@@ -78,9 +80,10 @@ rule faidx:
 	input:
 		rules.odgi_paths_fasta.output
 	output:
-		'results/odgi/paths/fasta/{region}.fa.fai'
-	threads:
-		1
+		config['output'] + '/odgi/paths/fasta/{region}.fa.fai'
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://davidebolo1993/graph_genotyper:latest'
 	shell:
@@ -93,9 +96,10 @@ rule get_proper_region:
 	input:
 		rules.faidx.output
 	output:
-		'results/samtools/bed/{region}.bed'
-	threads:
-		1
+		config['output'] + '/samtools/bed/{region}.bed'
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
 	params:
 		path=config['path']
 	shell:
@@ -111,7 +115,7 @@ rule samtools_view:
 		sample=lambda wildcards: glob('resources/alignment/{sample}.*am'.format(sample=wildcards.sample)),
 		bed=rules.get_proper_region.output
 	output:
-		'results/samtools/view/{sample}/{region}.bam'
+		config['output'] + '/samtools/view/{sample}/{region}.bam'
 	threads:
 		config['samtools']['threads']
 	container:
@@ -141,7 +145,7 @@ rule samtools_fasta:
 	input:
 		rules.samtools_view.output
 	output:
-		'results/samtools/fasta/{sample}/{region}.fasta.gz'
+		config['output'] + '/samtools/fasta/{sample}/{region}.fasta.gz'
 	threads:
 		config['samtools']['threads']
 	container:

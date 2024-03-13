@@ -5,12 +5,12 @@ rule bwa_index:
 	input:
 		rules.odgi_paths_fasta.output
 	output:
-		multiext('results/odgi/paths/fasta/{region}.fa', '.bwt', '.pac', '.ann', '.amb', '.sa')	
+		multiext(config['output'] + '/odgi/paths/fasta/{region}.fa', '.bwt', '.pac', '.ann', '.amb', '.sa')	
 	threads:
 		1
 	resources:
-		mem_mb=config['bwa']['mem_mb'],
-		time=config['bwa']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['bwa']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['bwa']['time']
 	container:
 		'docker://davidebolo1993/graph_genotyper:latest'
 	shell:
@@ -27,12 +27,12 @@ rule bwa_aln_old:
 		idx=rules.bwa_index.output,
 		sample=rules.samtools_fasta.output
 	output:
-		'results/bwa/{sample}/{region}.realigned.sai'
+		config['output'] + '/bwa/{sample}/{region}.realigned.sai'
 	threads:
 		config['bwa']['threads']
 	resources:
-		mem_mb=config['bwa']['mem_mb'],
-		time=config['bwa']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['bwa']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['bwa']['time']
 	container:
 		'docker://davidebolo1993/graph_genotyper:latest'
 	shell:
@@ -49,9 +49,12 @@ rule bwa_samse_old_samtools_sort:
 		ref=rules.odgi_paths_fasta.output,
 		sample=rules.samtools_fasta.output
 	output:
-		'results/bwa/{sample}/{region}.realigned.bam'
+		config['output'] + '/bwa/{sample}/{region}.realigned.bam'
 	threads:
 		config['samtools']['threads']
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['samtools']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['samtools']['time']
 	container:
 		'docker://davidebolo1993/graph_genotyper:latest'
 	shell:
