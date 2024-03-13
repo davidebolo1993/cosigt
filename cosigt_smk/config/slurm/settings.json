@@ -1,0 +1,5 @@
+{
+    "SBATCH_DEFAULTS": "partition=cpuq mem=1000 time=10 gres=gpu:0",
+    "CLUSTER_NAME": "",
+    "CLUSTER_CONFIG": ""
+}

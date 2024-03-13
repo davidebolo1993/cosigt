@@ -6,9 +6,12 @@ rule gfa_inject:
 		gfa=rules.odgi_view.output,
 		bam=rules.minimap2_samtools_sort.output
 	output:
-		'results/gfainject/{sample}/{region}.gaf'
+		config['output'] + '/gfainject/{sample}/{region}.gaf'
 	threads:
 		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://davidebolo1993/graph_genotyper:latest'
 	params:

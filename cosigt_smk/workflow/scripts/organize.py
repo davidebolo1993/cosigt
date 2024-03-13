@@ -94,6 +94,15 @@ def default_parameters(args):
 	d['pggb']['threads'] = args.pggb_threads
 	d['pggb']['mem_mb'] = args.pggb_memory
 	d['pggb']['time'] =  args.pggb_time
+	d['pggb']['params'] =  args.pggb_params
+
+	#default
+	d['default']=dict()
+	d['default']['mem_mb'] = args.std_memory
+	d['default']['time'] =  args.std_time
+
+	#output
+	d['output'] = args.output
 
 	return d
 
@@ -112,34 +121,43 @@ def main():
 	required.add_argument('--gfa', help='variation graph in .gfa format', metavar='GFA', required=True)
 	required.add_argument('-a', '--alignment', help='folder with alignment files (bam,cram) - and their index - to use', metavar='FOLDER', required=True)
 	required.add_argument('--roi', help='one or more regions of interest in BED format', metavar='BED', required=True)
+	
 
 	additional = parser.add_argument_group('Additional I/O arguments')
 	additional.add_argument('--blacklist', help='blacklist of samples (one per line) that should not be included in the analysis [None]', metavar='', required=False, default=None)
 	additional.add_argument('--path', help='path name in the pangenome graph to be used as a reference [grch38]',type=str, default='grch38')
 	additional.add_argument('--binds', help='additional paths to bind for singularity in /path/1,/path/2 format', type=str, default='/localscratch')
+	additional.add_argument('--output', help='output folder [results]', metavar='FOLDER', default='results')
+
 
 	metrics = parser.add_argument_group('Specify #threads, memory and time requirements')
 
+	#default
+	metrics.add_argument('--std_time', help='max time (minutes) - default [1]',type=int, default=1)
+	metrics.add_argument('--std_memory', help='memory (mb) - default [1000]',type=int, default=1000)
+
 	#alignment
 	metrics.add_argument('--aln_threads', help='threads - aligner [5]',type=int, default=5)
-	metrics.add_argument('--aln_time', help='max time (minutes) - aligner [2]',type=int, default=2)
-	metrics.add_argument('--aln_memory', help='max memory (mb) - aligner[5000]',type=int, default=5000)
-	metrics.add_argument('--aln_preset', help='long-read preset for minimap2 [map-ont] - ignore if not using the long branch',type=str, default='map-ont')
+	metrics.add_argument('--aln_time', help='max time (minutes) - aligner [2]',type=int, default=5)
+	metrics.add_argument('--aln_memory', help='max memory (mb) - aligner [5000]',type=int, default=10000)
+	metrics.add_argument('--aln_preset', help='long-read preset for minimap2 [map-ont] - ignore if not using the "long" branch of cosigt',type=str, default='map-ont')
 
 	#samtools extraction and sort
-	metrics.add_argument('--sam_threads', help='threads - samtools (view/sort) commands [2]',type=int, default=2)
-	metrics.add_argument('--sam_time', help='max time (minutes) - samtools (view/sort) commands [8]',type=int, default=8)
-	metrics.add_argument('--sam_memory', help='max memory (mb) - samtools (view/sort) commands [1000]',type=int, default=1000)
+	metrics.add_argument('--sam_threads', help='threads - samtools (view) commands [2]',type=int, default=2)
+	metrics.add_argument('--sam_time', help='max time (minutes) - samtools (view) commands [5]',type=int, default=5)
+	metrics.add_argument('--sam_memory', help='max memory (mb) - samtools (view) commands [5000]',type=int, default=5000)
 
 	#pggb
 	metrics.add_argument('--pggb_threads', help='threads - pggb command [24]',type=int, default=24)
 	metrics.add_argument('--pggb_time', help='max time (minutes) - pggb commands [35]',type=int, default=35)
-	metrics.add_argument('--pggb_memory', help='max memory (mb) - pggb commands [20000]',type=int, default=20000)
+	metrics.add_argument('--pggb_memory', help='max memory (mb) - pggb commands [30000]',type=int, default=30000)
+	metrics.add_argument('--pggb_params', help='additional parameters for pggb [-c 2 -n 94]',type=str, default='-c 2 -n 94')
+
 
 	#odgi build and extract
 	metrics.add_argument('--odgi_threads', help='threads - odgi (build/extract) commands [10]',type=int, default=10)
-	metrics.add_argument('--odgi_time', help='max time (minutes) - odgi (build/extract) commands [10]',type=int, default=10)
-	metrics.add_argument('--odgi_memory', help='max memory (mb) - odgi (build/extract) commands [30000]',type=int, default=30000)
+	metrics.add_argument('--odgi_time', help='max time (minutes) - odgi (build/extract) commands [20]',type=int, default=20)
+	metrics.add_argument('--odgi_memory', help='max memory (mb) - odgi (build/extract) commands [20000]',type=int, default=20000)
 
 	args = parser.parse_args()
 

@@ -1,29 +1,28 @@
-cluster:
-  mkdir -p logs/{rule} &&
-  sbatch
-    --partition={resources.partition}
-    --cpus-per-task={threads}
-    --mem={resources.mem_mb}
-    --job-name=smk-{rule}-{wildcards}
-    --output=logs/{rule}/{rule}-{wildcards}-%j.out
-    --time={resources.time}
-    --gres=gpu:{resources.gpu}
-default-resources:
-  - partition=cpuq
-  - mem_mb=1000
-  - time=10
-  - gpu=0
-max-jobs-per-second: 10
-max-status-checks-per-second: 20
+
+cluster-cancel: "scancel"
+restart-times: "3"
+jobscript: "slurm-jobscript.sh"
+cluster: "slurm-submit.py"
+cluster-status: "slurm-status.py"
+max-jobs-per-second: "10"
+max-status-checks-per-second: "10"
 local-cores: 1
-latency-wait: 90
-jobs: 100
-keep-going: True
-rerun-incomplete: True
-printshellcmds: True
-scheduler: greedy
-use-conda: True
-use-singularity: True
-verbose: True
-reason: True
-retries: 4
+latency-wait: "30"
+use-conda: "True"
+use-singularity: "True"
+jobs: "500"
+printshellcmds: "True"
+
+# Example resource configuration
+# default-resources:
+#   - runtime=100
+#   - mem_mb=6000
+#   - disk_mb=1000000
+# # set-threads: map rule names to threads
+# set-threads:
+#   - single_core_rule=1
+#   - multi_core_rule=10
+# # set-resources: map rule names to resources in general
+# set-resources:
+#   - high_memory_rule:mem_mb=12000
+#   - long_running_rule:runtime=1200

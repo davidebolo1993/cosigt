@@ -28,6 +28,7 @@ def agglomerative(mtx,prefix):
 	sil_score=[]
 	result=[]
 	d=dict()
+	hd=dict()
 
 	agg=AgglomerativeClustering(distance_threshold=0, n_clusters=None, metric='precomputed', linkage='average')
 	cluster=agg.fit(mtx)
@@ -70,6 +71,10 @@ def agglomerative(mtx,prefix):
 		
 		group=list(np.take(mtx.columns.tolist(),np.where(cluster.labels_ == g))[0])
 		result.append(group)
+		
+		for hap in group:
+
+			hd[hap] = str(g)
 
 	with open(os.path.join(prefix, 'dendrogram.jaccard.bestcut.tsv'), 'w') as outfile:
 
@@ -85,6 +90,11 @@ def agglomerative(mtx,prefix):
 	with open(os.path.join(prefix, 'dendrogram.jaccard.bestcut.json'), 'w') as outfile:
 		
 		json.dump(d, outfile, indent = 4)
+
+	with open(os.path.join(prefix, 'dendrogram.jaccard.haplogroups.json'), 'w') as outfile:
+		
+		json.dump(hd, outfile, indent = 4)
+
 
 def LinkageMatrix(model):
 

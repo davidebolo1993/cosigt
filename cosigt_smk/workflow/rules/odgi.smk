@@ -5,9 +5,12 @@ rule odgi_chop:
 	input:
 		rules.pggb.output
 	output:
-		'results/odgi/chop/{region}.og'
+		config['output'] + '/odgi/chop/{region}.og'
 	threads:
 		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://pangenome/odgi:1707818641'
 	shell:
@@ -25,9 +28,12 @@ rule odgi_view:
 	input:
 		rules.odgi_chop.output
 	output:
-		'results/odgi/view/{region}.gfa'
+		config['output'] + '/odgi/view/{region}.gfa'
 	threads:
 		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://pangenome/odgi:1707818641'
 	shell:
@@ -44,9 +50,12 @@ rule odgi_paths_matrix:
 	input:
 		rules.odgi_chop.output
 	output:
-		'results/odgi/paths/matrix/{region}.tsv.gz'
+		config['output'] + '/odgi/paths/matrix/{region}.tsv.gz'
 	threads:
 		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://pangenome/odgi:1707818641'
 	shell:
@@ -63,9 +72,12 @@ rule odgi_similarity:
 	input:
 		rules.pggb.output
 	output:
-		'results/odgi/similarity/{region}.tsv'
+		config['output'] + '/odgi/similarity/{region}.tsv'
 	threads:
 		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://pangenome/odgi:1707818641'
 	shell:
