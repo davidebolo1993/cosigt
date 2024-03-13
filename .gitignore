@@ -14,3 +14,4 @@ cosigt_smk/config/samples.tsv
 cosigt_smk/*.pdf
 cosigt_smk/workflow/scripts/__pycache__
 cosigt_smk/snakemake.run.sh
+cosigt_smk/config/*
