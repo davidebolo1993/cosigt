@@ -13,7 +13,7 @@ rule gafpack_coverage:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://davidebolo1993/graph_genotyper:latest'
+		'docker://davidebolo1993/cosigt_workflow:latest'
 	shell:
 		'''
 		gafpack \

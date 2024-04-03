@@ -85,7 +85,7 @@ rule faidx:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://davidebolo1993/graph_genotyper:latest'
+		'docker://davidebolo1993/cosigt_workflow:latest'
 	shell:
 		'''
 		samtools faidx {input}
@@ -119,7 +119,7 @@ rule samtools_view:
 	threads:
 		config['samtools']['threads']
 	container:
-		'docker://davidebolo1993/graph_genotyper:latest'
+		'docker://davidebolo1993/cosigt_workflow:latest'
 	params:
 		ref=config['reference'],
 		region='{region}'
@@ -149,7 +149,7 @@ rule samtools_fasta:
 	threads:
 		config['samtools']['threads']
 	container:
-		'docker://davidebolo1993/graph_genotyper:latest'
+		'docker://davidebolo1993/cosigt_workflow:latest'
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['samtools']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['samtools']['time']

@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"compress/gzip"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math"
 	"os"
 	"sort"
@@ -20,6 +22,10 @@ import (
 
 
 func GetMagnitude(A []float64, B []float64) float64 {
+
+	/*
+	Calculate magnitude
+	*/
 
 	var A_len, B_len float64
 
@@ -38,6 +44,10 @@ func GetMagnitude(A []float64, B []float64) float64 {
 
 func GetDotProduct(A []float64, B []float64) float64 {
 
+	/*
+	Calculate dot product
+	*/
+
 	var dot_product float64
 
 	for i := 0; i < len(A); i++ {
@@ -53,9 +63,8 @@ func GetDotProduct(A []float64, B []float64) float64 {
 func GetCosineSimilarity(A []float64, B []float64) float64 {
 
 	/*
-	Simple calculation of cosine similarity
+	Calculate cosine similarity
 	*/
-
 
 	var eucl_magn, dot_product, similarity float64
 
@@ -80,9 +89,8 @@ func GetCosineSimilarity(A []float64, B []float64) float64 {
 func ReadBlacklist(s string) []string {
 
 	/*
-	Samples we may want to exclude, one-per-line
+	Read file with paths to exclude - can be empty
 	*/
-
 
 	ids := make([]string, 0, 100)
 
@@ -104,7 +112,7 @@ func ReadBlacklist(s string) []string {
 func ReadGz(s string) ([]string, [][]float64) {
 
 	/*
-	Read the gzip-compressed files
+	Read gafpack and odgi paths files
 	*/
 
 	cov := make([][]float64, 0, 1000)
@@ -148,24 +156,69 @@ func ReadGz(s string) ([]string, [][]float64) {
 	return id, cov
 }
 
-func WriteMap(m map[string]float64, s string) {
+func ReadJson(s string) map[string]string {
 
-	f, _ := os.Create(s)
-	defer f.Close()
+	/*
+	Read cluster json file
+	*/
 
-	w := csv.NewWriter(f)
+	clstr:=make(map[string]string)
+	jsonFile,_ := os.Open(s)
+	defer jsonFile.Close()
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	json.Unmarshal([]byte(byteValue), &clstr)
+
+	return clstr
+
+}
+
+
+
+
+func WriteResults(m map[string]float64, keys *[]string, clstr map[string]string, s string, id string) {
+
+	/*
+	Write results to sorted_combos and cosigt_genotype
+	*/
+
+	f1, _ := os.Create(s + "/sorted_combos.tsv")
+	defer f1.Close()
+
+	f2, _ := os.Create(s + "/cosigt_genotype.tsv")
+	defer f2.Close()
+
+	w := csv.NewWriter(f1)
 	w.Comma = '\t'
 	defer w.Flush()
 
-	for k, v := range m {
+	x := csv.NewWriter(f2)
+	x.Comma = '\t'
+	defer x.Flush()
 
-		_ = w.Write([]string{k, fmt.Sprintf("%.16f", v)})
+	for i,k:=range (*keys) {
+
+		haps:=strings.Split(k,"$")
+
+		if i == 0 {
+
+			//k, fmt.Sprintf("%.16f", v)
+			_ = x.Write([]string{"id", "h1", "h2", "c1", "c2", "cs"})
+			_ = w.Write([]string{"h1", "h2", "c1", "c2", "cs"})
+			_ = x.Write([]string{id,haps[0],haps[1],clstr[haps[0]],clstr[haps[1]],fmt.Sprintf("%.16f", m[k])})
+
+		}
+
+		_ = w.Write([]string{haps[0],haps[1],clstr[haps[0]],clstr[haps[1]],fmt.Sprintf("%.16f", m[k])})
 
 	}
 
 }
 
 func SliceContains(s string, ids []string) bool {
+
+	/*
+	Check if substring in any string
+	*/
 
 	for _, x := range ids {
 
@@ -182,6 +235,9 @@ func SliceContains(s string, ids []string) bool {
 }
 
 func SumSlices(a []float64, b []float64) []float64 {
+	/*
+	Sum slices of floats
+	*/
 
 	c := make([]float64, len(a))
 
@@ -206,6 +262,7 @@ func main() {
 	p := parser.String("p", "paths", &argparse.Options{Required: true, Help: "gzip-compressed tsv file with path names and node coverages from odgi paths"})
 	g := parser.String("g", "gaf", &argparse.Options{Required: true, Help: "gzip-compressed gaf (graph alignment format) file for a sample from gafpack"})
 	b := parser.String("b", "blacklist", &argparse.Options{Required: false, Help: "txt file with names of paths to exclude (one per line)"})
+	c := parser.String("c", "cluster", &argparse.Options{Required: false, Help: "cluster json file as generated with cluster.py"})
 	o := parser.String("o", "output", &argparse.Options{Required: true, Help: "folder prefix for output files"})
 
 	err := parser.Parse(os.Args)
@@ -221,15 +278,17 @@ func main() {
 	hapid, gcov := ReadGz(*p)
 	//read second table
 	smpl, bcov := ReadGz(*g)
-	//read blacklist - it can be empty or not
+	//read blacklist
 	blck := ReadBlacklist(*b)
+	//read cluster .json file
+	clstr:= ReadJson(*c)
 	//trace combinations we have already seen
 	seen:=make(map[int]bool)
 	//store results in map
 	m := make(map[string]float64)
 	//generate all possible diploid combination
 	n := len(hapid)
-	k := 2 //fixed ploidy - this can be however adjusted
+	k := 2 //fixed ploidy
 	gen := combin.NewCombinationGenerator(n, k)
 
 	for gen.Next() {
@@ -239,7 +298,7 @@ func main() {
 		if len(blck) == 0 || (!SliceContains(hapid[h1], blck) && !SliceContains(hapid[h2], blck)) { //nothing to blacklist or both ids not in blacklist
 
 			sum := SumSlices(gcov[h1], gcov[h2])
-			indiv := (hapid[h1] + "-" + hapid[h2])
+			indiv := (hapid[h1] + "$" + hapid[h2])
 			m[indiv] = GetCosineSimilarity(sum, bcov[0])
 
 			_,ok:=seen[h1]
@@ -247,7 +306,7 @@ func main() {
 			if !ok {
 
 				sum=SumSlices(gcov[h1], gcov[h1])
-				indiv= (hapid[h1] + "-" + hapid[h1])
+				indiv= (hapid[h1] + "$" + hapid[h1])
 				m[indiv] = GetCosineSimilarity(sum, bcov[0])
 				seen[h1] = true
 
@@ -258,7 +317,7 @@ func main() {
 			if !ok {
 
 				sum=SumSlices(gcov[h2], gcov[h2])
-				indiv= (hapid[h2] + "-" + hapid[h2])
+				indiv= (hapid[h2] + "$" + hapid[h2])
 				m[indiv] = GetCosineSimilarity(sum, bcov[0])
 				seen[h2] = true
 
@@ -284,20 +343,8 @@ func main() {
 
 	})
 
-	//write combinations
+	//write genotype
 	outpath:=path.Clean(*o)
 	_ = os.Mkdir(outpath, os.ModePerm)
-
-	combos:=path.Clean(outpath + "/combos.tsv")
-	WriteMap(m, combos)
-
-	//write best score
-	best:=path.Clean(outpath + "/best_genotype.tsv")
-	f, _ := os.Create(best)
-	defer f.Close()
-	result := fmt.Sprintf("#sample\tbest_genotype\tbest_score\n%s\t%s\t%.16f\n", smpl[0], keys[0], m[keys[0]])
-	_, _ = f.WriteString(result)	
-
-	//all done
-
+	WriteResults(m,&keys,clstr,outpath,smpl[0])
 }

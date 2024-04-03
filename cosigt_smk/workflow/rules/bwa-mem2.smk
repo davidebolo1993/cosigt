@@ -12,7 +12,7 @@ rule bwa_mem2_index:
 		mem_mb=lambda wildcards, attempt: attempt * config['bwa-mem2']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['bwa-mem2']['time']
 	container:
-		'docker://davidebolo1993/graph_genotyper:latest'
+		'docker://davidebolo1993/cosigt_workflow:latest'
 	shell:
 		'''
 		bwa-mem2 index {input}
@@ -34,7 +34,7 @@ rule bwa_mem2_samtools_sort:
 		mem_mb=lambda wildcards, attempt: attempt * config['bwa-mem2']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['bwa-mem2']['time']
 	container:
-		'docker://davidebolo1993/graph_genotyper:latest'
+		'docker://davidebolo1993/cosigt_workflow:latest'
 	shell:
 		'''
 		bwa-mem2 mem -t {threads} {input.ref} {input.sample} | samtools sort -@ {threads} - > {output}

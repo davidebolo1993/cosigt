@@ -84,4 +84,28 @@ rule odgi_similarity:
 		'''
 		odgi similarity \
 		-i {input} > {output}
-		'''	
+		'''
+
+rule cluster:
+	'''
+	cluster
+	'''
+	input:
+		rules.odgi_similarity.output
+	output:
+		config['output'] + '/cluster/{region}.json'
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
+	container:
+		'docker://davidebolo1993/cosigt_workflow:latest'
+	params:
+		prefix=config['output'] + '/cluster/{region}'
+	shell:
+		'''
+		python workflow/scripts/cluster.py \
+			{input} \
+			{params.prefix}
+		'''

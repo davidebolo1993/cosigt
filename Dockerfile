@@ -56,16 +56,20 @@ RUN rustup update
 RUN cargo install --locked maturin
 
 #install numpy
-RUN pip3 install numpy
+RUN pip3 install numpy \
+	pandas \
+	matplotlib \
+	scikit-learn \
+	scipy
 
 #ln python to python3 -not used right now but, who knows?
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
 ##install samtools
-RUN wget https://github.com/samtools/samtools/releases/download/1.18/samtools-1.18.tar.bz2 \
-	&& tar -jxvf samtools-1.18.tar.bz2 \
-	&& rm samtools-1.18.tar.bz2 \
-	&& cd samtools-1.18 \
+RUN wget https://github.com/samtools/samtools/releases/download/1.19.2/samtools-1.19.2.tar.bz2 \
+	&& tar -jxvf samtools-1.19.2.tar.bz2 \
+	&& rm samtools-1.19.2.tar.bz2 \
+	&& cd samtools-1.19.2 \
 	&& ./configure \
 	&& make \
 	&& make install
@@ -89,14 +93,15 @@ ENV PATH /opt/bwa-mem2-2.2.1_x64-linux:$PATH
 
 ##install minimap2
 
-RUN wget https://github.com/lh3/minimap2/releases/download/v2.26/minimap2-2.26_x64-linux.tar.bz2 \
-	&& tar -jxvf minimap2-2.26_x64-linux.tar.bz2 \
-	&& rm minimap2-2.26_x64-linux.tar.bz2
+RUN wget https://github.com/lh3/minimap2/releases/download/v2.28/minimap2-2.28_x64-linux.tar.bz2 \
+	&& tar -jxvf minimap2-2.28_x64-linux.tar.bz2 \
+	&& rm minimap2-2.28_x64-linux.tar.bz2
 
-ENV PATH /opt/minimap2-2.26_x64-linux:$PATH
+ENV PATH /opt/minimap2-2.28_x64-linux:$PATH
 
 ##install gafpack
 ##checkout to a specific version
+##we need to git bisect in order to understand what is not working properly with the newest version
 
 RUN git clone https://github.com/ekg/gafpack.git \
 	&& cd gafpack \

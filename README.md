@@ -2,4 +2,4 @@
 
 Workflow for genotyping from graph.
 
-Docs [here](https://cosigtdoc.readthedocs.io/en/latest/)
+Docs [here](https://davidebolo1993.github.io/cosigtdoc/)

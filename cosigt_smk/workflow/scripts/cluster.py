@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-import os
 import sys
 import json
 import pandas as pd
@@ -25,21 +24,11 @@ def agglomerative(mtx,prefix):
 	perform agglomerative clustering and plot dendrogram
 	'''
 
-	sil_score=[]
-	result=[]
-	d=dict()
-
 	agg=AgglomerativeClustering(distance_threshold=0, n_clusters=None, metric='precomputed', linkage='average')
 	cluster=agg.fit(mtx)
 	linkage_matrix=LinkageMatrix(agg)
 
-
-	plt.figure()
-	dendrogram = hierarchy.dendrogram(linkage_matrix)
-	plt.ylabel('jaccard dissimilarity')
-	plt.tick_params(labelbottom = False, bottom = False)
-	plt.savefig(os.path.join(prefix, 'dendrogram.jaccard.dissimilarity.pdf'))
-	plt.close()
+	sil_score=[] #all silhouette scores
 
 	range_n_clusters = range(2,mtx.shape[0])
 
@@ -53,38 +42,53 @@ def agglomerative(mtx,prefix):
 	#get best
 	k=sorted(sil_score, key=lambda x: x[1], reverse=True)[0][0]
 
-	#plot best
-	plt.figure(figsize=(10,6))
-	dendrogram = hierarchy.dendrogram(linkage_matrix, truncate_mode = 'lastp', p = k)
-	plt.xlabel('haplotype group')
-	plt.ylabel('jaccard dissimilarity')
-	plt.xticks(rotation = 45)
-	plt.savefig(os.path.join(prefix, 'dendrogram.jaccard.bestcut.pdf'))
-	plt.close()
+	#results
+	hapdict=dict()
 	agg=AgglomerativeClustering(n_clusters=k, metric='precomputed', linkage='average')
 	cluster=agg.fit(mtx)
 	groups=set(cluster.labels_)
+	haplotype_labels=list()
 
-	#result
-	for g in groups:
+	with open(prefix + '.clusters.tsv', 'w') as outfile:
+
+		outfile.write('group\thaplotypes\n')	
+
+		for i,g in enumerate(groups):
+			
+			group=list(np.take(mtx.columns.tolist(),np.where(cluster.labels_ == g))[0])
+
+			for h in group:
+
+				hapdict[h] = 'HG'+str(i)
+
+			outfile.write('HG'+str(i) + '\t' + ','.join(group) + '\n')	
+			haplotype_labels.append('HG'+str(i) + ' (' + str(len(group)) + ')')
+
+	with open(prefix + '.clusters.json', 'w') as outfile:
 		
-		group=list(np.take(mtx.columns.tolist(),np.where(cluster.labels_ == g))[0])
-		result.append(group)
+		json.dump(hapdict, outfile, indent = 4)
 
-	with open(os.path.join(prefix, 'dendrogram.jaccard.bestcut.tsv'), 'w') as outfile:
+	dendrogram = hierarchy.dendrogram(linkage_matrix, truncate_mode = 'lastp', p = k)
+	hgl = {dendrogram['leaves'][ii]: haplotype_labels[ii] for ii in range(len(dendrogram['leaves']))}
 
-		for g in result:
+	#plot best
+	plt.figure(figsize=(10,6))
+	hierarchy.dendrogram(
+            linkage_matrix,
+            truncate_mode='lastp',  # show only the last p merged clusters
+            p=k,  # show only the last p merged clusters
+            leaf_label_func=lambda x: hgl[x],
+            leaf_rotation=45,
+            leaf_font_size=5,
+            show_contracted=True 
+            )
+	plt.xlabel('haplotype group (# haplotypes)')
+	plt.ylabel('jaccard dissimilarity')
+	plt.xticks(rotation = 45)
+	plt.savefig(prefix + '.clusters.pdf')
+	plt.close()
 
-			outfile.write(','.join(g) + '\n')	
 
-			for l in g:
-
-				d[l]=[x for x in g if x != l]
-
-
-	with open(os.path.join(prefix, 'dendrogram.jaccard.bestcut.json'), 'w') as outfile:
-		
-		json.dump(d, outfile, indent = 4)
 
 def LinkageMatrix(model):
 
@@ -103,7 +107,7 @@ def LinkageMatrix(model):
 
 			if child_idx < n_samples:
 
-				current_count += 1  # leaf node
+				current_count += 1  #leaf node
 
 			else:
 

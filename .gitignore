@@ -3,7 +3,6 @@
 go.sum
 go.mod
 cosigt
-cosigt_smk/results/*
 cosigt_smk/resources/*
 cosigt_smk/logs/*
 cosigt_smk/.snakemake/*

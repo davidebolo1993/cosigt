@@ -22,4 +22,4 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          tags: davidebolo1993/graph_genotyper:latest
+          tags: davidebolo1993/cosigt_workflow:latest
