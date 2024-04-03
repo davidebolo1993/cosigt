@@ -9,3 +9,4 @@ cosigt_smk/.snakemake/*
 cosigt_smk/workflow/scripts/__pycache__
 cosigt_smk/snakemake.run.sh
 cosigt_smk/config/*
+cosigt_smk/.*

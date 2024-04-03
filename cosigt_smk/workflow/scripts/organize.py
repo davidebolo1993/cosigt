@@ -113,7 +113,7 @@ def main():
 	parse arguments and organize inputs for running cosigt properly without additional efforts from the users
 	'''
 
-	parser = argparse.ArgumentParser(prog='cosigt', description='''COsine SImilarity-based GenoTyper''', epilog='''Developed by Davide Bolognini @ Human Technopole''', formatter_class=CustomFormat) 
+	parser = argparse.ArgumentParser(prog='organize.py', description='''COsine SImilarity-based GenoTyper''', epilog='''Developed by Davide Bolognini @ Human Technopole''', formatter_class=CustomFormat) 
 
 	required = parser.add_argument_group('Required I/O arguments')
 
@@ -126,7 +126,7 @@ def main():
 	additional = parser.add_argument_group('Additional I/O arguments')
 	additional.add_argument('--blacklist', help='blacklist of samples (one per line) that should not be included in the analysis [None]', metavar='', required=False, default=None)
 	additional.add_argument('--path', help='path name in the pangenome graph to be used as a reference [grch38]',type=str, default='grch38')
-	additional.add_argument('--binds', help='additional paths to bind for singularity in /path/1,/path/2 format', type=str, default='/localscratch')
+	additional.add_argument('--binds', help='additional paths to bind for singularity in /path/1,/path/2 format [/localscratch]', type=str, default='/localscratch')
 	additional.add_argument('--output', help='output folder [results]', metavar='FOLDER', default='results')
 
 

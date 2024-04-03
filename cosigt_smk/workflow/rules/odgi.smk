@@ -93,7 +93,7 @@ rule cluster:
 	input:
 		rules.odgi_similarity.output
 	output:
-		config['output'] + '/cluster/{region}.json'
+		config['output'] + '/cluster/{region}.clusters.json'
 	threads:
 		1
 	resources:
