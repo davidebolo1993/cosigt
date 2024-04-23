@@ -7,9 +7,8 @@ LABEL about.license="GPLv3"
 
 ARG DEBIAN_FRONTEND=noninteractive
 #install basic libraries and python
-#this is useful for having all the dependencies for which no official docker exist
-#odgi is out there
-#pggb same
+#this is useful for having control on all the depenendencies
+#odgi and pggb are excluded here
 
 WORKDIR /opt
 
@@ -51,8 +50,6 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 
 #and update
 RUN rustup update
-
-#and pgr-tk dependency
 RUN cargo install --locked maturin
 
 #install numpy
@@ -60,7 +57,8 @@ RUN pip3 install numpy \
 	pandas \
 	matplotlib \
 	scikit-learn \
-	scipy
+	scipy \
+	pyfaidx
 
 #ln python to python3 -not used right now but, who knows?
 RUN ln -s /usr/bin/python3 /usr/bin/python
@@ -99,9 +97,17 @@ RUN wget https://github.com/lh3/minimap2/releases/download/v2.28/minimap2-2.28_x
 
 ENV PATH /opt/minimap2-2.28_x64-linux:$PATH
 
+##install bedtools
+
+RUN wget https://github.com/arq5x/bedtools2/releases/download/v2.31.0/bedtools.static \
+	&& chmod +x bedtools.static \
+	&& mv bedtools.static bedtools
+
+ENV PATH /opt:$PATH
+
 ##install gafpack
 ##checkout to a specific version
-##we need to git bisect in order to understand what is not working properly with the newest version
+##we need to git bisect in order to understand what is not working properly with the newest version - git bisect (?)
 
 RUN git clone https://github.com/ekg/gafpack.git \
 	&& cd gafpack \
@@ -117,6 +123,15 @@ RUN git clone https://github.com/ekg/gfainject.git \
 	&& cargo install --force --path .
 
 ENV PATH /opt/gfainject/target/release:$PATH
+
+##install impg
+
+RUN git clone https://github.com/ekg/impg.git \
+	&& cd impg \
+	&& cargo install --force --path .
+
+ENV PATH /opt/impg/target/release:$PATH
+
 
 ##install cosigt
 
