@@ -1,4 +1,5 @@
 import pandas as pd
+from glob import glob
 
 configfile: 'config/config.yaml'
 
@@ -7,7 +8,10 @@ df=(pd.read_table(config['samples'], dtype={'sample_id': str, 'cram':str})
 	.sort_index()
 )
 
-include: 'rules/extract.smk'
+include: 'rules/impg.smk'
+include: 'rules/bedtools.smk'
+include: 'rules/samtools.smk'
+include: 'rules/faidx.smk'
 include: 'rules/pggb.smk'
 include: 'rules/odgi.smk'
 include: 'rules/bwa-mem2.smk'

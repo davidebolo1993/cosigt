@@ -11,7 +11,7 @@ from argparse import HelpFormatter
 class CustomFormat(HelpFormatter):
 
 	'''
-	custo help format
+	custom help format
 	'''
 
 	def _format_action_invocation(self, action):
@@ -49,11 +49,6 @@ class CustomFormat(HelpFormatter):
 		return action.dest.upper()
 
 
-
-def double_quote(time):
-
-	return '"%s"' % time
-
 def default_parameters(args):
 
 	d=dict()
@@ -75,19 +70,13 @@ def default_parameters(args):
 	d['minimap2']['threads'] = args.aln_threads
 	d['minimap2']['mem_mb'] = args.aln_memory
 	d['minimap2']['time'] =  args.aln_time
-	d['minimap2']['preset'] =   args.aln_preset
+	d['minimap2']['preset'] =  args.aln_preset
 
 	#samtools
 	d['samtools']=dict()
 	d['samtools']['threads'] = args.sam_threads
 	d['samtools']['mem_mb'] = args.sam_memory
 	d['samtools']['time'] =   args.sam_time
-
-	#odgi
-	d['odgi']=dict()
-	d['odgi']['threads'] = args.odgi_threads
-	d['odgi']['mem_mb'] = args.odgi_memory
-	d['odgi']['time'] =  args.odgi_time
 
 	#pggb
 	d['pggb']=dict()
@@ -117,18 +106,17 @@ def main():
 
 	required = parser.add_argument_group('Required I/O arguments')
 
-	required.add_argument('-r','--reference', help='reference genome in FASTA format', metavar='FASTA', required=True)
-	required.add_argument('--gfa', help='variation graph in .gfa format', metavar='GFA', required=True)
-	required.add_argument('-a', '--alignment', help='folder with alignment files (bam,cram) - and their index - to use', metavar='FOLDER', required=True)
-	required.add_argument('--roi', help='one or more regions of interest in BED format', metavar='BED', required=True)
-	
+	required.add_argument('-a', '--alignments', help='folder with read-level alignment files (BAM,CRAM) - and their indexes (BAI/CSI,CRAI) - of the individuals to genotype', metavar='FOLDER', required=True)
+	required.add_argument('-r','--reference', help='reference FASTA file - the same the individuals to genotype are aligned to', metavar='FASTA', required=True)
+	required.add_argument('--fasta', help='chromosome-level assemblies in FASTA format', metavar='FASTA', required=True)
+	required.add_argument('--paf', help='pairwise alignment (PAF format) of the assemblies provided with --fasta', metavar='PAF', required=True)
+	required.add_argument('--roi', help='one or more regions of interest in BED format - first column is the assembly to use as reference (PanSN format, # delimiter)', metavar='BED', required=True)
 
 	additional = parser.add_argument_group('Additional I/O arguments')
-	additional.add_argument('--blacklist', help='blacklist of samples (one per line) that should not be included in the analysis [None]', metavar='', required=False, default=None)
-	additional.add_argument('--path', help='path name in the pangenome graph to be used as a reference [grch38]',type=str, default='grch38')
+
+	additional.add_argument('--blacklist', help='assemblies (one per line) that should not be included in the analysis [None]', metavar='', required=False, default=None)
 	additional.add_argument('--binds', help='additional paths to bind for singularity in /path/1,/path/2 format [/localscratch]', type=str, default='/localscratch')
 	additional.add_argument('--output', help='output folder [results]', metavar='FOLDER', default='results')
-
 
 	metrics = parser.add_argument_group('Specify #threads, memory and time requirements')
 
@@ -137,27 +125,21 @@ def main():
 	metrics.add_argument('--std_memory', help='memory (mb) - default [1000]',type=int, default=1000)
 
 	#alignment
-	metrics.add_argument('--aln_threads', help='threads - aligner [5]',type=int, default=5)
+	metrics.add_argument('--aln_threads', help='# threads - aligner [5]',type=int, default=5)
 	metrics.add_argument('--aln_time', help='max time (minutes) - aligner [2]',type=int, default=5)
 	metrics.add_argument('--aln_memory', help='max memory (mb) - aligner [5000]',type=int, default=10000)
-	metrics.add_argument('--aln_preset', help='long-read preset for minimap2 [map-ont] - ignore if not using the "long" branch of cosigt',type=str, default='map-ont')
+	metrics.add_argument('--aln_preset', help='preset for minimap2 [map-ont] - ignore if not using the long branch of cosigt', type=str, default='map-ont')
 
-	#samtools extraction and sort
-	metrics.add_argument('--sam_threads', help='threads - samtools (view) commands [2]',type=int, default=2)
-	metrics.add_argument('--sam_time', help='max time (minutes) - samtools (view) commands [5]',type=int, default=5)
-	metrics.add_argument('--sam_memory', help='max memory (mb) - samtools (view) commands [5000]',type=int, default=5000)
+	#samtools
+	metrics.add_argument('--sam_threads', help='# threads - samtools (view) [2]',type=int, default=2)
+	metrics.add_argument('--sam_time', help='max time (minutes) - samtools (view) [5]',type=int, default=5)
+	metrics.add_argument('--sam_memory', help='max memory (mb) - samtools (view) [5000]',type=int, default=5000)
 
 	#pggb
-	metrics.add_argument('--pggb_threads', help='threads - pggb command [24]',type=int, default=24)
-	metrics.add_argument('--pggb_time', help='max time (minutes) - pggb commands [35]',type=int, default=35)
-	metrics.add_argument('--pggb_memory', help='max memory (mb) - pggb commands [30000]',type=int, default=30000)
-	metrics.add_argument('--pggb_params', help='additional parameters for pggb [-c 2 -n 94]',type=str, default='-c 2 -n 94')
-
-
-	#odgi build and extract
-	metrics.add_argument('--odgi_threads', help='threads - odgi (build/extract) commands [10]',type=int, default=10)
-	metrics.add_argument('--odgi_time', help='max time (minutes) - odgi (build/extract) commands [20]',type=int, default=20)
-	metrics.add_argument('--odgi_memory', help='max memory (mb) - odgi (build/extract) commands [20000]',type=int, default=20000)
+	metrics.add_argument('--pggb_threads', help='# threads - pggb [24]',type=int, default=24)
+	metrics.add_argument('--pggb_time', help='max time (minutes) - pggb [35]',type=int, default=35)
+	metrics.add_argument('--pggb_memory', help='max memory (mb) - pggb [30000]',type=int, default=30000)
+	metrics.add_argument('--pggb_params', help='additional parameters for pggb [-c 2]',type=str, default='-c 2')
 
 	args = parser.parse_args()
 
@@ -171,18 +153,19 @@ def main():
 
 	#config
 	out_config_path=os.path.join(wd,'config')
+	os.makedirs(out_config_path,exist_ok=True)
 	out_yaml_tmp=os.path.join(out_config_path, 'config.yaml.tmp')
 	out_yaml=os.path.join(out_config_path, 'config.yaml')
 	out_samples=os.path.join(out_config_path, 'samples.tsv')
 
 	#resources
 	out_resources=os.path.join(wd,'resources')
-	out_aln=os.path.join(out_resources, 'alignment')
+	out_aln=os.path.join(out_resources, 'alignments')
 	os.makedirs(out_aln, exist_ok=True)
-	#out_agc=os.path.join(out_resources, 'agc')
-	#os.makedirs(out_agc, exist_ok=True)
-	out_gfa=os.path.join(out_resources, 'graph')
-	os.makedirs(out_gfa, exist_ok=True)
+	out_fasta=os.path.join(out_resources, 'assemblies')
+	os.makedirs(out_fasta, exist_ok=True)
+	out_paf=os.path.join(out_resources, 'paf')
+	os.makedirs(out_paf, exist_ok=True)
 	out_ref=os.path.join(out_resources, 'reference')
 	os.makedirs(out_ref, exist_ok=True)
 	out_extra=os.path.join(out_resources, 'extra')
@@ -191,8 +174,6 @@ def main():
 	out_regions=os.path.join(out_resources, 'regions')
 	os.makedirs(out_regions,exist_ok=True)
 
-	#sing
-	out_sing=os.path.join(wd, 'singularity_bind_paths.csv')
 
 	#blacklist of samples to exclude
 	blcklst=[]
@@ -211,24 +192,20 @@ def main():
 		open(blcklst_out, 'w').close()
 
 	#symlink alignments
-	alns=sorted(glob.glob(args.alignment+'/*am*'))
+	alns=sorted(glob.glob(args.alignments+'/*am*'))
 
 	with open(out_samples, 'w') as samples_out:
 
-		samples_out.write('sample_id\talignment\n')
+		samples_out.write('sample_id\talignments\n')
 
 		for aln in alns:
-
-			if any(x.lower() in aln.lower() for x in blcklst):
-
-				continue #skip blacklisted
 
 			bnaln=os.path.basename(aln)
 			out_aln_file=os.path.join(out_aln, bnaln)
 
 			try:
 
-				os.symlink(os.path.abspath(aln), out_aln_file)
+				os.symlink(os.path.abspath(aln), out_aln_file) #error out if this exists
 			
 			except:
 
@@ -242,20 +219,34 @@ def main():
 	#add to config
 	d['samples'] = out_samples
 
-	#symlink gfa
-	out_gfa_file=os.path.join(out_gfa, os.path.basename(args.gfa))
+	#symlink paf
+	out_paf_file=os.path.join(out_paf, os.path.basename(args.paf))
 
 	try:
 
-		os.symlink(os.path.abspath(args.gfa), out_gfa_file)
+		os.symlink(os.path.abspath(args.paf), out_paf_file)
 	
 	except:
 
 		pass
 
 	#add to config
-	d['graph'] = out_gfa_file
+	d['paf'] = out_paf_file
 
+	#symlink assemblies
+ 
+	out_assemblies_file=os.path.join(out_fasta, os.path.basename(args.fasta))
+
+	try:
+
+		os.symlink(os.path.abspath(args.fasta), out_assemblies_file)
+	
+	except:
+
+		pass
+
+	#add to config
+	d['assemblies'] = out_assemblies_file
 
 	#symlink reference
 	out_reference_file=os.path.join(out_ref, os.path.basename(args.reference))
@@ -270,18 +261,19 @@ def main():
 
 	#add to config
 	d['reference'] = out_reference_file
-	d['path'] = args.path
 
 	#add to config
 	d['region'] = list()
-
+	d['path'] = ''
+ 
 	with open(args.roi) as bed_in:
 
 		for line in bed_in:
 
 			l=line.rstrip().split('\t')
 						
-			region=l[0] + '_' + l[1] + '_' + l[2]
+			region=l[0].replace('#','_') + '_' + l[1] + '_' + l[2]
+			d['path'] = l[0] if d['path'] == '' else d['path']
 
 			#put regions in the config fille
 			d['region'].append(region)
@@ -291,7 +283,7 @@ def main():
 
 			with open(region_out, 'w') as out_region:
 
-				out_region.write(args.path +'#'+ l[0] + '\t' + l[1] + '\t' + l[2] + '\t' + region+'\n')
+				out_region.write(l[0] + '\t' + l[1] + '\t' + l[2]+'\n')
 
 	
 	#dump config
@@ -310,7 +302,7 @@ def main():
 	os.remove(out_yaml_tmp)
 
 	#write command
-	singpath=','.join([os.path.abspath(args.alignment),os.path.dirname(os.path.abspath(args.gfa)),os.path.dirname(os.path.abspath(args.reference)),args.binds])
+	singpath=','.join(list(set([os.path.abspath(args.alignments),os.path.dirname(os.path.abspath(args.paf)),os.path.dirname(os.path.abspath(args.fasta)), os.path.dirname(os.path.abspath(args.reference)),args.binds])))
 	command_out=' '.join(['snakemake --profile config/slurm --singularity-args "-B '+ singpath + '" cosigt'])
 	
 	with open('snakemake.run.sh', 'w') as out:

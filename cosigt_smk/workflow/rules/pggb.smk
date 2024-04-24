@@ -1,10 +1,10 @@
-rule pggb:
+rule pggb_construct:
 	'''
-	pggb
+	https://github.com/pangenome/pggb
 	'''
 	input:
-		fasta=rules.odgi_paths_fasta.output,
-		index=rules.faidx.output
+		fasta=rules.pyfaidx_extract.output,
+		index=rules.samtools_faidx_index.output
 	output:
 		config['output'] + '/pggb/{region}.og'
 	threads:
@@ -14,6 +14,8 @@ rule pggb:
 		time=lambda wildcards, attempt: attempt * config['pggb']['time']
 	container:
 		'docker://pangenome/pggb:latest'
+	benchmark:
+		'benchmarks/{region}.pggb_construct.benchmark.txt'
 	params:
 		prefix=config['output'] + '/pggb/{region}',
 		flags=config['pggb']['params']
