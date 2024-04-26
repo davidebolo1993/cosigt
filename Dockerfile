@@ -58,7 +58,8 @@ RUN pip3 install numpy \
 	matplotlib \
 	scikit-learn \
 	scipy \
-	pyfaidx
+	pyfaidx \
+	--break-system-packages
 
 #ln python to python3 -not used right now but, who knows?
 RUN ln -s /usr/bin/python3 /usr/bin/python
