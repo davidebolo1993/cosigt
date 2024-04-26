@@ -1,8 +1,8 @@
 FROM ubuntu:latest
-LABEL description="graph genotyper"
+LABEL description="cosigt"
 LABEL base_image="ubuntu:latest"
-LABEL software="graph genotyper"
-LABEL about.home="https://github.com/davidebolo1993/graph_genotyper"
+LABEL software="cosigt"
+LABEL about.home="https://github.com/davidebolo1993/cosigt"
 LABEL about.license="GPLv3"
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -23,7 +23,7 @@ RUN apt-get -y install build-essential \
 	libssl-dev \
 	libncurses5-dev \
 	libz-dev \
-	python3-distutils python3-dev python3-pip \ 
+	python3-dev python3-pip \ 
 	libjemalloc-dev \
 	cmake make g++ \
 	libhts-dev \
