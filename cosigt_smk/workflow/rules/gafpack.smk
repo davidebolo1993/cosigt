@@ -1,10 +1,10 @@
 rule gafpack_coverage:
 	'''
-	gafpack
+	https://github.com/ekg/gafpack
 	'''
 	input:
 		gfa=rules.odgi_view.output,
-		gaf=rules.gfa_inject.output
+		gaf=rules.gfainject_inject.output
 	output:
 		config['output'] + '/gafpack/{sample}/{region}.gafpack.gz'
 	threads:
@@ -14,6 +14,8 @@ rule gafpack_coverage:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://davidebolo1993/cosigt_workflow:latest'
+	benchmark:
+		'benchmarks/{sample}.{region}.gafpack_coverage.benchmark.txt'
 	shell:
 		'''
 		gafpack \
