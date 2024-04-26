@@ -1,9 +1,9 @@
 rule odgi_chop:
 	'''
-	odgi chop
+	https://github.com/pangenome/odgi
 	'''
 	input:
-		rules.pggb.output
+		rules.pggb_construct.output
 	output:
 		config['output'] + '/odgi/chop/{region}.og'
 	threads:
@@ -13,6 +13,8 @@ rule odgi_chop:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://pangenome/odgi:1707818641'
+	benchmark:
+		'benchmarks/{region}.odgi_chop.benchmark.txt'
 	shell:
 		'''
 		odgi chop  \
@@ -23,7 +25,7 @@ rule odgi_chop:
 
 rule odgi_view:
 	'''
-	odgi view
+	https://github.com/pangenome/odgi
 	'''
 	input:
 		rules.odgi_chop.output
@@ -36,6 +38,8 @@ rule odgi_view:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://pangenome/odgi:1707818641'
+	benchmark:
+		'benchmarks/{region}.odgi_view.benchmark.txt'
 	shell:
 		'''
 		odgi view \
@@ -45,7 +49,7 @@ rule odgi_view:
 
 rule odgi_paths_matrix:
 	'''
-	odgi build non-binary haplotype matrix
+	https://github.com/pangenome/odgi
 	'''
 	input:
 		rules.odgi_chop.output
@@ -58,19 +62,22 @@ rule odgi_paths_matrix:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://pangenome/odgi:1707818641'
+	benchmark:
+		'benchmarks/{region}.odgi_paths_matrix.benchmark.txt'
 	shell:
 		'''
 		odgi paths \
 		-i {input} \
-		-H | cut -f 1,4- | gzip > {output}
+		-H | \
+		cut -f 1,4- | gzip > {output}
 		'''
 
 rule odgi_similarity:
 	'''
-	odgi similarity
+	https://github.com/pangenome/odgi
 	'''
 	input:
-		rules.pggb.output
+		rules.pggb_construct.output
 	output:
 		config['output'] + '/odgi/similarity/{region}.tsv'
 	threads:
@@ -80,15 +87,17 @@ rule odgi_similarity:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://pangenome/odgi:1707818641'
+	benchmark:
+		'benchmarks/{region}.odgi_similarity.benchmark.txt'
 	shell:
 		'''
 		odgi similarity \
 		-i {input} > {output}
 		'''
 
-rule cluster:
+rule make_clusters:
 	'''
-	cluster
+	https://github.com/davidebolo1993/cosigt
 	'''
 	input:
 		rules.odgi_similarity.output
@@ -101,6 +110,8 @@ rule cluster:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://davidebolo1993/cosigt_workflow:latest'
+	benchmark:
+		'benchmarks/{region}.make_clusters.benchmark.txt'
 	params:
 		prefix=config['output'] + '/cluster/{region}'
 	shell:

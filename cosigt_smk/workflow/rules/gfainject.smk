@@ -1,10 +1,10 @@
-rule gfa_inject:
+rule gfainject_inject:
 	'''
-	gfainject
+	https://github.com/ekg/gfainject
 	'''
 	input:
 		gfa=rules.odgi_view.output,
-		bam=rules.bwa_mem2_samtools_sort.output
+		bam=rules.bwamem2_mem_samtools_sort.output
 	output:
 		config['output'] + '/gfainject/{sample}/{region}.gaf'
 	threads:
@@ -14,9 +14,11 @@ rule gfa_inject:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://davidebolo1993/cosigt_workflow:latest'
-	params:
-
+	benchmark:
+		'benchmarks/{sample}.{region}.gfainject_inject.benchmark.txt'
 	shell:
 		'''
-		gfainject --gfa {input.gfa} --bam {input.bam} > {output}
+		gfainject \
+		--gfa {input.gfa} \
+		--bam {input.bam} > {output}
 		'''

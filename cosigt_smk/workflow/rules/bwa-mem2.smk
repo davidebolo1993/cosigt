@@ -1,11 +1,11 @@
-rule bwa_mem2_index:
+rule bwamem2_index:
 	'''
-	bwa index
+	https://github.com/bwa-mem2/bwa-mem2
 	'''
 	input:
-		rules.odgi_paths_fasta.output
+		rules.pyfaidx_extract.output
 	output:
-		multiext(config['output'] + '/odgi/paths/fasta/{region}.fa', '.bwt.2bit.64', '.pac', '.ann', '.amb', '.0123')	
+		multiext(config['output'] + '/pyfaidx/{region}.fasta', '.bwt.2bit.64', '.pac', '.ann', '.amb', '.0123')	
 	threads:
 		1
 	resources:
@@ -13,18 +13,21 @@ rule bwa_mem2_index:
 		time=lambda wildcards, attempt: attempt * config['bwa-mem2']['time']
 	container:
 		'docker://davidebolo1993/cosigt_workflow:latest'
+	benchmark:
+		'benchmarks/{region}.bwamem2_index.benchmark.txt'
 	shell:
 		'''
 		bwa-mem2 index {input}
 		'''
 
-rule bwa_mem2_samtools_sort:
+rule bwamem2_mem_samtools_sort:
 	'''
-	bwa-mem2 and sam-to-bam conversion with samtools
+	https://github.com/bwa-mem2/bwa-mem2
+	https://github.com/samtools/samtools
 	'''
 	input:
-		ref=rules.odgi_paths_fasta.output,
-		idx=rules.bwa_mem2_index.output,
+		ref=rules.pyfaidx_extract.output,
+		idx=rules.bwamem2_index.output,
 		sample=rules.samtools_fasta.output
 	output:
 		config['output'] + '/bwa-mem2/{sample}/{region}.realigned.bam'
@@ -35,7 +38,14 @@ rule bwa_mem2_samtools_sort:
 		time=lambda wildcards, attempt: attempt * config['bwa-mem2']['time']
 	container:
 		'docker://davidebolo1993/cosigt_workflow:latest'
+	benchmark:
+		'benchmarks/{sample}.{region}.bwamem2_mem_samtools_sort.benchmark.txt'
 	shell:
 		'''
-		bwa-mem2 mem -t {threads} {input.ref} {input.sample} | samtools sort -@ {threads} - > {output}
+		bwa-mem2 mem \
+		-t {threads} \
+		{input.ref} \
+		{input.sample} | samtools sort \
+		-@ {threads} \
+		- > {output}
 		'''
