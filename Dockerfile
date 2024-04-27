@@ -107,12 +107,10 @@ RUN wget https://github.com/arq5x/bedtools2/releases/download/v2.31.0/bedtools.s
 ENV PATH /opt:$PATH
 
 ##install gafpack
-##checkout to a specific version
-##we need to git bisect in order to understand what is not working properly with the newest version - git bisect (?)
 
 RUN git clone https://github.com/ekg/gafpack.git \
 	&& cd gafpack \
-	&& git checkout ad31875b6914d964c6fd72d1bf334f0843538fb6 \
+	#&& git checkout ad31875b6914d964c6fd72d1bf334f0843538fb6 \
 	&& cargo install --force --path .
 
 ENV PATH /opt/gafpack/target/release:$PATH
