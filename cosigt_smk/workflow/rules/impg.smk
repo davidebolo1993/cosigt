@@ -23,8 +23,8 @@ rule impg_project:
 		impg \
 		-p {input.paf} \
 		-b {input.region} \
-		-x \
-		cut -f 1-3 |\
+		-x | \
+		cut -f 1-3 | \
 		grep -v \
 		-f {params.exclude} > {output}
 		'''
