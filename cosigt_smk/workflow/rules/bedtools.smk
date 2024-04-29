@@ -21,6 +21,6 @@ rule bedtools_merge:
 		bedtools sort \
 		-i {input} | \
 		bedtools merge \
-		-d 50000 \
+		-d 100000 \
 		-i - > {output}
 		'''	
