@@ -57,7 +57,7 @@ def agglomerative(mtx,prefix):
 			
 			group=list(np.take(mtx.columns.tolist(),np.where(cluster.labels_ == g))[0])
 
-			for h in group:
+			for h in group: 
 
 				hapdict[h] = 'HG'+str(i)
 

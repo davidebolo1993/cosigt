@@ -122,12 +122,12 @@ def main():
 
 	#default
 	metrics.add_argument('--std_time', help='max time (minutes) - default [1]',type=int, default=1)
-	metrics.add_argument('--std_memory', help='memory (mb) - default [1000]',type=int, default=1000)
+	metrics.add_argument('--std_memory', help='memory (mb) - default [500]',type=int, default=500)
 
 	#alignment
 	metrics.add_argument('--aln_threads', help='# threads - aligner [5]',type=int, default=5)
 	metrics.add_argument('--aln_time', help='max time (minutes) - aligner [2]',type=int, default=5)
-	metrics.add_argument('--aln_memory', help='max memory (mb) - aligner [5000]',type=int, default=10000)
+	metrics.add_argument('--aln_memory', help='max memory (mb) - aligner [5000]',type=int, default=5000)
 	metrics.add_argument('--aln_preset', help='preset for minimap2 [map-ont] - ignore if not using the long branch of cosigt', type=str, default='map-ont')
 
 	#samtools
@@ -192,7 +192,7 @@ def main():
 		open(blcklst_out, 'w').close()
 
 	#symlink alignments
-	alns=sorted(glob.glob(args.alignments+'/*am*'))
+	alns=sorted([x for x in glob.glob(args.alignments + '/**/*am*', recursive=True) if os.path.isfile(x)])
 
 	with open(out_samples, 'w') as samples_out:
 

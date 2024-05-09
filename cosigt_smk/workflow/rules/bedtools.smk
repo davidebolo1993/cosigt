@@ -23,4 +23,4 @@ rule bedtools_merge:
 		bedtools merge \
 		-d 100000 \
 		-i - > {output}
-		'''	
+		'''
