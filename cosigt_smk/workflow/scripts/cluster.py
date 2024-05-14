@@ -80,14 +80,13 @@ def agglomerative(mtx,prefix):
             leaf_label_func=lambda x: hgl[x],
             leaf_rotation=45,
             leaf_font_size=5,
-            show_contracted=True 
+            show_contracted=False 
             )
 	plt.xlabel('haplotype group (# haplotypes)')
 	plt.ylabel('jaccard dissimilarity')
 	plt.xticks(rotation = 45)
 	plt.savefig(prefix + '.clusters.pdf')
 	plt.close()
-
 
 
 def LinkageMatrix(model):
