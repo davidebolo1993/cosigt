@@ -104,6 +104,11 @@ RUN wget https://github.com/arq5x/bedtools2/releases/download/v2.31.0/bedtools.s
 	&& chmod +x bedtools.static \
 	&& mv bedtools.static bedtools
 
+## install megadepth
+
+RUN wget https://github.com/ChristopherWilks/megadepth/releases/download/1.2.0/megadepth \
+	&& chmod +x megadepth
+
 ENV PATH /opt:$PATH
 
 ##install gafpack
@@ -125,12 +130,11 @@ ENV PATH /opt/gfainject/target/release:$PATH
 
 ##install impg
 
-RUN git clone https://github.com/ekg/impg.git \
+RUN git clone https://github.com/pangenome/impg \
 	&& cd impg \
 	&& cargo install --force --path .
 
 ENV PATH /opt/impg/target/release:$PATH
-
 
 ##install cosigt
 
