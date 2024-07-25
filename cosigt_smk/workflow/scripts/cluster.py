@@ -15,8 +15,8 @@ def read_tsv(tsv):
 	'''
 	read tsv with distances between haplotypes from odgi similarity
 	'''
-
-	return 1-pd.read_table(tsv).set_index(['group.a', 'group.b'])['jaccard.similarity'].sort_index().unstack()
+	
+	return 1-pd.read_table(tsv).pivot(index='group.a',columns ='group.b',values='jaccard.similarity')
 
 def agglomerative(mtx,prefix):
 
@@ -30,7 +30,8 @@ def agglomerative(mtx,prefix):
 
 	sil_score=[] #all silhouette scores
 
-	range_n_clusters = range(2,mtx.shape[0])
+	maxc=round(mtx.shape[0]/100*33)
+	range_n_clusters = range(2,maxc)
 
 	for i,n_clusters in enumerate(range_n_clusters):
 

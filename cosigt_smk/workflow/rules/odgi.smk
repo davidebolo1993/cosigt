@@ -72,6 +72,33 @@ rule odgi_paths_matrix:
 		cut -f 1,4- | gzip > {output}
 		'''
 
+
+rule cosine_distance_from_paths:
+	'''
+	https://github.com/davidebolo1993/cosigt
+	'''
+
+	input:
+		rules.odgi_paths_matrix.output
+	output:
+		config['output'] + '/cosine_paths/{region}.tsv'
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
+	container:
+		'docker://davidebolo1993/cosigt_workflow:latest'
+	benchmark:
+		'benchmarks/{region}.cosine_distance_from_paths.benchmark.txt'
+	shell:
+		'''
+		python workflow/scripts/combos.py \
+			{input} \
+			{output}
+		'''
+
+
 rule odgi_similarity:
 	'''
 	https://github.com/pangenome/odgi
@@ -94,6 +121,7 @@ rule odgi_similarity:
 		odgi similarity \
 		-i {input} > {output}
 		'''
+
 
 rule make_clusters:
 	'''
@@ -120,3 +148,131 @@ rule make_clusters:
 			{input} \
 			{params.prefix}
 		'''
+
+
+#plot structures when using rule annotate
+rule odgi_procbed:
+	'''
+	https://github.com/pangenome/odgi
+	'''
+	input:
+		og=rules.pggb_construct.output,
+		bed='resources/annotations/{region}.bed'
+	output:
+		config['output'] + '/odgi/procbed/{region}.bed'
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
+	container:
+		'docker://pangenome/odgi:1707818641'
+	benchmark:
+		'benchmarks/{region}.odgi_procbed.benchmark.txt'
+	shell:
+		'''
+		odgi procbed  \
+		-i {input.og} \
+		-b {input.bed} > {output}
+		'''
+
+
+rule annot_names:
+	'''
+	https://github.com/davidebolo1993/cosigt
+	'''
+	input:
+		rules.odgi_procbed.output
+	output:
+		config['output'] + '/odgi/procbed/{region}.names.txt'
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
+	benchmark:
+		'benchmarks/{region}.annot_names.benchmark.txt'
+	shell:
+		'''
+		cat <(cut -f 4 {input}) <(cut -f 4 {input} | sed 's/$/_inv/g') > {output}
+		'''
+
+
+rule odgi_inject:
+	'''
+	https://github.com/pangenome/odgi
+	'''
+	input:
+		og=rules.pggb_construct.output,
+		bed=rules.odgi_procbed.output
+	output:
+		config['output'] + '/odgi/inject/{region}.og'
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
+	container:
+		'docker://pangenome/odgi:1707818641'
+	benchmark:
+		'benchmarks/{region}.odgi_inject.benchmark.txt'
+	shell:
+		'''
+		odgi inject \
+			-i {input.og} \
+			-b {input.bed} \
+			-o {output}
+		'''
+
+
+rule odgi_flip:
+	'''
+	https://github.com/pangenome/odgi
+	'''
+	input:
+		rules.odgi_inject.output,
+	output:
+		config['output'] + '/odgi/flip/{region}.og'
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
+	container:
+		'docker://pangenome/odgi:1707818641'
+	benchmark:
+		'benchmarks/{region}.odgi_flip.benchmark.txt'
+	shell:
+		'''
+		odgi flip \
+			-i {input} \
+			-o {output}
+		'''	
+
+
+rule odgi_untangle:
+	'''
+	https://github.com/pangenome/odgi
+	'''
+	input:
+		og=rules.odgi_flip.output,
+		annots=rules.annot_names.output
+	output:
+		config['output'] + '/odgi/untangle/{region}.gggenes.tsv'
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
+	container:
+		'docker://pangenome/odgi:1707818641'
+	benchmark:
+		'benchmarks/{region}.odgi_untangle.benchmark.txt'
+	shell:
+		'''
+		odgi untangle \
+			-R {input.annots} \
+			-i {input.og} \
+			-j 0.3 \
+			-g > {output}
+		'''	

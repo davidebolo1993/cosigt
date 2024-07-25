@@ -49,3 +49,4 @@ rule bwamem2_mem_samtools_sort:
 		-@ {threads} \
 		- > {output}
 		'''
+
