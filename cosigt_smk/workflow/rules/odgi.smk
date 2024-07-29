@@ -73,32 +73,6 @@ rule odgi_paths_matrix:
 		'''
 
 
-rule cosine_distance_from_paths:
-	'''
-	https://github.com/davidebolo1993/cosigt
-	'''
-
-	input:
-		rules.odgi_paths_matrix.output
-	output:
-		config['output'] + '/cosine_paths/{region}.tsv'
-	threads:
-		1
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['time']
-	container:
-		'docker://davidebolo1993/cosigt_workflow:latest'
-	benchmark:
-		'benchmarks/{region}.cosine_distance_from_paths.benchmark.txt'
-	shell:
-		'''
-		python workflow/scripts/combos.py \
-			{input} \
-			{output}
-		'''
-
-
 rule odgi_similarity:
 	'''
 	https://github.com/pangenome/odgi

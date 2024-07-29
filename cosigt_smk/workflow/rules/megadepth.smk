@@ -5,7 +5,7 @@ rule megadepth_bam_to_bigwig:
 	input:
 		rules.bwamem2_mem_samtools_sort.output
 	output:
-		config['output'] + '/megadepth/{sample}/{region}.all.bw'
+		config['output'] + '/bwa-mem2/{sample}/{region}.realigned.bam.all.bw'
 	threads:
 		1
 	resources:
@@ -15,12 +15,9 @@ rule megadepth_bam_to_bigwig:
 		'docker://davidebolo1993/cosigt_workflow:latest'
 	benchmark:
 		'benchmarks/{sample}.{region}.megadepth_bam_to_bigwig.benchmark.txt'
-	params:
-		prefix=config['output'] + '/megadepth/{sample}/{region}
 	shell:
 		'''
 		megadepth \
 		--bigwig \
-		--prefix {params.prefix} \
 		{input}
 		'''

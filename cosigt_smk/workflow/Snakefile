@@ -30,4 +30,4 @@ rule annotate:
 
 rule debug:
 	input:
-		expand(config['output'] + '/megadepth/{sample}/{region}.all.bw', sample=df['sample_id'].tolist(), region=config['region'])
+		expand(config['output'] + '/bwa-mem2/{sample}/{region}.realigned.bam.all.bw', sample=df['sample_id'].tolist(), region=config['region'])

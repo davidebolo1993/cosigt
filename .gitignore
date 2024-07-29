@@ -11,3 +11,4 @@ cosigt_smk/snakemake.run.sh
 cosigt_smk/config/*
 cosigt_smk/benchmarks/*
 cosigt_smk/.*
+cosigt_smk/debug
