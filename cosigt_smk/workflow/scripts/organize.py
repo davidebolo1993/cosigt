@@ -83,6 +83,7 @@ def default_parameters(args):
 	d['pggb']['threads'] = args.pggb_threads
 	d['pggb']['mem_mb'] = args.pggb_memory
 	d['pggb']['time'] =  args.pggb_time
+	d['pggb']['temp_dir'] = args.temp_dir
 	d['pggb']['params'] =  args.pggb_params
 
 	#default
@@ -139,6 +140,7 @@ def main():
 	metrics.add_argument('--pggb_threads', help='# threads - pggb [24]',type=int, default=24)
 	metrics.add_argument('--pggb_time', help='max time (minutes) - pggb [35]',type=int, default=35)
 	metrics.add_argument('--pggb_memory', help='max memory (mb) - pggb [30000]',type=int, default=30000)
+	metrics.add_argument('--pggb_temp_dir', help='temporary directory - pggb [working directory]', type=str, default=os.getcwd())
 	metrics.add_argument('--pggb_params', help='additional parameters for pggb [-c 2]',type=str, default='-c 2')
 
 	args = parser.parse_args()

@@ -18,6 +18,7 @@ rule pggb_construct:
 		'benchmarks/{region}.pggb_construct.benchmark.txt'
 	params:
 		prefix=config['output'] + '/pggb/{region}',
+		temp_dir=config['pggb']['temp_dir'],
 		flags=config['pggb']['params']
 	shell:
 		'''
@@ -25,6 +26,7 @@ rule pggb_construct:
 			-i {input.fasta} \
 			-o {params.prefix} \
 			-t {threads} \
+			-D {params.temp_dir} \
 			{params.flags} \
 		&& mv {params.prefix}/*smooth.final.og {output}
 		'''
