@@ -83,7 +83,7 @@ def default_parameters(args):
 	d['pggb']['threads'] = args.pggb_threads
 	d['pggb']['mem_mb'] = args.pggb_memory
 	d['pggb']['time'] =  args.pggb_time
-	d['pggb']['temp_dir'] = args.temp_dir
+	d['pggb']['temp_dir'] = args.pggb_temp_dir
 	d['pggb']['params'] =  args.pggb_params
 
 	#default
