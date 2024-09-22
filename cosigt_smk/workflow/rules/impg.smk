@@ -6,7 +6,7 @@ rule impg_project:
 		paf=config['paf'],
 		region=lambda wildcards: glob('resources/regions/{region}.bed'.format(region=wildcards.region))
 	output:
-		config['output'] + '/impg/{region}.bed'
+		config['output'] + '/impg/{region}.bedpe'
 	threads:
 		1
 	resources:
@@ -24,7 +24,6 @@ rule impg_project:
 		-p {input.paf} \
 		-b {input.region} \
 		-x | \
-		cut -f 1-3 | \
 		grep -v \
 		-f {params.exclude} > {output}
 		'''
