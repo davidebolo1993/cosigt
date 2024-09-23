@@ -19,6 +19,9 @@ rule make_reference_bed:
 		'''
 		grep {params.path} \
 		{input} | \
+		cut -f 4-6 | \
+		bedtools sort -i - | \
+		bedtools merge -i - | \
 		sed 's/#/\t/' | \
 		rev | \
 		cut -f 1-3 | \
