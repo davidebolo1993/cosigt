@@ -83,6 +83,7 @@ def default_parameters(args):
 	d['pggb']['threads'] = args.pggb_threads
 	d['pggb']['mem_mb'] = args.pggb_memory
 	d['pggb']['time'] =  args.pggb_time
+	d['pggb']['tmpdir'] = args.pggb_tmpdir
 	d['pggb']['params'] =  args.pggb_params
 
 	#default
@@ -140,6 +141,8 @@ def main():
 	metrics.add_argument('--pggb_time', help='max time (minutes) - pggb [35]',type=int, default=35)
 	metrics.add_argument('--pggb_memory', help='max memory (mb) - pggb [30000]',type=int, default=30000)
 	metrics.add_argument('--pggb_params', help='additional parameters for pggb [-c 2]',type=str, default='-c 2')
+	metrics.add_argument('--pggb_tmpdir', help='temporary directory - pggb [working directory]',type=str, default=os.getcwd())
+
 
 	args = parser.parse_args()
 
@@ -302,7 +305,7 @@ def main():
 	os.remove(out_yaml_tmp)
 
 	#write command
-	singpath=','.join(list(set([os.path.abspath(args.alignments),os.path.dirname(os.path.abspath(args.paf)),os.path.dirname(os.path.abspath(args.fasta)), os.path.dirname(os.path.abspath(args.reference)),args.binds])))
+	singpath=','.join(list(set([os.path.abspath(args.alignments),os.path.dirname(os.path.abspath(args.paf)),os.path.dirname(os.path.abspath(args.fasta)), os.path.dirname(os.path.abspath(args.reference)),args.binds, os.path.abspath(args.pggb_tmpdir)])))
 	command_out=' '.join(['snakemake --profile config/slurm --singularity-args "-B '+ singpath + '" cosigt'])
 	
 	with open('snakemake.run.sh', 'w') as out:
