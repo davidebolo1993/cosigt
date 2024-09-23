@@ -11,6 +11,8 @@ rule make_reference_bed:
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
+	container:
+		'docker://davidebolo1993/cosigt_workflow:latest'
 	benchmark:
 		'benchmarks/{region}.make_reference_bed.benchmark.txt'
 	params:
