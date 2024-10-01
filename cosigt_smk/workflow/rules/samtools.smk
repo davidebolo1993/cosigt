@@ -83,5 +83,5 @@ rule samtools_fasta:
 		'''
 		samtools fasta \
 		-@ {threads} \
-		{input} | pigz > {output}
+		{input} | gzip > {output}
 		'''

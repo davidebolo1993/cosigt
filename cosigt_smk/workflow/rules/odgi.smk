@@ -12,7 +12,7 @@ rule odgi_chop:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://pangenome/odgi:1707818641'
+		'docker://pangenome/odgi:1726671973'
 	benchmark:
 		'benchmarks/{region}.odgi_chop.benchmark.txt'
 	shell:
@@ -37,7 +37,7 @@ rule odgi_view:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://pangenome/odgi:1707818641'
+		'docker://pangenome/odgi:1726671973'
 	benchmark:
 		'benchmarks/{region}.odgi_view.benchmark.txt'
 	shell:
@@ -61,7 +61,7 @@ rule odgi_paths_matrix:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://pangenome/odgi:1707818641'
+		'docker://pangenome/odgi:1726671973'
 	benchmark:
 		'benchmarks/{region}.odgi_paths_matrix.benchmark.txt'
 	shell:
@@ -87,7 +87,7 @@ rule odgi_similarity:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://pangenome/odgi:1707818641'
+		'docker://pangenome/odgi:1726671973'
 	benchmark:
 		'benchmarks/{region}.odgi_similarity.benchmark.txt'
 	shell:
@@ -140,7 +140,7 @@ rule odgi_procbed:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://pangenome/odgi:1707818641'
+		'docker://pangenome/odgi:1726671973'
 	benchmark:
 		'benchmarks/{region}.odgi_procbed.benchmark.txt'
 	shell:
@@ -187,7 +187,7 @@ rule odgi_inject:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://pangenome/odgi:1707818641'
+		'docker://pangenome/odgi:1726671973'
 	benchmark:
 		'benchmarks/{region}.odgi_inject.benchmark.txt'
 	shell:
@@ -213,7 +213,7 @@ rule odgi_flip:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://pangenome/odgi:1707818641'
+		'docker://pangenome/odgi:1726671973'
 	benchmark:
 		'benchmarks/{region}.odgi_flip.benchmark.txt'
 	shell:
@@ -239,7 +239,7 @@ rule odgi_untangle:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://pangenome/odgi:1707818641'
+		'docker://pangenome/odgi:1726671973'
 	benchmark:
 		'benchmarks/{region}.odgi_untangle.benchmark.txt'
 	shell:

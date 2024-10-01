@@ -21,5 +21,5 @@ rule gafpack_coverage:
 		gafpack \
 		-g {input.gfa} \
 		-a {input.gaf} \
-		--len-scale | pigz > {output}
+		--len-scale | gzip > {output}
 		'''

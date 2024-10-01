@@ -73,11 +73,11 @@ RUN wget https://github.com/samtools/samtools/releases/download/1.19.2/samtools-
 	&& make \
 	&& make install
 
-#no need to env path, because of make install - should be sufficient
 ##install bwa-mem
 
 RUN git clone https://github.com/lh3/bwa.git \
 	&& cd bwa \
+	&& git checkout 79b230de48c74156f9d3c26795a360fc5a2d5d3b \
 	&& make
 
 ENV PATH /opt/bwa:$PATH
@@ -115,15 +115,16 @@ ENV PATH /opt:$PATH
 
 RUN git clone https://github.com/ekg/gafpack.git \
 	&& cd gafpack \
-	#&& git checkout ad31875b6914d964c6fd72d1bf334f0843538fb6 \
+	&& git checkout cf2e96057c4efe86317caa990b53f1fc1fdc6367 \
 	&& cargo install --force --path .
 
 ENV PATH /opt/gafpack/target/release:$PATH
 
 ##install gfainject
 
-RUN git clone https://github.com/ekg/gfainject.git \
+RUN git clone https://github.com/chfi/gfainject.git \
 	&& cd gfainject \
+	&& git checkout e56cba362047e7137352858dfba5f56e944cbf06 \
 	&& cargo install --force --path .
 
 ENV PATH /opt/gfainject/target/release:$PATH
@@ -132,6 +133,7 @@ ENV PATH /opt/gfainject/target/release:$PATH
 
 RUN git clone https://github.com/pangenome/impg \
 	&& cd impg \
+	&& git checkout 4cf6009160ec9d64e9f9972248511a63d6d012a5 \
 	&& cargo install --force --path .
 
 ENV PATH /opt/impg/target/release:$PATH
