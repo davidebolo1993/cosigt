@@ -1,5 +1,6 @@
 !.gitignore
 !*/.gitignore
+!*/*/.gitignore
 go.sum
 go.mod
 cosigt
