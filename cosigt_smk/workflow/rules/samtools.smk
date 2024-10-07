@@ -30,44 +30,13 @@ rule make_reference_bed:
 		rev > {output}
 		'''
 	
-rule samtools_view:
+rule samtools_fasta:
 	'''
 	https://github.com/samtools/samtools
 	'''
 	input:
 		sample=lambda wildcards: glob('resources/alignments/{sample}.*am'.format(sample=wildcards.sample)),
 		bed=rules.make_reference_bed.output
-	output:
-		config['output'] + '/samtools/view/{sample}/{region}.bam'
-	threads:
-		config['samtools']['threads']
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['samtools']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['samtools']['time']
-	container:
-		'docker://davidebolo1993/cosigt_workflow:latest'
-	benchmark:
-		'benchmarks/{sample}.{region}.samtools_view.benchmark.txt'
-	params:
-		ref=config['reference']
-	shell:
-		'''
-		samtools view \
-		-O bam \
-		-o {output} \
-		-T {params.ref} \
-		-@ {threads} \
-		-L {input.bed} \
-		-M \
-		{input.sample}
-		'''
-
-rule samtools_fasta:
-	'''
-	https://github.com/samtools/samtools
-	'''
-	input:
-		rules.samtools_view.output
 	output:
 		config['output'] + '/samtools/fasta/{sample}/{region}.fasta.gz'
 	threads:
@@ -79,9 +48,16 @@ rule samtools_fasta:
 		'docker://davidebolo1993/cosigt_workflow:latest'
 	benchmark:
 		'benchmarks/{sample}.{region}.samtools_fasta.benchmark.txt'
+	params:
+		ref=config['reference']
 	shell:
 		'''
-		samtools fasta \
+		samtools view \
+		-T {params.ref} \
 		-@ {threads} \
-		{input} | gzip > {output}
+		-L {input.bed} \
+		-M \
+		{input.sample} | samtools fasta \
+		-@ {threads} \
+		- | gzip > {output}
 		'''
