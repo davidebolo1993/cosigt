@@ -57,6 +57,7 @@ rule samtools_fasta:
 		-@ {threads} \
 		-L {input.bed} \
 		-M \
+		-b \
 		{input.sample} | samtools fasta \
 		-@ {threads} \
 		- | gzip > {output}

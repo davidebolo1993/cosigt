@@ -24,7 +24,29 @@ rule pansnspec_toref:
         $(echo {params.path} | cut -d "#" -f 2) | \
         sed "1 s/^.*$/>{params.path}/" \
         > {output}
-        '''        
+        ''' 
+
+rule index_assemblies:
+    '''
+    https://github.com/davidebolo1993/cosigt
+    '''
+    input:
+        config['assemblies']
+    output:
+        config['assemblies'] + '.fai'
+    threads:
+        1
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+        time=lambda wildcards, attempt: attempt * config['default']['time']
+    container:
+        'docker://davidebolo1993/cosigt_workflow:latest'
+    benchmark:
+        'benchmarks/index_assemblies.benchmark.txt'
+    shell:
+        '''
+        samtools faidx {input}
+        '''                
 
 rule wfmash_align:
     '''
@@ -32,6 +54,7 @@ rule wfmash_align:
     '''
     input:
         queries=config['assemblies'],
+        index=rules.index_assemblies.output,
         target=rules.pansnspec_toref.output
     output:
         config['output'] + '/wfmash/queries_to_target.paf'
