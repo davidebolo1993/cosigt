@@ -30,10 +30,10 @@ rule wfmash_align:
     https://github.com/waveygang/wfmash
     '''
     input:
-        asm=config['assemblies'],
+        queries=config['assemblies'],
         target=rules.pansnspec_toref.output
     output:
-        config['output'] + '/wfmash/{region}.paf'
+        config['output'] + '/wfmash/queries_to_target.paf'
     threads:
         config['wfmash']['threads']
     resources:
@@ -50,7 +50,7 @@ rule wfmash_align:
         '''
         wfmash \
             {input.target} \
-            {input.asm} \
+            {input.queries} \
             -X \
             -t {threads} \
             -B {params.tmpdir} \
