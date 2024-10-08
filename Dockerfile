@@ -1,47 +1,60 @@
-FROM ubuntu:latest
+FROM debian:bullseye-slim AS binary
 LABEL description="cosigt"
-LABEL base_image="ubuntu:latest"
+LABEL base_image="debian:bullseye-slim"
 LABEL software="cosigt"
 LABEL about.home="https://github.com/davidebolo1993/cosigt"
 LABEL about.license="GPLv3"
 
 ARG DEBIAN_FRONTEND=noninteractive
 #install basic libraries and python
-#this is useful for having control on all the depenendencies
-#odgi and pggb are excluded here
 
 WORKDIR /opt
 
 RUN apt-get update
 
-RUN apt-get -y install build-essential \
+RUN apt-get -y install \
+	build-essential \
 	software-properties-common \
-	wget curl git \
-	bzip2 libbz2-dev \
-	zlib1g zlib1g-dev \
+	bash \
+	wget \
+	curl \
+	git \
+	bzip2 \
+	libbz2-dev \
+	zlib1g \
+	zlib1g-dev \
 	liblzma-dev \
 	libssl-dev \
 	libncurses5-dev \
 	libz-dev \
-	python3-dev python3-pip \ 
+	python3-dev \
+	python3-pip \ 
 	libjemalloc-dev \
-	cmake make g++ \
+	cmake \
+	make \
+	g++ \
 	libhts-dev \
 	libzstd-dev \
 	autoconf \
 	libatomic-ops-dev \
 	pkg-config \
-	pigz \
 	clang-14 \ 
-	libomp5 libomp-dev libssl-dev libssl3 pkg-config \
-	zip unzip
+	libomp5 \
+	libomp-dev \
+	libssl-dev \
+	libssl3 \
+	pkg-config \
+	zip \
+	unzip
 
 #install golang
 RUN add-apt-repository ppa:longsleep/golang-backports
 
 RUN apt-get -y install golang-go \
 	&& apt-get -y clean all \
-	&& rm -rf /var/cache
+	&& apt-get -y purge \
+	&& rm -rf /var/cache \
+	&& rm -rf /var/lib/apt/lists/*
 
 #install rust
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
@@ -71,15 +84,19 @@ RUN wget https://github.com/samtools/samtools/releases/download/1.21/samtools-1.
 	&& cd samtools-1.21 \
 	&& ./configure \
 	&& make \
-	&& make install
+	&& cp samtools /opt/samtools \
+	&& cd .. \
+	&& rm -rf samtools-1.21
 
 ##install bwa-mem
 RUN git clone https://github.com/lh3/bwa.git \
 	&& cd bwa \
 	&& git checkout 79b230de48c74156f9d3c26795a360fc5a2d5d3b \
-	&& make
-
-ENV PATH /opt/bwa:$PATH
+	&& make \
+	&& cp bwa ../bwa-tmp \
+	&& cd .. \
+	&& rm -rf bwa \
+	&& mv bwa-tmp bwa
 
 ##install bwa-mem2
 RUN wget https://github.com/bwa-mem2/bwa-mem2/releases/download/v2.2.1/bwa-mem2-2.2.1_x64-linux.tar.bz2 \
@@ -108,37 +125,42 @@ RUN wget https://github.com/ChristopherWilks/megadepth/releases/download/1.2.0/m
 RUN wget https://github.com/waveygang/wfmash/releases/download/v0.15.0/wfmash \
 	&& chmod +x wfmash
 
-ENV PATH /opt:$PATH
-
 ##install gafpack
 RUN git clone https://github.com/ekg/gafpack.git \
 	&& cd gafpack \
 	&& git checkout cf2e96057c4efe86317caa990b53f1fc1fdc6367 \
-	&& cargo install --force --path .
-
-ENV PATH /opt/gafpack/target/release:$PATH
+	&& cargo install --force --path . \
+	&& cp target/release/gafpack ../gafpack-tmp \
+	&& cd .. \
+	&& rm -rf gafpack \
+	&& mv gafpack-tmp gafpack
 
 ##install gfainject
 RUN git clone https://github.com/chfi/gfainject.git \
 	&& cd gfainject \
 	&& git checkout e56cba362047e7137352858dfba5f56e944cbf06 \
-	&& cargo install --force --path .
-
-ENV PATH /opt/gfainject/target/release:$PATH
+	&& cargo install --force --path . \
+	&& cp target/release/gfainject ../gfainject-tmp \
+	&& cd .. \
+	&& rm -rf gfainject \
+	&& mv gfainject-tmp gfainject
 
 ##install impg
 RUN git clone https://github.com/pangenome/impg \
 	&& cd impg \
 	&& git checkout 4cf6009160ec9d64e9f9972248511a63d6d012a5 \
-	&& cargo install --force --path .
-
-ENV PATH /opt/impg/target/release:$PATH
+	&& cargo install --force --path . \
+	&& cp target/release/impg ../impg-tmp \
+	&& cd .. \
+	&& rm -rf impg \
+	&& mv impg-tmp impg
 
 ##install cosigt
 RUN git clone https://github.com/davidebolo1993/cosigt.git \
 	&& cd cosigt \
 	&& go mod init cosigt \
 	&& go mod tidy \
-	&& go build cosigt
-
-ENV PATH /opt/cosigt:$PATH
+	&& go build cosigt \
+	&& cp cosigt ../cosigt-tmp \
+	&& rm -rf cosigt \
+	&& mv cosigt-tmp cosigt
