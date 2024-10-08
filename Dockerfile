@@ -38,11 +38,9 @@ RUN apt-get -y install \
 	autoconf \
 	libatomic-ops-dev \
 	pkg-config \
-	clang-14 \ 
 	libomp5 \
 	libomp-dev \
 	libssl-dev \
-	libssl3 \
 	pkg-config \
 	zip \
 	unzip
