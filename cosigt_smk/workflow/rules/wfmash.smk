@@ -42,7 +42,7 @@ rule wfmash_align:
     container:
         'docker://davidebolo1993/cosigt_workflow:latest'
     benchmark:
-        'benchmarks/{region}.wfmash_align.benchmark.txt'
+        'benchmarks/wfmash_align.benchmark.txt'
     params:
         flags=config['wfmash']['params'],
         tmpdir=config['wfmash']['tmpdir'] 
