@@ -22,7 +22,7 @@ rule pansnspec_toref:
         samtools faidx \
         {input.ref} \
         $(echo {params.path} | cut -d "#" -f 2) | \
-        sed sed "1 s/^.*$/>{params.path}/" \
+        sed "1 s/^.*$/>{params.path}/" \
         > {output}
         '''        
 
