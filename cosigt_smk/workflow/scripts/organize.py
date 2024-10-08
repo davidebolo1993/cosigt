@@ -86,6 +86,15 @@ def default_parameters(args):
 	d['pggb']['tmpdir'] = args.pggb_tmpdir
 	d['pggb']['params'] =  args.pggb_params
 
+	#wfmash
+	d['wfmash']=dict()
+	d['wfmash']['threads'] = args.wfmash_threads
+	d['wfmash']['mem_mb'] = args.wfmash_memory
+	d['wfmash']['time'] =  args.wfmash_time
+	d['wfmash']['tmpdir'] = args.wfmash_tmpdir
+	d['wfmash']['params'] =  args.wfmash_params
+
+
 	#default
 	d['default']=dict()
 	d['default']['mem_mb'] = args.std_memory
@@ -110,7 +119,6 @@ def main():
 	required.add_argument('-a', '--alignments', help='folder with read-level alignment files (BAM,CRAM) - and their indexes (BAI/CSI,CRAI) - of the individuals to genotype', metavar='FOLDER', required=True)
 	required.add_argument('-r','--reference', help='reference FASTA file - the same the individuals to genotype are aligned to', metavar='FASTA', required=True)
 	required.add_argument('--fasta', help='chromosome-level assemblies in FASTA format', metavar='FASTA', required=True)
-	required.add_argument('--paf', help='pairwise alignment (PAF format) of the assemblies provided with --fasta', metavar='PAF', required=True)
 	required.add_argument('--roi', help='one or more regions of interest in BED format - first column is the assembly to use as reference (PanSN format, # delimiter)', metavar='BED', required=True)
 
 	additional = parser.add_argument_group('Additional I/O arguments')
@@ -143,6 +151,13 @@ def main():
 	metrics.add_argument('--pggb_params', help='additional parameters for pggb [-c 2]',type=str, default='-c 2')
 	metrics.add_argument('--pggb_tmpdir', help='temporary directory - pggb [working directory]',type=str, default=os.getcwd())
 
+	#wfmash
+	metrics.add_argument('--wfmash_threads', help='# threads - wfmash [24]',type=int, default=24)
+	metrics.add_argument('--wfmash_time', help='max time (minutes) - wfmash [35]',type=int, default=35)
+	metrics.add_argument('--wfmash_memory', help='max memory (mb) - wfmash [30000]',type=int, default=30000)
+	metrics.add_argument('--wfmash_params', help='additional parameters for wfmash [-s 10k -p 95]',type=str, default='-s 10k -p 95')
+	metrics.add_argument('--wfmash_tmpdir', help='temporary directory - wfmash [working directory]',type=str, default=os.getcwd())
+	
 
 	args = parser.parse_args()
 
@@ -167,8 +182,6 @@ def main():
 	os.makedirs(out_aln, exist_ok=True)
 	out_fasta=os.path.join(out_resources, 'assemblies')
 	os.makedirs(out_fasta, exist_ok=True)
-	out_paf=os.path.join(out_resources, 'paf')
-	os.makedirs(out_paf, exist_ok=True)
 	out_ref=os.path.join(out_resources, 'reference')
 	os.makedirs(out_ref, exist_ok=True)
 	out_extra=os.path.join(out_resources, 'extra')
@@ -222,19 +235,6 @@ def main():
 	#add to config
 	d['samples'] = out_samples
 
-	#symlink paf
-	out_paf_file=os.path.join(out_paf, os.path.basename(args.paf))
-
-	try:
-
-		os.symlink(os.path.abspath(args.paf), out_paf_file)
-	
-	except:
-
-		pass
-
-	#add to config
-	d['paf'] = out_paf_file
 
 	#symlink assemblies
  
@@ -305,7 +305,7 @@ def main():
 	os.remove(out_yaml_tmp)
 
 	#write command
-	singpath=','.join(list(set([os.path.abspath(args.alignments),os.path.dirname(os.path.abspath(args.paf)),os.path.dirname(os.path.abspath(args.fasta)), os.path.dirname(os.path.abspath(args.reference)),args.binds, os.path.abspath(args.pggb_tmpdir)])))
+	singpath=','.join(list(set([os.path.abspath(args.alignments),os.path.dirname(os.path.abspath(args.paf)),os.path.dirname(os.path.abspath(args.fasta)), os.path.dirname(os.path.abspath(args.reference)),args.binds, os.path.abspath(args.pggb_tmpdir), os.path.abspath(args.wfmash_tmpdir)])))
 	command_out=' '.join(['snakemake --profile config/slurm --singularity-args "-B '+ singpath + '" cosigt'])
 	
 	with open('snakemake.run.sh', 'w') as out:

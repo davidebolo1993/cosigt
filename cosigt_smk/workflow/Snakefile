@@ -8,6 +8,7 @@ df=(pd.read_table(config['samples'], dtype={'sample_id': str, 'cram':str})
 	.sort_index()
 )
 
+include: 'rules/wfmash.smk'
 include: 'rules/impg.smk'
 include: 'rules/bedtools.smk'
 include: 'rules/samtools.smk'

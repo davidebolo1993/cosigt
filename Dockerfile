@@ -65,16 +65,15 @@ RUN pip3 install numpy \
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
 ##install samtools
-RUN wget https://github.com/samtools/samtools/releases/download/1.19.2/samtools-1.19.2.tar.bz2 \
-	&& tar -jxvf samtools-1.19.2.tar.bz2 \
-	&& rm samtools-1.19.2.tar.bz2 \
-	&& cd samtools-1.19.2 \
+RUN wget https://github.com/samtools/samtools/releases/download/1.21/samtools-1.21.tar.bz2 \
+	&& tar -jxvf samtools-1.21.tar.bz2 \
+	&& rm samtools-1.21.tar.bz2 \
+	&& cd samtools-1.21 \
 	&& ./configure \
 	&& make \
 	&& make install
 
 ##install bwa-mem
-
 RUN git clone https://github.com/lh3/bwa.git \
 	&& cd bwa \
 	&& git checkout 79b230de48c74156f9d3c26795a360fc5a2d5d3b \
@@ -83,7 +82,6 @@ RUN git clone https://github.com/lh3/bwa.git \
 ENV PATH /opt/bwa:$PATH
 
 ##install bwa-mem2
-
 RUN wget https://github.com/bwa-mem2/bwa-mem2/releases/download/v2.2.1/bwa-mem2-2.2.1_x64-linux.tar.bz2 \
 	&& tar -jxvf bwa-mem2-2.2.1_x64-linux.tar.bz2 \
 	&& rm bwa-mem2-2.2.1_x64-linux.tar.bz2
@@ -91,7 +89,6 @@ RUN wget https://github.com/bwa-mem2/bwa-mem2/releases/download/v2.2.1/bwa-mem2-
 ENV PATH /opt/bwa-mem2-2.2.1_x64-linux:$PATH
 
 ##install minimap2
-
 RUN wget https://github.com/lh3/minimap2/releases/download/v2.28/minimap2-2.28_x64-linux.tar.bz2 \
 	&& tar -jxvf minimap2-2.28_x64-linux.tar.bz2 \
 	&& rm minimap2-2.28_x64-linux.tar.bz2
@@ -99,20 +96,22 @@ RUN wget https://github.com/lh3/minimap2/releases/download/v2.28/minimap2-2.28_x
 ENV PATH /opt/minimap2-2.28_x64-linux:$PATH
 
 ##install bedtools
-
 RUN wget https://github.com/arq5x/bedtools2/releases/download/v2.31.0/bedtools.static \
 	&& chmod +x bedtools.static \
 	&& mv bedtools.static bedtools
 
 ## install megadepth
-
 RUN wget https://github.com/ChristopherWilks/megadepth/releases/download/1.2.0/megadepth \
 	&& chmod +x megadepth
+
+##install wfmash
+RUN wget https://github.com/waveygang/wfmash/releases/download/v0.21.0/wfmash-v0.21.0-0-g4521c10 \
+	&& mv wfmash-v0.21.0-0-g4521c10 wfmash \
+	&& chmod +x wfmash
 
 ENV PATH /opt:$PATH
 
 ##install gafpack
-
 RUN git clone https://github.com/ekg/gafpack.git \
 	&& cd gafpack \
 	&& git checkout cf2e96057c4efe86317caa990b53f1fc1fdc6367 \
@@ -121,7 +120,6 @@ RUN git clone https://github.com/ekg/gafpack.git \
 ENV PATH /opt/gafpack/target/release:$PATH
 
 ##install gfainject
-
 RUN git clone https://github.com/chfi/gfainject.git \
 	&& cd gfainject \
 	&& git checkout e56cba362047e7137352858dfba5f56e944cbf06 \
@@ -130,7 +128,6 @@ RUN git clone https://github.com/chfi/gfainject.git \
 ENV PATH /opt/gfainject/target/release:$PATH
 
 ##install impg
-
 RUN git clone https://github.com/pangenome/impg \
 	&& cd impg \
 	&& git checkout 4cf6009160ec9d64e9f9972248511a63d6d012a5 \
@@ -139,7 +136,6 @@ RUN git clone https://github.com/pangenome/impg \
 ENV PATH /opt/impg/target/release:$PATH
 
 ##install cosigt
-
 RUN git clone https://github.com/davidebolo1993/cosigt.git \
 	&& cd cosigt \
 	&& go mod init cosigt \
