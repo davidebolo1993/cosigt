@@ -55,7 +55,7 @@ rule wfmash_align:
     https://github.com/waveygang/wfmash
     '''
     input:
-        queries=rules.add_target_to_queries,
+        queries=rules.add_target_to_queries.output,
         target=rules.pansnspec_target.output
     output:
         config['output'] + '/wfmash/queries_to_target.paf'
