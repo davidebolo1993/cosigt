@@ -3,8 +3,7 @@ rule pansnspec_toref:
     https://github.com/davidebolo1993/cosigt
     '''
     input:
-        ref=config['reference'],
-        path=config['path']
+        ref=config['reference']
     output:
         config['output'] + '/wfmash/target.fa'
     threads:
@@ -16,12 +15,14 @@ rule pansnspec_toref:
         'docker://davidebolo1993/cosigt_workflow:latest'
     benchmark:
         'benchmarks/pansnspec_toref.benchmark.txt'
+    params:
+        path=config['path']
     shell:
         '''
         samtools faidx \
         {input.ref} \
-        $(echo {input.path} | cut -d "#" -f 2) | \
-        sed sed "1 s/^.*$/>{input.path}/" \
+        $(echo {params.path} | cut -d "#" -f 2) | \
+        sed sed "1 s/^.*$/>{params.path}/" \
         > {output}
         '''        
 
