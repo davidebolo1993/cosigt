@@ -105,8 +105,7 @@ RUN wget https://github.com/ChristopherWilks/megadepth/releases/download/1.2.0/m
 	&& chmod +x megadepth
 
 ##install wfmash
-RUN wget https://github.com/waveygang/wfmash/releases/download/v0.21.0/wfmash-v0.21.0-0-g4521c10 \
-	&& mv wfmash-v0.21.0-0-g4521c10 wfmash \
+RUN wget https://github.com/waveygang/wfmash/releases/download/v0.15.0/wfmash \
 	&& chmod +x wfmash
 
 ENV PATH /opt:$PATH
