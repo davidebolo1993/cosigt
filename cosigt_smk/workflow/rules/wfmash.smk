@@ -1,4 +1,4 @@
-rule pansnspec_toref:
+rule pansnspec_target:
     '''
     https://github.com/davidebolo1993/cosigt
     '''
@@ -24,16 +24,17 @@ rule pansnspec_toref:
         $(echo {params.path} | cut -d "#" -f 2) | \
         sed "1 s/^.*$/>{params.path}/" \
         > {output}
-        ''' 
+        '''
 
-rule index_assemblies:
+rule add_target_to_queries:
     '''
     https://github.com/davidebolo1993/cosigt
     '''
     input:
-        config['assemblies']
+        queries=config['assemblies'],
+        target=rules.pansnspec_target.output
     output:
-        config['assemblies'] + '.fai'
+         config['output'] + '/wfmash/queries.fa'
     threads:
         1
     resources:
@@ -42,7 +43,29 @@ rule index_assemblies:
     container:
         'docker://davidebolo1993/cosigt_workflow:latest'
     benchmark:
-        'benchmarks/index_assemblies.benchmark.txt'
+        'benchmarks/add_target_to_queries.benchmark.txt'
+    shell:
+        '''
+        cat {input.queries} {input.target} > {output}
+        '''                  
+
+rule index_queries:
+    '''
+    https://github.com/davidebolo1993/cosigt
+    '''
+    input:
+        rules.add_target_to_queries.output
+    output:
+        rules.add_target_to_queries.output + '.fai'
+    threads:
+        1
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+        time=lambda wildcards, attempt: attempt * config['default']['time']
+    container:
+        'docker://davidebolo1993/cosigt_workflow:latest'
+    benchmark:
+        'benchmarks/index_queries.benchmark.txt'
     shell:
         '''
         samtools faidx {input}
@@ -53,9 +76,9 @@ rule wfmash_align:
     https://github.com/waveygang/wfmash
     '''
     input:
-        queries=config['assemblies'],
-        index=rules.index_assemblies.output,
-        target=rules.pansnspec_toref.output
+        rules.add_target_to_queries.output,
+        index=rules.index_queries.output,
+        target=rules.pansnspec_target.output
     output:
         config['output'] + '/wfmash/queries_to_target.paf'
     threads:
