@@ -55,5 +55,5 @@ rule wfmash_align:
             -X \
             -t {threads} \
             -B {params.tmpdir} \
-            {params.flags}
+            {params.flags} > {output}
         '''
