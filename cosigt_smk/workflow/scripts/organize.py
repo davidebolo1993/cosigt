@@ -118,7 +118,7 @@ def main():
 
 	required.add_argument('-a', '--alignments', help='folder with read-level alignment files (BAM,CRAM) - and their indexes (BAI/CSI,CRAI) - of the individuals to genotype', metavar='FOLDER', required=True)
 	required.add_argument('-r','--reference', help='reference FASTA file - the same the individuals to genotype are aligned to', metavar='FASTA', required=True)
-	required.add_argument('--fasta', help='chromosome-level assemblies in FASTA format', metavar='FASTA', required=True)
+	required.add_argument('--assemblies', help='chromosome-level assemblies in FASTA format', metavar='FASTA', required=True)
 	required.add_argument('--roi', help='one or more regions of interest in BED format - first column is the assembly to use as reference (PanSN format, # delimiter)', metavar='BED', required=True)
 
 	additional = parser.add_argument_group('Additional I/O arguments')
@@ -158,7 +158,6 @@ def main():
 	metrics.add_argument('--wfmash_params', help='additional parameters for wfmash [-s 10k -p 95]',type=str, default='-s 10k -p 95')
 	metrics.add_argument('--wfmash_tmpdir', help='temporary directory - wfmash [working directory]',type=str, default=os.getcwd())
 	
-
 	args = parser.parse_args()
 
 	#wd
@@ -238,11 +237,11 @@ def main():
 
 	#symlink assemblies
  
-	out_assemblies_file=os.path.join(out_fasta, os.path.basename(args.fasta))
+	out_assemblies_file=os.path.join(out_fasta, os.path.basename(args.assemblies))
 
 	try:
 
-		os.symlink(os.path.abspath(args.fasta), out_assemblies_file)
+		os.symlink(os.path.abspath(args.assemblies), out_assemblies_file)
 	
 	except:
 
@@ -305,7 +304,7 @@ def main():
 	os.remove(out_yaml_tmp)
 
 	#write command
-	singpath=','.join(list(set([os.path.abspath(args.alignments),os.path.dirname(os.path.abspath(args.paf)),os.path.dirname(os.path.abspath(args.fasta)), os.path.dirname(os.path.abspath(args.reference)),args.binds, os.path.abspath(args.pggb_tmpdir), os.path.abspath(args.wfmash_tmpdir)])))
+	singpath=','.join(list(set([os.path.abspath(args.alignments),os.path.dirname(os.path.abspath(args.paf)),os.path.dirname(os.path.abspath(args.assemblies)), os.path.dirname(os.path.abspath(args.reference)),args.binds, os.path.abspath(args.pggb_tmpdir), os.path.abspath(args.wfmash_tmpdir)])))
 	command_out=' '.join(['snakemake --profile config/slurm --singularity-args "-B '+ singpath + '" cosigt'])
 	
 	with open('snakemake.run.sh', 'w') as out:
