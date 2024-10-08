@@ -46,38 +46,16 @@ rule add_target_to_queries:
         'benchmarks/add_target_to_queries.benchmark.txt'
     shell:
         '''
-        cat {input.queries} {input.target} > {output}
+        cat {input.queries} {input.target} > {output} \
+        && samtools faidx {output}
         '''                  
-
-rule index_queries:
-    '''
-    https://github.com/davidebolo1993/cosigt
-    '''
-    input:
-        rules.add_target_to_queries.output
-    output:
-        rules.add_target_to_queries.output + '.fai'
-    threads:
-        1
-    resources:
-        mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
-        time=lambda wildcards, attempt: attempt * config['default']['time']
-    container:
-        'docker://davidebolo1993/cosigt_workflow:latest'
-    benchmark:
-        'benchmarks/index_queries.benchmark.txt'
-    shell:
-        '''
-        samtools faidx {input}
-        '''                
 
 rule wfmash_align:
     '''
     https://github.com/waveygang/wfmash
     '''
     input:
-        rules.add_target_to_queries.output,
-        index=rules.index_queries.output,
+        queries=rules.add_target_to_queries,
         target=rules.pansnspec_target.output
     output:
         config['output'] + '/wfmash/queries_to_target.paf'
