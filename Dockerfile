@@ -162,3 +162,5 @@ RUN git clone https://github.com/davidebolo1993/cosigt.git \
 	&& cd .. \
 	&& rm -rf cosigt \
 	&& mv cosigt-tmp cosigt
+
+ENV PATH /opt:$PATH
