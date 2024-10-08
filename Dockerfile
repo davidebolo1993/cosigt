@@ -159,5 +159,6 @@ RUN git clone https://github.com/davidebolo1993/cosigt.git \
 	&& go mod tidy \
 	&& go build cosigt \
 	&& cp cosigt ../cosigt-tmp \
+	&& cd .. \
 	&& rm -rf cosigt \
 	&& mv cosigt-tmp cosigt
