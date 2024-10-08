@@ -15,12 +15,14 @@ rule bedtools_merge:
 		'docker://davidebolo1993/cosigt_workflow:latest'
 	benchmark:
 		'benchmarks/{region}.bedtools_merge.benchmark.txt'
-
+	params:
+		ref_region='resources/regions/{region}.bed'
 	shell:
 		'''
 		bedtools sort \
 		-i {input} | \
 		bedtools merge \
 		-d 100000 \
-		-i - > {output}
+		-i - > {output} \
+		&& cat {params.ref_region} >> {output}
 		'''

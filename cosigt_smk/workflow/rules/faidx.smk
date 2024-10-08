@@ -3,7 +3,7 @@ rule pyfaidx_extract:
 	https://github.com/mdshw5/pyfaidx/
 	'''
 	input:
-		fasta=config['assemblies'],
+		fasta=rules.add_target_to_queries.output,
 		bed=rules.bedtools_merge.output
 	output:
 		config['output'] + '/pyfaidx/{region}.fasta'
