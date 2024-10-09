@@ -3,9 +3,9 @@ rule bwamem2_index:
 	https://github.com/bwa-mem2/bwa-mem2
 	'''
 	input:
-		rules.pyfaidx_extract.output
+		rules.samtools_faidx_extract.output
 	output:
-		multiext(config['output'] + '/pyfaidx/{region}.fasta', '.bwt.2bit.64', '.pac', '.ann', '.amb', '.0123')	
+		multiext(config['output'] + '/samtools/{region}.fasta', '.bwt.2bit.64', '.pac', '.ann', '.amb', '.0123')	
 	threads:
 		1
 	resources:
@@ -26,7 +26,7 @@ rule bwamem2_mem_samtools_sort:
 	https://github.com/samtools/samtools
 	'''
 	input:
-		ref=rules.pyfaidx_extract.output,
+		ref=rules.samtools_faidx_extract.output,
 		idx=rules.bwamem2_index.output,
 		sample=rules.samtools_fasta.output
 	output:
