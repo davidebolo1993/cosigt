@@ -46,7 +46,9 @@ rule add_target_to_queries:
         'benchmarks/add_target_to_queries.benchmark.txt'
     shell:
         '''
-        cat {input.queries} {input.target} > {output} \
+        cat {input.queries} {input.target} \
+        awk '/^>/{{f=!d[$1];d[$1]=1}}f' \
+        > {output} \
         && samtools faidx {output}
         '''                  
 
