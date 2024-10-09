@@ -1,34 +1,9 @@
-rule odgi_chop:
-	'''
-	https://github.com/pangenome/odgi
-	'''
-	input:
-		rules.pggb_construct.output
-	output:
-		config['output'] + '/odgi/chop/{region}.og'
-	threads:
-		1
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['time']
-	container:
-		'docker://pangenome/odgi:1726671973'
-	benchmark:
-		'benchmarks/{region}.odgi_chop.benchmark.txt'
-	shell:
-		'''
-		odgi chop  \
-		-i {input} \
-		-c 32 \
-		-o {output}
-		'''
-
 rule odgi_view:
 	'''
 	https://github.com/pangenome/odgi
 	'''
 	input:
-		rules.odgi_chop.output
+		rules.pggb_construct.output
 	output:
 		config['output'] + '/odgi/view/{region}.gfa'
 	threads:
@@ -52,7 +27,7 @@ rule odgi_paths_matrix:
 	https://github.com/pangenome/odgi
 	'''
 	input:
-		rules.odgi_chop.output
+		rules.pggb_construct.output
 	output:
 		config['output'] + '/odgi/paths/matrix/{region}.tsv.gz'
 	threads:
