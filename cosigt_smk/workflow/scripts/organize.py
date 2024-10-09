@@ -125,6 +125,7 @@ def main():
 
 	additional.add_argument('--blacklist', help='assemblies (one per line) that should not be included in the analysis [None]', metavar='', required=False, default=None)
 	additional.add_argument('--binds', help='additional paths to bind for singularity in /path/1,/path/2 format [/localscratch]', type=str, default='/localscratch')
+	additional.add_argument('--tmp', help='SINGULARITY TMPDIR [/tmp]', type=str, default='/tmp')	
 	additional.add_argument('--output', help='output folder [results]', metavar='FOLDER', default='results')
 
 	metrics = parser.add_argument_group('Specify #threads, memory and time requirements')
@@ -305,7 +306,7 @@ def main():
 
 	#write command
 	singpath=','.join(list(set([os.path.abspath(args.alignments),os.path.dirname(os.path.abspath(args.assemblies)), os.path.dirname(os.path.abspath(args.reference)),args.binds, os.path.abspath(args.pggb_tmpdir), os.path.abspath(args.wfmash_tmpdir)])))
-	command_out=' '.join(['snakemake --profile config/slurm --singularity-args "-B '+ singpath + '" cosigt'])
+	command_out='SINGULARITY_TMPDIR=' + os.path.abspath(args.tmp) + ' snakemake --profile config/slurm --singularity-args "-B '+ singpath + ' -e" cosigt'
 	
 	with open('snakemake.run.sh', 'w') as out:
 
