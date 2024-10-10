@@ -1,0 +1,9 @@
+channels:
+ - conda-forge
+ - bioconda
+dependencies:
+ - scikit-learn=1.5.2
+ - matplotlib=3.9.2
+ - scipy=1.14.1
+ - pandas=2.2.3
+ - numpy=2.1.2

@@ -13,6 +13,8 @@ rule odgi_chop:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://pangenome/odgi:1726671973'
+	conda:
+		'../envs/odgi.yaml'
 	benchmark:
 		'benchmarks/{region}.odgi_chop.benchmark.txt'
 	shell:
@@ -38,6 +40,8 @@ rule odgi_view:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://pangenome/odgi:1726671973'
+	conda:
+		'../envs/odgi.yaml'
 	benchmark:
 		'benchmarks/{region}.odgi_view.benchmark.txt'
 	shell:
@@ -62,6 +66,8 @@ rule odgi_paths_matrix:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://pangenome/odgi:1726671973'
+	conda:
+		'../envs/odgi.yaml'
 	benchmark:
 		'benchmarks/{region}.odgi_paths_matrix.benchmark.txt'
 	shell:
@@ -71,7 +77,6 @@ rule odgi_paths_matrix:
 		-H | \
 		cut -f 1,4- | gzip > {output}
 		'''
-
 
 rule odgi_similarity:
 	'''
@@ -88,6 +93,8 @@ rule odgi_similarity:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://pangenome/odgi:1726671973'
+	conda:
+		'../envs/odgi.yaml'
 	benchmark:
 		'benchmarks/{region}.odgi_similarity.benchmark.txt'
 	shell:
@@ -95,7 +102,6 @@ rule odgi_similarity:
 		odgi similarity \
 		-i {input} > {output}
 		'''
-
 
 rule make_clusters:
 	'''
@@ -112,6 +118,8 @@ rule make_clusters:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://davidebolo1993/cosigt_workflow:latest'
+	conda:
+		'../envs/cluster.yaml'
 	benchmark:
 		'benchmarks/{region}.make_clusters.benchmark.txt'
 	params:
@@ -122,7 +130,6 @@ rule make_clusters:
 			{input} \
 			{params.prefix}
 		'''
-
 
 #plot structures when using rule annotate
 rule odgi_procbed:
@@ -141,6 +148,8 @@ rule odgi_procbed:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://pangenome/odgi:1726671973'
+	conda:
+		'../envs/odgi.yaml'
 	benchmark:
 		'benchmarks/{region}.odgi_procbed.benchmark.txt'
 	shell:
@@ -149,7 +158,6 @@ rule odgi_procbed:
 		-i {input.og} \
 		-b {input.bed} > {output}
 		'''
-
 
 rule annot_names:
 	'''
@@ -188,6 +196,8 @@ rule odgi_inject:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://pangenome/odgi:1726671973'
+	conda:
+		'../envs/odgi.yaml'
 	benchmark:
 		'benchmarks/{region}.odgi_inject.benchmark.txt'
 	shell:
@@ -197,7 +207,6 @@ rule odgi_inject:
 			-b {input.bed} \
 			-o {output}
 		'''
-
 
 rule odgi_flip:
 	'''
@@ -214,6 +223,8 @@ rule odgi_flip:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://pangenome/odgi:1726671973'
+	conda:
+		'../envs/odgi.yaml'
 	benchmark:
 		'benchmarks/{region}.odgi_flip.benchmark.txt'
 	shell:
@@ -222,7 +233,6 @@ rule odgi_flip:
 			-i {input} \
 			-o {output}
 		'''	
-
 
 rule odgi_untangle:
 	'''
@@ -240,6 +250,8 @@ rule odgi_untangle:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://pangenome/odgi:1726671973'
+	conda:
+		'../envs/odgi.yaml'
 	benchmark:
 		'benchmarks/{region}.odgi_untangle.benchmark.txt'
 	shell:

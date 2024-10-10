@@ -16,6 +16,8 @@ rule pyfaidx_extract:
 		'docker://davidebolo1993/cosigt_workflow:latest'
 	benchmark:
 		'benchmarks/{region}.pyfaidx_extract.benchmark.txt'
+	conda:
+		'../envs/pyfaidx.yaml'
 	shell:
 		'''
 		faidx \

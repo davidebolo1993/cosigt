@@ -13,6 +13,8 @@ rule make_reference_bed:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://davidebolo1993/cosigt_workflow:latest'
+	conda:
+		'../envs/bedtools.yaml'
 	benchmark:
 		'benchmarks/{region}.make_reference_bed.benchmark.txt'
 	params:
@@ -46,6 +48,8 @@ rule samtools_fasta:
 		time=lambda wildcards, attempt: attempt * config['samtools']['time']
 	container:
 		'docker://davidebolo1993/cosigt_workflow:latest'
+	conda:
+		'../envs/samtools.yaml'	
 	benchmark:
 		'benchmarks/{sample}.{region}.samtools_fasta.benchmark.txt'
 	params:

@@ -13,6 +13,8 @@ rule bwamem2_index:
 		time=lambda wildcards, attempt: attempt * config['bwa-mem2']['time']
 	container:
 		'docker://davidebolo1993/cosigt_workflow:latest'
+	conda:
+		'../envs/bwa-mem2.yaml'
 	benchmark:
 		'benchmarks/{region}.bwamem2_index.benchmark.txt'
 	shell:
@@ -38,6 +40,8 @@ rule bwamem2_mem_samtools_sort:
 		time=lambda wildcards, attempt: attempt * config['bwa-mem2']['time']
 	container:
 		'docker://davidebolo1993/cosigt_workflow:latest'
+	conda:
+		'../envs/bwa-mem2.yaml'
 	benchmark:
 		'benchmarks/{sample}.{region}.bwamem2_mem_samtools_sort.benchmark.txt'
 	shell:

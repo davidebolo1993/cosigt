@@ -14,6 +14,8 @@ rule pggb_construct:
 		time=lambda wildcards, attempt: attempt * config['pggb']['time']
 	container:
 		'docker://pangenome/pggb:latest'
+	conda:
+		'../envs/pggb.yaml'
 	benchmark:
 		'benchmarks/{region}.pggb_construct.benchmark.txt'
 	params:

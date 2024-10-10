@@ -13,6 +13,8 @@ rule bedtools_merge:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://davidebolo1993/cosigt_workflow:latest'
+	conda:
+		'../envs/bedtools.yaml'
 	benchmark:
 		'benchmarks/{region}.bedtools_merge.benchmark.txt'
 	params:

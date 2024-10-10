@@ -13,6 +13,8 @@ rule megadepth_bam_to_bigwig:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://davidebolo1993/cosigt_workflow:latest'
+	conda:
+		'../envs/megdepth.yaml'
 	benchmark:
 		'benchmarks/{sample}.{region}.megadepth_bam_to_bigwig.benchmark.txt'
 	shell:
