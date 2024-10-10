@@ -14,6 +14,8 @@ rule impg_project:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://davidebolo1993/cosigt_workflow:latest'
+	conda:
+		'../envs/impg.yaml'
 	benchmark:
 		'benchmarks/{region}.impg_project.benchmark.txt'
 	params:

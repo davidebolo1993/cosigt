@@ -14,6 +14,8 @@ rule gafpack_coverage:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://davidebolo1993/cosigt_workflow:latest'
+	conda:
+		'../envs/gafpack.yaml'
 	benchmark:
 		'benchmarks/{sample}.{region}.gafpack_coverage.benchmark.txt'
 	shell:
