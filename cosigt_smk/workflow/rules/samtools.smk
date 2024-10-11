@@ -66,3 +66,54 @@ rule samtools_fasta:
 		-@ {threads} \
 		- | gzip > {output}
 		'''
+
+rule samtools_faidx_extract:
+	'''
+	https://github.com/samtools/samtools
+	'''
+	input:
+		fasta=rules.add_target_to_queries.output,
+		bed=rules.bedtools_merge.output
+	output:
+		config['output'] + '/samtools/faidx/{region}.fasta'
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
+	container:
+		'docker://davidebolo1993/cosigt_workflow:latest'
+	benchmark:
+		'benchmarks/{region}.samtools_faidx_extract.benchmark.txt'
+	conda:
+		'../envs/samtools.yaml'
+	shell:
+		'''
+		samtools faidx \
+		-r <(awk '{{print $1":"$2+1"-"$3}}' {input.bed}) \
+		{input.fasta} > {output}
+		'''
+
+rule samtools_faidx_index:
+	'''
+	https://github.com/samtools/samtools
+	'''
+	input:
+		rules.samtools_faidx_extract.output
+	output:
+		config['output'] + '/samtools/faidx/{region}.fasta.fai'
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
+	container:
+		'docker://davidebolo1993/cosigt_workflow:latest'
+	conda:
+		'../envs/samtools.yaml'
+	benchmark:
+		'benchmarks/{region}.samtools_faidx_index.benchmark.txt'
+	shell:
+		'''
+		samtools faidx {input}
+		'''
