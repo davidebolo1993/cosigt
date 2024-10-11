@@ -1,9 +1,8 @@
 channels:
  - conda-forge
- - bioconda
 dependencies:
- - scikit-learn=1.5.2
- - matplotlib=3.9.2
- - scipy=1.14.1
- - pandas=2.2.3
- - numpy=2.1.2
+  - r-data.table=1.15.4
+  - r-rjson=0.2.23
+  - r-reshape2=1.4.4
+  - r-nbclust=3.0.1
+  - r-base
