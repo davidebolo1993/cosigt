@@ -122,13 +122,11 @@ rule make_clusters:
 		'../envs/cluster.yaml'
 	benchmark:
 		'benchmarks/{region}.make_clusters.benchmark.txt'
-	params:
-		prefix=config['output'] + '/cluster/{region}'
 	shell:
 		'''
-		python workflow/scripts/cluster.py \
+		Rscript workflow/scripts/cluster.r \
 			{input} \
-			{params.prefix}
+			{output}
 		'''
 
 #plot structures when using rule annotate
