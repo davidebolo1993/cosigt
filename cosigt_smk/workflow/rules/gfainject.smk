@@ -14,6 +14,8 @@ rule gfainject_inject:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://davidebolo1993/cosigt_workflow:latest'
+	conda:
+		'../envs/gfainject.yaml'
 	benchmark:
 		'benchmarks/{sample}.{region}.gfainject_inject.benchmark.txt'
 	shell:

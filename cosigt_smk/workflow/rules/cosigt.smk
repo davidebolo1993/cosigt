@@ -16,6 +16,8 @@ rule cosigt_genotype:
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
 		'docker://davidebolo1993/cosigt_workflow:latest'
+	conda:
+		'../envs/cosigt.yaml'
 	params:
 		prefix=config['output'] + '/cosigt/{sample}/{region}'
 	benchmark:

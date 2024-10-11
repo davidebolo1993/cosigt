@@ -15,6 +15,8 @@ rule pansnspec_target:
         'docker://davidebolo1993/cosigt_workflow:latest'
     benchmark:
         'benchmarks/pansnspec_toref.benchmark.txt'
+    conda:
+        '../envs/samtools.yaml'
     params:
         path=config['path']
     shell:
@@ -40,16 +42,37 @@ rule add_target_to_queries:
     resources:
         mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
         time=lambda wildcards, attempt: attempt * config['default']['time']
-    container:
-        'docker://davidebolo1993/cosigt_workflow:latest'
     benchmark:
         'benchmarks/add_target_to_queries.benchmark.txt'
     shell:
         '''
         cat {input.queries} {input.target} | \
         awk '/^>/{{f=!d[$1];d[$1]=1}}f' \
-        > {output} \
-        && samtools faidx {output}
+        > {output}
+        '''                  
+
+rule samtools_faidx_queries:
+    '''
+    https://github.com/davidebolo1993/cosigt
+    '''
+    input:
+        rules.add_target_to_queries.output
+    output:
+        config['output'] + '/wfmash/queries.fa.fai'
+    threads:
+        1
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+        time=lambda wildcards, attempt: attempt * config['default']['time']
+    container:
+        'docker://davidebolo1993/cosigt_workflow:latest'
+    conda:
+        '../envs/samtools.yaml'
+    benchmark:
+        'benchmarks/samtools_faidx_queries.benchmark.txt'
+    shell:
+        '''
+        samtools faidx {input}
         '''                  
 
 rule wfmash_align:
@@ -58,6 +81,7 @@ rule wfmash_align:
     '''
     input:
         queries=rules.add_target_to_queries.output,
+        queriesidx=rules.samtools_faidx_queries.output,
         target=rules.pansnspec_target.output
     output:
         config['output'] + '/wfmash/queries_to_target.paf'
@@ -68,6 +92,8 @@ rule wfmash_align:
         time=lambda wildcards, attempt: attempt * config['wfmash']['time']
     container:
         'docker://davidebolo1993/cosigt_workflow:latest'
+    conda:
+        '../envs/wfmash.yaml'
     benchmark:
         'benchmarks/wfmash_align.benchmark.txt'
     params:
