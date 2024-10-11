@@ -132,9 +132,9 @@ RUN git clone https://github.com/ekg/gafpack.git \
 	&& mv gafpack-tmp gafpack
 
 ##install gfainject
-RUN git clone https://github.com/chfi/gfainject.git \
+RUN git clone https://github.com/AndreaGuarracino/gfainject \
 	&& cd gfainject \
-	&& git checkout e56cba362047e7137352858dfba5f56e944cbf06 \
+	&& git checkout cc4e2e070d1c0c883c2296024d5bb970f34820d8 \
 	&& cargo install --force --path . \
 	&& cp target/release/gfainject ../gfainject-tmp \
 	&& cd .. \
