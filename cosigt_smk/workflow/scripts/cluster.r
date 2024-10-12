@@ -19,7 +19,8 @@ regularMatrix <- acast(df, group.a ~ group.b, value.var = "jaccard.distance")
 distanceMatrix <- as.dist(regularMatrix)
 #calculate silhouette score and best partition
 res<-NbClust(diss=distanceMatrix, method = "average", index ="silhouette", distance=NULL)$Best.partition
-named_res<-lapply(res, function(k) paste0("HaploGroup", as.list(res[[k]])))
+res.list <- lapply(split(res, names(res)), unname)
+named_res<-lapply(res.list, function(x, prefix) paste0(prefix, x), prefix = "HploGroup")
 jout<-toJSON(named_res)
 #write json out
 write(jout, args[2])
