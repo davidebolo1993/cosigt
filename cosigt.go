@@ -202,8 +202,8 @@ func WriteResults(m map[string]float64, keys *[]string, clstr map[string]string,
 		if i == 0 {
 
 			//k, fmt.Sprintf("%.16f", v)
-			_ = x.Write([]string{"id", "h1", "h2", "c1", "c2", "cs"})
-			_ = w.Write([]string{"h1", "h2", "c1", "c2", "cs"})
+			_ = x.Write([]string{"#sample.id", "haplotype.1", "haplotype.2", "cluster.1", "cluster.2", "cosine.similarity"})
+			_ = w.Write([]string{"#haplotype.1", "haplotype2", "cluster.1", "cluster.2", "cosine.similarity"})
 			_ = x.Write([]string{id,haps[0],haps[1],clstr[haps[0]],clstr[haps[1]],fmt.Sprintf("%.16f", m[k])})
 
 		}
@@ -262,8 +262,9 @@ func main() {
 	p := parser.String("p", "paths", &argparse.Options{Required: true, Help: "gzip-compressed tsv file with path names and node coverages from odgi paths"})
 	g := parser.String("g", "gaf", &argparse.Options{Required: true, Help: "gzip-compressed gaf (graph alignment format) file for a sample from gafpack"})
 	b := parser.String("b", "blacklist", &argparse.Options{Required: false, Help: "txt file with names of paths to exclude (one per line)"})
-	c := parser.String("c", "cluster", &argparse.Options{Required: false, Help: "cluster json file as generated with cluster.py"})
+	c := parser.String("c", "cluster", &argparse.Options{Required: false, Help: "cluster json file as generated with cluster.r"})
 	o := parser.String("o", "output", &argparse.Options{Required: true, Help: "folder prefix for output files"})
+	i := parser.String("i", "id", &argparse.Options{Required: true, Help: "sample name"})
 
 	err := parser.Parse(os.Args)
 
@@ -277,7 +278,7 @@ func main() {
 	//read first table
 	hapid, gcov := ReadGz(*p)
 	//read second table
-	smpl, bcov := ReadGz(*g)
+	_, bcov := ReadGz(*g)
 	//read blacklist
 	blck := ReadBlacklist(*b)
 	//read cluster .json file
@@ -346,5 +347,5 @@ func main() {
 	//write genotype
 	outpath:=path.Clean(*o)
 	_ = os.Mkdir(outpath, os.ModePerm)
-	WriteResults(m,&keys,clstr,outpath,smpl[0])
+	WriteResults(m,&keys,clstr,outpath,*i)
 }

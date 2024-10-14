@@ -19,7 +19,8 @@ rule cosigt_genotype:
 	conda:
 		'../envs/cosigt.yaml'
 	params:
-		prefix=config['output'] + '/cosigt/{sample}/{region}'
+		prefix=config['output'] + '/cosigt/{sample}/{region}',
+		sampleid='{sample}'
 	benchmark:
 		'benchmarks/{sample}.{region}.cosigt_genotype.benchmark.txt'
 	shell:
@@ -29,5 +30,6 @@ rule cosigt_genotype:
 		-g {input.xpack} \
 		-c {input.cluster} \
 		-b resources/extra/blacklist.txt \
-		-o {params.prefix}
+		-o {params.prefix} \
+		-i {params.sampleid}
 		'''
