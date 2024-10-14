@@ -122,8 +122,6 @@ rule make_clusters:
 		'../envs/cluster.yaml'
 	benchmark:
 		'benchmarks/{region}.make_clusters.benchmark.txt'
-	params:
-		prefix=config['output'] + '/cluster/{region}'
 	shell:
 		'''
 		Rscript workflow/scripts/cluster.r \
