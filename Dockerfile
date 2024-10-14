@@ -65,10 +65,7 @@ RUN cargo install --locked maturin
 
 #install numpy
 RUN pip3 install numpy \
-	pandas \
-	matplotlib \
-	scikit-learn \
-	scipy
+	pandas
 
 #ln python to python3 -not used right now but, who knows?
 RUN ln -s /usr/bin/python3 /usr/bin/python
