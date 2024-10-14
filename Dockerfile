@@ -169,6 +169,6 @@ RUN bash Miniconda3-latest-Linux-x86_64.sh -p /miniconda -b
 RUN rm Miniconda3-latest-Linux-x86_64.sh
 ENV PATH=/miniconda/bin:${PATH}
 RUN conda update -y conda
-RUN conda create -y -n renv -c conda-forge r-base r-data.table=1.15.4 r-rjson=0.2.23 r-reshape2=1.4.4 r-nbclust=3.0.1
+RUN conda create -y -n renv -c conda-forge r-base r-data.table=1.15.4 r-rjson=0.2.23 r-reshape2=1.4.4 r-nbclust=3.0.1 r-ggplot2=3.5.1 r-dendextend=1.18.1
 RUN echo "source activate renv" > ~/.bashrc
 ENV PATH /miniconda/envs/renv/bin:$PATH
