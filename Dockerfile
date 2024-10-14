@@ -63,9 +63,8 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 RUN rustup update
 RUN cargo install --locked maturin
 
-#install numpy
-RUN pip3 install numpy \
-	pandas
+#install python libraries here
+#RUN pip3 install ...
 
 #ln python to python3 -not used right now but, who knows?
 RUN ln -s /usr/bin/python3 /usr/bin/python
@@ -161,7 +160,6 @@ RUN git clone https://github.com/davidebolo1993/cosigt.git \
 
 ENV PATH /opt:$PATH
 
-
 #R and R libs w/conda - adding should be easier
 
 RUN curl -LO https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
@@ -169,6 +167,15 @@ RUN bash Miniconda3-latest-Linux-x86_64.sh -p /miniconda -b
 RUN rm Miniconda3-latest-Linux-x86_64.sh
 ENV PATH=/miniconda/bin:${PATH}
 RUN conda update -y conda
-RUN conda create -y -n renv -c conda-forge r-base r-data.table=1.15.4 r-rjson=0.2.23 r-reshape2=1.4.4 r-nbclust=3.0.1 r-ggplot2=3.5.1 r-dendextend=1.18.1
+RUN conda create -y -n renv -c conda-forge -c bioconda \
+	r-base \
+	r-data.table=1.15.4 \
+	r-rjson=0.2.23 \
+	r-reshape2=1.4.4 \
+	r-nbclust=3.0.1 \
+	r-ggplot2=3.5.1 \
+	r-dendextend=1.18.1 \
+	r-gggenes=0.5.1 \
+	bioconductor-rtracklayer=1.62.0
 RUN echo "source activate renv" > ~/.bashrc
 ENV PATH /miniconda/envs/renv/bin:$PATH

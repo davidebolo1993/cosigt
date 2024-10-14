@@ -127,6 +127,7 @@ def main():
 	additional.add_argument('--binds', help='additional paths to bind for singularity in /path/1,/path/2 format [/localscratch]', type=str, default='/localscratch')
 	additional.add_argument('--tmp', help='SINGULARITY TMPDIR [/tmp]', type=str, default='/tmp')	
 	additional.add_argument('--output', help='output folder [results]', metavar='FOLDER', default='results')
+	additional.add_argument('--profile', help='use profile. If "None", do not use profile and run on the local machine [config/slurm]', metavar='FOLDER', default='config/slurm')
 
 	metrics = parser.add_argument_group('Specify #threads, memory and time requirements')
 
@@ -160,6 +161,7 @@ def main():
 	metrics.add_argument('--wfmash_tmpdir', help='temporary directory - wfmash [working directory]',type=str, default=os.getcwd())
 	
 	args = parser.parse_args()
+	args.profile=None if args.profile == 'None' else args.profile
 
 	#wd
 	wd=os.getcwd()
@@ -304,13 +306,38 @@ def main():
 
 	os.remove(out_yaml_tmp)
 
-	#write command
+	#write command - singularity
 	singpath=','.join(list(set([os.path.abspath(args.alignments),os.path.dirname(os.path.abspath(args.assemblies)), os.path.dirname(os.path.abspath(args.reference)),args.binds, os.path.abspath(args.pggb_tmpdir), os.path.abspath(args.wfmash_tmpdir)])))
-	command_out='SINGULARITY_TMPDIR=' + os.path.abspath(args.tmp) + ' snakemake --profile config/slurm --singularity-args "-B '+ singpath + ' -e" cosigt'
 	
-	with open('snakemake.run.sh', 'w') as out:
+	if args.profile is not None:
+	
+		command_singularity_out='SINGULARITY_TMPDIR=' + os.path.abspath(args.tmp) + ' snakemake --profile ' + args.profile + ' --singularity-args "-B '+ singpath + ' -e" cosigt'
+	
+		with open('snakemake.singularity.profile.run.sh', 'w') as out:
 
-		out.write(command_out + '\n')
+			out.write(command_singularity_out + '\n')
+
+		#write command - conda
+		command_conda_out='snakemake --profile ' + args.profile + ' --use-conda cosigt'
+
+		with open('snakemake.conda.profile.run.sh', 'w') as out:
+
+			out.write(command_conda_out + '\n')
+
+	else:
+
+		command_singularity_out='SINGULARITY_TMPDIR=' + os.path.abspath(args.tmp) + ' snakemake --singularity-args "-B '+ singpath + ' -e" cosigt'
+
+		with open('snakemake.singularity.run.sh', 'w') as out:
+
+			out.write(command_singularity_out + '\n')
+
+		#write command - conda
+		command_conda_out='snakemake --use-conda cosigt'
+
+		with open('snakemake.conda.run.sh', 'w') as out:
+
+			out.write(command_conda_out + '\n')
 
 
 if __name__ == '__main__':
