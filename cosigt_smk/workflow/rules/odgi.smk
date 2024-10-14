@@ -126,9 +126,9 @@ rule make_clusters:
 		prefix=config['output'] + '/cluster/{region}'
 	shell:
 		'''
-		python workflow/scripts/cluster.py \
+		Rscript workflow/scripts/cluster.r \
 			{input} \
-			{params.prefix}
+			{output}
 		'''
 
 #plot structures when using rule annotate
