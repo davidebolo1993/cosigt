@@ -23,11 +23,3 @@ include: 'rules/megadepth.smk'
 rule cosigt:
 	input:
 		expand(config['output'] + '/cosigt/{sample}/{region}/cosigt_genotype.tsv', sample=df['sample_id'].tolist(), region=config['region'])
-
-rule annotate:
-	input:
-		expand(config['output'] + '/odgi/untangle/{region}.gggenes.tsv', region=config['region'])
-
-rule debug:
-	input:
-		expand(config['output'] + '/bwa-mem2/{sample}/{region}.realigned.bam.all.bw', sample=df['sample_id'].tolist(), region=config['region'])

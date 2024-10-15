@@ -48,7 +48,7 @@ rule bwamem2_mem_samtools_sort:
 		'''
 		bwa-mem2 mem \
 		-t {threads} \
-		{input.fasta} \
+		{input.fasta_ref} \
 		{input.fasta_sample} | samtools sort \
 		-@ {threads} \
 		- > {output}
