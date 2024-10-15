@@ -134,7 +134,7 @@ rule odgi_viz:
 	https://github.com/pangenome/odgi
 	'''
 	input:
-		og=rules.pggb_construct,output,
+		og=rules.pggb_construct.output,
 		json=rules.make_clusters.output
 	output:
 		config['output'] + '/odgi/viz/{region}.png'
@@ -159,6 +159,7 @@ rule odgi_viz:
 		-m \
 		-o {output}
 		'''
+
 
 rule odgi_procbed:
 	'''
