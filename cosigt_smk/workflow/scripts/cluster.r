@@ -42,14 +42,12 @@ haplotable <- data.frame(
   haplotype.group = rep(names(reversed_data), lengths(reversed_data))
 )
 rownames(haplotable)<-c()
-fwrite(haplotable, filename=gsub(".json", ".tsv", args[2]), row.names=F,col.names=T,sep="\t")
-
+fwrite(haplotable, gsub(".json", ".tsv", args[2]), row.names=F,col.names=T,sep="\t")
 #simplify names, in distMatrix for hclust
 colnames(regularMatrix)<-do.call(c,lapply(colnames(regularMatrix), function(x) (unlist(strsplit(x,":"))[1])))
 rownames(regularMatrix)<-do.call(c,lapply(rownames(regularMatrix), function(x) (unlist(strsplit(x,":"))[1])))
 distanceMatrix <- as.dist(regularMatrix)
 k<-as.numeric(tail(sort(res),1))
-
 #plot
 hc <- hclust(distanceMatrix, method = "average")
 dend <- as.dendrogram(hc) %>%set("branches_k_color" ,k=k) %>% set("labels_cex", .6) 
