@@ -3,12 +3,12 @@ rule cosigt_genotype:
 	https://github.com/davidebolo1993/cosigt
 	'''
 	input:
-		zpath=rules.odgi_paths_matrix.output,
-		xpack=rules.gafpack_coverage.output,
-		cluster=rules.make_clusters.output
+		graph_cov_map=rules.odgi_paths_matrix.output,
+		sample_cov_map=rules.gafpack_coverage.output,
+		json=rules.make_clusters.output
 	output:
-		geno=config['output'] + '/cosigt/{sample}/{region}/cosigt_genotype.tsv',
-		combo=config['output'] + '/cosigt/{sample}/{region}/sorted_combos.tsv'
+		config['output'] + '/cosigt/{sample}/{region}/cosigt_genotype.tsv',
+		config['output'] + '/cosigt/{sample}/{region}/sorted_combos.tsv'
 	threads:
 		1
 	resources:
@@ -20,16 +20,15 @@ rule cosigt_genotype:
 		'../envs/cosigt.yaml'
 	params:
 		prefix=config['output'] + '/cosigt/{sample}/{region}',
-		sampleid='{sample}'
+		sample_id='{sample}'
 	benchmark:
 		'benchmarks/{sample}.{region}.cosigt_genotype.benchmark.txt'
 	shell:
 		'''
 		cosigt \
-		-p {input.zpath} \
-		-g {input.xpack} \
-		-c {input.cluster} \
-		-b resources/extra/blacklist.txt \
+		-p {input.graph_cov_map} \
+		-g {input.sample_cov_map} \
+		-c {input.json} \
 		-o {params.prefix} \
-		-i {params.sampleid}
+		-i {params.sample_id}
 		'''

@@ -4,7 +4,7 @@ rule pggb_construct:
 	'''
 	input:
 		fasta=rules.samtools_faidx_extract.output,
-		index=rules.samtools_faidx_index.output
+		fai=rules.samtools_faidx_index.output
 	output:
 		config['output'] + '/pggb/{region}.og'
 	threads:
@@ -29,7 +29,7 @@ rule pggb_construct:
 			-o {params.prefix} \
 			-t {threads} \
 			-D {params.tmpdir} \
-			-n $(wc -l {input.index}) \
+			-n $(wc -l {input.fai}) \
 			{params.flags} \
 		&& mv {params.prefix}/*smooth.final.og {output}
 		'''

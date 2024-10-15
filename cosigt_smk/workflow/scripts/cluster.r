@@ -27,7 +27,22 @@ named_res<-lapply(res.list, function(x, prefix) paste0(prefix, x), prefix = "Hap
 jout<-toJSON(named_res)
 #write json out
 write(jout, args[2])
-
+#reverse json
+reversed_data <- list()
+for (key in names(jout)) {
+  value <- jout[[key]]
+  if (!is.null(reversed_data[[value]])) {
+    reversed_data[[value]] <- c(reversed_data[[value]], key)
+  } else {
+    reversed_data[[value]] <- key
+  }
+}
+haplotable <- data.frame(
+  haplotype.name = unlist(reversed_data),
+  haplotype.group = rep(names(reversed_data), lengths(reversed_data))
+)
+rownames(haplotable)<-c()
+fwrite(haplotable, filename=gsub(".json", ".tsv", args[2]), row.names=F,col.names=T,sep="\t")
 
 #simplify names, in distMatrix for hclust
 colnames(regularMatrix)<-do.call(c,lapply(colnames(regularMatrix), function(x) (unlist(strsplit(x,":"))[1])))

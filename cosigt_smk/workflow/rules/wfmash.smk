@@ -33,8 +33,8 @@ rule add_target_to_queries:
     https://github.com/davidebolo1993/cosigt
     '''
     input:
-        queries=config['assemblies'],
-        target=rules.pansnspec_target.output
+        queries_fasta=config['assemblies'],
+        target_fasta=rules.pansnspec_target.output
     output:
          config['output'] + '/wfmash/queries.fa'
     threads:
@@ -46,7 +46,7 @@ rule add_target_to_queries:
         'benchmarks/add_target_to_queries.benchmark.txt'
     shell:
         '''
-        cat {input.queries} {input.target} | \
+        cat {input.queries_fasta} {input.target_fasta} | \
         awk '/^>/{{f=!d[$1];d[$1]=1}}f' \
         > {output}
         '''                  
@@ -80,9 +80,9 @@ rule wfmash_align:
     https://github.com/waveygang/wfmash
     '''
     input:
-        queries=rules.add_target_to_queries.output,
-        queriesidx=rules.samtools_faidx_queries.output,
-        target=rules.pansnspec_target.output
+        queries_fasta=rules.add_target_to_queries.output,
+        queries_fai=rules.samtools_faidx_queries.output,
+        target_fasta=rules.pansnspec_target.output
     output:
         config['output'] + '/wfmash/queries_to_target.paf'
     threads:
@@ -102,8 +102,8 @@ rule wfmash_align:
     shell:
         '''
         wfmash \
-            {input.target} \
-            {input.queries} \
+            {input.target_fasta} \
+            {input.queries_fasta} \
             -X \
             -t {threads} \
             -B {params.tmpdir} \

@@ -129,7 +129,37 @@ rule make_clusters:
 			{output}
 		'''
 
-#plot structures when using rule annotate
+rule odgi_viz:
+	'''
+	https://github.com/pangenome/odgi
+	'''
+	input:
+		og=rules.pggb_construct,output,
+		json=rules.make_clusters.output
+	output:
+		config['output'] + '/odgi/viz/{region}.png'
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
+	container:
+		'docker://pangenome/odgi:1726671973'
+	conda:
+		'../envs/odgi.yaml'
+	benchmark:
+		'benchmarks/{region}.odgi_viz.benchmark.txt'
+	params:
+		tsv=config['output'] + '/cluster/{region}.clusters.tsv'
+	shell:
+		'''
+		odgi viz \
+		-i {input.og} \
+		-p <(cut -f 1 {params.tsv} | tail -n+2) \
+		-m \
+		-o {output}
+		'''
+
 rule odgi_procbed:
 	'''
 	https://github.com/pangenome/odgi
@@ -176,7 +206,6 @@ rule annot_names:
 		'''
 		cat <(cut -f 4 {input}) <(cut -f 4 {input} | sed 's/$/_inv/g') > {output}
 		'''
-
 
 rule odgi_inject:
 	'''
@@ -238,7 +267,7 @@ rule odgi_untangle:
 	'''
 	input:
 		og=rules.odgi_flip.output,
-		annots=rules.annot_names.output
+		txt=rules.annot_names.output
 	output:
 		config['output'] + '/odgi/untangle/{region}.gggenes.tsv'
 	threads:
@@ -255,7 +284,7 @@ rule odgi_untangle:
 	shell:
 		'''
 		odgi untangle \
-			-R {input.annots} \
+			-R {input.txt} \
 			-i {input.og} \
 			-j 0.3 \
 			-g > {output}

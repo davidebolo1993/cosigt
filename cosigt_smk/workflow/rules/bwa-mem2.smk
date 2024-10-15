@@ -28,9 +28,9 @@ rule bwamem2_mem_samtools_sort:
 	https://github.com/samtools/samtools
 	'''
 	input:
-		ref=rules.samtools_faidx_extract.output,
-		idx=rules.bwamem2_index.output,
-		sample=rules.samtools_fasta.output
+		fasta_ref=rules.samtools_faidx_extract.output,
+		fai=rules.bwamem2_index.output,
+		fasta_sample=rules.samtools_fasta.output
 	output:
 		config['output'] + '/bwa-mem2/{sample}/{region}.realigned.bam'
 	threads:
@@ -48,8 +48,8 @@ rule bwamem2_mem_samtools_sort:
 		'''
 		bwa-mem2 mem \
 		-t {threads} \
-		{input.ref} \
-		{input.sample} | samtools sort \
+		{input.fasta} \
+		{input.fasta_sample} | samtools sort \
 		-@ {threads} \
 		- > {output}
 		'''

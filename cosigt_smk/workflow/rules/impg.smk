@@ -4,7 +4,7 @@ rule impg_project:
 	'''
 	input:
 		paf=rules.wfmash_align.output,
-		region=lambda wildcards: glob('resources/regions/{region}.bed'.format(region=wildcards.region))
+		bed=lambda wildcards: glob('resources/regions/{region}.bed'.format(region=wildcards.region))
 	output:
 		config['output'] + '/impg/{region}.bedpe'
 	threads:
@@ -24,7 +24,7 @@ rule impg_project:
 		'''
 		impg \
 		-p {input.paf} \
-		-b {input.region} \
+		-b {input.bed} \
 		-x | \
 		grep -v \
 		-f {params.exclude} > {output}
