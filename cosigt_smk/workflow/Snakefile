@@ -4,8 +4,8 @@ from glob import glob
 configfile: 'config/config.yaml'
 
 df=(pd.read_table(config['samples'], dtype={'sample_id': str, 'cram':str})
-	.set_index('sample_id', drop=False)
-	.sort_index()
+    .set_index('sample_id', drop=False)
+    .sort_index()
 )
 
 include: 'rules/wfmash.smk'
@@ -19,7 +19,16 @@ include: 'rules/gfainject.smk'
 include: 'rules/gafpack.smk'
 include: 'rules/cosigt.smk'
 include: 'rules/megadepth.smk'
+include: 'rules/benchmark.smk'
 
 rule cosigt:
-	input:
-		expand(config['output'] + '/cosigt/{sample}/{region}/cosigt_genotype.tsv', sample=df['sample_id'].tolist(), region=config['region'])
+    input:
+        expand(config['output'] + '/cosigt/{sample}/{region}/cosigt_genotype.tsv', sample=df['sample_id'].tolist(), region=config['region'])
+
+#DO NOT USE OUTSIDE BENCHMARK CONTEXT
+rule benchmark:
+    input:
+        'benchmark/resources.time.pdf',
+        'benchmark/resources.mem.pdf',
+        #'benchmark/tpr.strict.pdf',
+        #'benchmark/tpr.lenient.pdf'
