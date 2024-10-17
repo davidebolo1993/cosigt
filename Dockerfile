@@ -21,6 +21,7 @@ RUN apt-get -y install \
 	git \
 	bzip2 \
 	libbz2-dev \
+	libgsl-dev \
 	zlib1g \
 	zlib1g-dev \
 	liblzma-dev \
