@@ -1,10 +1,9 @@
 #!/usr/bin/Rscript
 
-args <- commandArgs(trailingOnly = TRUE)
-
 library(rtracklayer)
 library(ggplot2)
 
+args <- commandArgs(trailingOnly = TRUE)
 
 bw <- import.bw(args[1])
 df<- data.frame(bw)
