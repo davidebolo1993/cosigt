@@ -118,10 +118,11 @@ RUN wget https://github.com/ChristopherWilks/megadepth/releases/download/1.2.0/m
 RUN wget https://github.com/waveygang/wfmash/releases/download/v0.14.0/wfmash-v0.14.0.tar.gz \
 	&& tar -xvzf wfmash-v0.14.0.tar.gz \
 	&& cd wfmash-v0.14.0 \
-	&& cmake -H. -Bbuild \
+	&& cmake -H. -Bbuild -DBUILD_STATIC=ON \
 	&& cmake --build build -- -j 8 \
-	&& cmake --install build \
+	&& cp build/bin/wfmash ../wfmash \
 	&& cd .. \
+	&& chmod +x wfmash \
 	&& rm -rf wfmash-v0.14.0*
 
 ##install gafpack
