@@ -39,7 +39,7 @@ rule plot_benchmark_tpr:
     conda:
         '../envs/plot.yaml'
     params:
-        benchmark_dir=config['output'] + '/cosigt'
+        benchmark_dir=config['output'] + '/cosigt',
         cluster_dir=config['output'] + '/cluster'
     shell:
         '''
