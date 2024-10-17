@@ -7,142 +7,184 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"math"
+	"log"
 	"os"
+	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
-	"path"
+	"sync"
+	"math"
+
 	"github.com/akamensky/argparse"
 	"gonum.org/v1/gonum/stat/combin"
 )
 
-func GetMagnitude(A []float64, B []float64) float64 {
-	/*
-	Calculate magnitude
-	*/
-	var A_len, B_len float64
-	A_len = 0
-	B_len = 0
-	for i := 0; i < len(A); i += 1 {
-		A_len += (A[i] * A[i])
-		B_len += (B[i] * B[i])
+// Vector represents a float64 slice for cleaner type declarations
+type Vector []float64
+
+// GetMagnitude calculates the Euclidean magnitude of two vectors
+func GetMagnitude(A, B Vector) float64 {
+	var ALen, BLen float64
+	for i, a := range A {
+		ALen += a * a
+		BLen += B[i] * B[i]
 	}
-	return math.Sqrt(A_len * B_len)
+	return math.Sqrt(ALen * BLen)
 }
 
-func GetDotProduct(A []float64, B []float64) float64 {
-	/*
-	Calculate dot product
-	*/
-	var dot_product float64
-	for i := 0; i < len(A); i++ {
-		dot_product += (A[i] * B[i])
+// GetDotProduct calculates the dot product of two vectors
+func GetDotProduct(A, B Vector) float64 {
+	var dotProduct float64
+	for i, a := range A {
+		dotProduct += a * B[i]
 	}
-	return dot_product
+	return dotProduct
 }
 
-func GetCosineSimilarity(A []float64, B []float64) float64 {
-	/*
-	Calculate cosine similarity
-	*/
-	var eucl_magn, dot_product, similarity float64
-	eucl_magn = GetMagnitude(A, B)
-	if eucl_magn > 0 {
-		dot_product = GetDotProduct(A, B)
-		similarity = dot_product / eucl_magn
-	} else {
-		similarity = 0
+// GetCosineSimilarity calculates the cosine similarity between two vectors
+func GetCosineSimilarity(A, B Vector) float64 {
+	euclMagn := GetMagnitude(A, B)
+	if euclMagn > 0 {
+		return GetDotProduct(A, B) / euclMagn
 	}
-	return similarity
+	return 0
 }
 
-func ReadBlacklist(s string) []string {
-	/*
-	Read file with paths to exclude - can be empty
-	*/
-	ids := make([]string, 0, 100)
-	f, _ := os.Open(s)
-	defer f.Close()
-	b := bufio.NewScanner(f)
-	for b.Scan() {
-		ids = append(ids, b.Text())
+// ReadBlacklist reads a file containing paths to exclude
+func ReadBlacklist(filename string) ([]string, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("error opening blacklist file: %w", err)
 	}
-	return ids
+	defer file.Close()
+
+	var ids []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		ids = append(ids, scanner.Text())
+	}
+	return ids, scanner.Err()
 }
 
-func ReadGz(s string) ([]string, [][]float64) {
-	/*
-	Read gafpack and odgi paths files
-	*/
-	cov := make([][]float64, 0, 1000)
-	id := make([]string, 0, 1000)
-	f, _ := os.Open(s)
-	defer f.Close()
-	gr, _ := gzip.NewReader(f)
+// ReadGz reads gzip-compressed TSV files containing gafpack and odgi paths data
+func ReadGz(filename string) ([]string, []Vector, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error opening gzip file: %w", err)
+	}
+	defer file.Close()
+
+	gr, err := gzip.NewReader(file)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error creating gzip reader: %w", err)
+	}
 	defer gr.Close()
+
 	cr := csv.NewReader(gr)
 	cr.Comma = '\t'
-	//skip header
-	cr.Read()
+	
+	// Skip header
+	if _, err := cr.Read(); err != nil {
+		return nil, nil, fmt.Errorf("error reading header: %w", err)
+	}
+
+	var id []string
+	var cov []Vector
+
 	for {
 		rec, err := cr.Read()
 		if err == io.EOF {
 			break
 		}
-		f64s := make([]float64, len(rec)-1) //rec[0] is the haplotype name in z.paths and sample name in x.gafpack
+		if err != nil {
+			return nil, nil, fmt.Errorf("error reading record: %w", err)
+		}
+
+		f64s := make(Vector, len(rec)-1)
 		for i, s := range rec[1:] {
-			f64s[i], _ = strconv.ParseFloat(s, 64)
+			f64s[i], err = strconv.ParseFloat(s, 64)
+			if err != nil {
+				return nil, nil, fmt.Errorf("error parsing float: %w", err)
+			}
 		}
 		cov = append(cov, f64s)
 		id = append(id, rec[0])
 	}
-	return id, cov
+
+	return id, cov, nil
 }
 
-func ReadJson(s string) map[string]string {
-	/*
-	Read cluster json file
-	*/
-	clstr:=make(map[string]string)
-	jsonFile,_ := os.Open(s)
-	defer jsonFile.Close()
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-	json.Unmarshal([]byte(byteValue), &clstr)
-	return clstr
-}
-
-func WriteResults(m map[string]float64, keys *[]string, clstr map[string]string, s string, id string) {
-	/*
-	Write results to sorted_combos and cosigt_genotype
-	*/
-	f1, _ := os.Create(s + "/sorted_combos.tsv")
-	defer f1.Close()
-	f2, _ := os.Create(s + "/cosigt_genotype.tsv")
-	defer f2.Close()
-	w := csv.NewWriter(f1)
-	w.Comma = '\t'
-	defer w.Flush()
-	x := csv.NewWriter(f2)
-	x.Comma = '\t'
-	defer x.Flush()
-	for i,k:=range (*keys) {
-		haps:=strings.Split(k,"$")
-		if i == 0 {
-			//k, fmt.Sprintf("%.16f", v)
-			_ = x.Write([]string{"#sample.id", "haplotype.1", "haplotype.2", "cluster.1", "cluster.2", "cosine.similarity"})
-			_ = w.Write([]string{"#haplotype.1", "haplotype2", "cluster.1", "cluster.2", "cosine.similarity"})
-			_ = x.Write([]string{id,haps[0],haps[1],clstr[haps[0]],clstr[haps[1]],fmt.Sprintf("%.16f", m[k])})
-		}
-		_ = w.Write([]string{haps[0],haps[1],clstr[haps[0]],clstr[haps[1]],fmt.Sprintf("%.16f", m[k])})
+// ReadJSON reads a JSON file containing cluster information
+func ReadJSON(filename string) (map[string]string, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("error opening JSON file: %w", err)
 	}
+	defer file.Close()
+
+	var clstr map[string]string
+	if err := json.NewDecoder(file).Decode(&clstr); err != nil {
+		return nil, fmt.Errorf("error decoding JSON: %w", err)
+	}
+	return clstr, nil
 }
 
+// WriteResults writes the analysis results to output files
+func WriteResults(m *sync.Map, keys []string, clstr map[string]string, outDir, id string) error {
+	if err := os.MkdirAll(outDir, os.ModePerm); err != nil {
+		return fmt.Errorf("error creating output directory: %w", err)
+	}
+
+	sortedCombosFile, err := os.Create(filepath.Join(outDir, "sorted_combos.tsv"))
+	if err != nil {
+		return fmt.Errorf("error creating sorted_combos.tsv: %w", err)
+	}
+	defer sortedCombosFile.Close()
+
+	genotypeFile, err := os.Create(filepath.Join(outDir, "cosigt_genotype.tsv"))
+	if err != nil {
+		return fmt.Errorf("error creating cosigt_genotype.tsv: %w", err)
+	}
+	defer genotypeFile.Close()
+
+	sortedCombosWriter := csv.NewWriter(sortedCombosFile)
+	sortedCombosWriter.Comma = '\t'
+	defer sortedCombosWriter.Flush()
+
+	genotypeWriter := csv.NewWriter(genotypeFile)
+	genotypeWriter.Comma = '\t'
+	defer genotypeWriter.Flush()
+
+	// Write headers
+	if err := genotypeWriter.Write([]string{"#sample.id", "haplotype.1", "haplotype.2", "cluster.1", "cluster.2", "cosine.similarity"}); err != nil {
+		return fmt.Errorf("error writing genotype header: %w", err)
+	}
+	if err := sortedCombosWriter.Write([]string{"#haplotype.1", "haplotype.2", "cluster.1", "cluster.2", "cosine.similarity"}); err != nil {
+		return fmt.Errorf("error writing sorted combos header: %w", err)
+	}
+
+	for i, k := range keys {
+		haps := strings.Split(k, "$")
+		val, _ := m.Load(k) // Fetch value from sync.Map
+		cosineSimilarity := val.(float64)
+
+		if i == 0 {
+			if err := genotypeWriter.Write([]string{id, haps[0], haps[1], clstr[haps[0]], clstr[haps[1]], fmt.Sprintf("%.16f", cosineSimilarity)}); err != nil {
+				return fmt.Errorf("error writing genotype data: %w", err)
+			}
+		}
+		if err := sortedCombosWriter.Write([]string{haps[0], haps[1], clstr[haps[0]], clstr[haps[1]], fmt.Sprintf("%.16f", cosineSimilarity)}); err != nil {
+			return fmt.Errorf("error writing sorted combos data: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// SliceContains checks if a string is contained in any string of a slice
 func SliceContains(s string, ids []string) bool {
-	/*
-	Check if substring in any string
-	*/
 	for _, x := range ids {
 		if strings.Contains(s, x) {
 			return true
@@ -151,21 +193,16 @@ func SliceContains(s string, ids []string) bool {
 	return false
 }
 
-func SumSlices(a []float64, b []float64) []float64 {
-	/*
-	Sum slices of floats
-	*/
-	c := make([]float64, len(a))
-	for i := 0; i < len(a); i++ {
+// SumSlices adds two float64 slices element-wise
+func SumSlices(a, b Vector) Vector {
+	c := make(Vector, len(a))
+	for i := range a {
 		c[i] = a[i] + b[i]
 	}
 	return c
 }
 
 func main() {
-	/*
-	Parsing of arguments with argparse
-	*/
 	parser := argparse.NewParser("cosigt", "genotyping loci in pangenome graphs using cosine distance")
 	p := parser.String("p", "paths", &argparse.Options{Required: true, Help: "gzip-compressed tsv file with path names and node coverages from odgi paths"})
 	g := parser.String("g", "gaf", &argparse.Options{Required: true, Help: "gzip-compressed gaf (graph alignment format) file for a sample from gafpack"})
@@ -173,59 +210,112 @@ func main() {
 	c := parser.String("c", "cluster", &argparse.Options{Required: false, Help: "cluster json file as generated with cluster.r"})
 	o := parser.String("o", "output", &argparse.Options{Required: true, Help: "folder prefix for output files"})
 	i := parser.String("i", "id", &argparse.Options{Required: true, Help: "sample name"})
-	err := parser.Parse(os.Args)
-	if err != nil  {
-		fmt.Print(parser.Usage(err))
-		os.Exit(1)
+
+	if err := parser.Parse(os.Args); err != nil {
+		log.Fatalf("Error parsing arguments: %v", err)
 	}
-	//read first table
-	hapid, gcov := ReadGz(*p)
-	//read second table
-	_, bcov := ReadGz(*g)
-	//read blacklist
-	blck := ReadBlacklist(*b)
-	//read cluster .json file
-	clstr:= ReadJson(*c)
-	//trace combinations we have already seen
-	seen:=make(map[int]bool)
-	//store results in map
-	m := make(map[string]float64)
-	//generate all possible diploid combination
-	n := len(hapid)
-	k := 2 //fixed ploidy
-	gen := combin.NewCombinationGenerator(n, k)
-	for gen.Next() {
-		h1, h2 := gen.Combination(nil)[0], gen.Combination(nil)[1]
-		if len(blck) == 0 || (!SliceContains(hapid[h1], blck) && !SliceContains(hapid[h2], blck)) { //nothing to blacklist or both ids not in blacklist
-			sum := SumSlices(gcov[h1], gcov[h2])
-			indiv := (hapid[h1] + "$" + hapid[h2])
-			m[indiv] = GetCosineSimilarity(sum, bcov[0])
-			_,ok:=seen[h1]
-			if !ok {
-				sum=SumSlices(gcov[h1], gcov[h1])
-				indiv= (hapid[h1] + "$" + hapid[h1])
-				m[indiv] = GetCosineSimilarity(sum, bcov[0])
-				seen[h1] = true
-			}
-			_,ok=seen[h2]
-			if !ok {
-				sum=SumSlices(gcov[h2], gcov[h2])
-				indiv= (hapid[h2] + "$" + hapid[h2])
-				m[indiv] = GetCosineSimilarity(sum, bcov[0])
-				seen[h2] = true
-			}
+
+	hapid, gcov, err := ReadGz(*p)
+	if err != nil {
+		log.Fatalf("Error reading paths file: %v", err)
+	}
+
+	_, bcov, err := ReadGz(*g)
+	if err != nil {
+		log.Fatalf("Error reading gaf file: %v", err)
+	}
+
+	var blck []string
+	if *b != "" {
+		blck, err = ReadBlacklist(*b)
+		if err != nil {
+			log.Fatalf("Error reading blacklist: %v", err)
 		}
 	}
-	//sort map
-	keys := make([]string, 0, len(m))
-	for key := range m {
-		keys = append(keys, key)
+
+	clstr, err := ReadJSON(*c)
+	if err != nil {
+		log.Fatalf("Error reading cluster file: %v", err)
 	}
-	sort.SliceStable(keys, func(i, j int) bool {
-		return m[keys[i]] > m[keys[j]]
+
+	seen := sync.Map{} // Changed to use sync.Map for concurrency safety
+	m := sync.Map{}    // Changed to use sync.Map for results
+	n := len(hapid)
+	k := 2 // fixed ploidy
+
+	numWorkers := runtime.NumCPU()
+	jobs := make(chan []int, numWorkers)
+	results := make(chan map[string]float64, numWorkers)
+	var wg sync.WaitGroup
+
+	// Start worker goroutines
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for combo := range jobs {
+				localResults := make(map[string]float64)
+				h1, h2 := combo[0], combo[1]
+				if len(blck) == 0 || (!SliceContains(hapid[h1], blck) && !SliceContains(hapid[h2], blck)) {
+					sum := SumSlices(gcov[h1], gcov[h2])
+					indiv := hapid[h1] + "$" + hapid[h2]
+					localResults[indiv] = GetCosineSimilarity(sum, bcov[0])
+
+					_, seenH1 := seen.LoadOrStore(h1, true)
+					if !seenH1 {
+						sum = SumSlices(gcov[h1], gcov[h1])
+						indiv = hapid[h1] + "$" + hapid[h1]
+						localResults[indiv] = GetCosineSimilarity(sum, bcov[0])
+					}
+
+					_, seenH2 := seen.LoadOrStore(h2, true)
+					if !seenH2 {
+						sum = SumSlices(gcov[h2], gcov[h2])
+						indiv = hapid[h2] + "$" + hapid[h2]
+						localResults[indiv] = GetCosineSimilarity(sum, bcov[0])
+					}
+				}
+				results <- localResults
+			}
+		}()
+	}
+
+	// Generate combinations and send jobs
+	go func() {
+		gen := combin.NewCombinationGenerator(n, k)
+		for gen.Next() {
+			combo := gen.Combination(nil)
+			jobs <- combo
+		}
+		close(jobs)
+	}()
+
+	// Collect results
+	go func() {
+		for localResults := range results {
+			for k, v := range localResults {
+				m.Store(k, v) // Store result in sync.Map
+			}
+		}
+		close(results)
+	}()
+
+	wg.Wait()
+
+	// Sort results
+	keys := make([]string, 0)
+	m.Range(func(key, value interface{}) bool {
+		keys = append(keys, key.(string))
+		return true
 	})
-	//write genotype
-	outpath:=path.Clean(*o)
-	_ = os.Mkdir(outpath, os.ModePerm)
-	WriteResults(m,&keys,clstr,outpath,*i)
+	sort.SliceStable(keys, func(i, j int) bool {
+		valI, _ := m.Load(keys[i])
+		valJ, _ := m.Load(keys[j])
+		return valI.(float64) > valJ.(float64)
+	})
+
+	// Write output
+	if err := WriteResults(&m, keys, clstr, *o, *i); err != nil {
+		log.Fatalf("Error writing results: %v", err)
+	}
 }

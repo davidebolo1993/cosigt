@@ -114,8 +114,14 @@ RUN wget https://github.com/ChristopherWilks/megadepth/releases/download/1.2.0/m
 	&& chmod +x megadepth
 
 ##install wfmash
-RUN wget https://github.com/waveygang/wfmash/releases/download/v0.15.0/wfmash \
-	&& chmod +x wfmash
+RUN wget https://github.com/waveygang/wfmash/releases/download/v0.14.0/wfmash-v0.14.0.tar.gz \
+	&& tar -xvzf wfmash-v0.14.0.tar.gz \
+	&& cd wfmash-v0.14.0 \
+	&& cmake -H. -Bbuild \
+	&& cmake --build build -- -j 8 \
+	&& cmake --install build \
+	&& cd .. \
+	&& rm -rf wfmash-v0.14.0*
 
 ##install gafpack
 RUN git clone https://github.com/ekg/gafpack.git \
