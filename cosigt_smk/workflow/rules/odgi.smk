@@ -160,7 +160,6 @@ rule odgi_viz:
 		-o {output}
 		'''
 
-
 rule odgi_procbed:
 	'''
 	https://github.com/pangenome/odgi

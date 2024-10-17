@@ -39,8 +39,8 @@ write(jout, output_file)
 
 # Create reversed data
 reversed_data <- list()
-for (key in names(jout)) {
-  value <- jout[[key]]
+for (key in names(named_res)) {
+  value <- named_res[[key]]
   if (!is.null(reversed_data[[value]])) {
     reversed_data[[value]] <- c(reversed_data[[value]], key)
   } else {

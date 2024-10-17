@@ -24,7 +24,8 @@ include: 'rules/benchmark.smk'
 rule cosigt:
     input:
         expand(config['output'] + '/cosigt/{sample}/{region}/cosigt_genotype.tsv', sample=df['sample_id'].tolist(), region=config['region']),
-        expand(config['output'] + '/bwa-mem2/{sample}/{region}.realigned.bam.all.pdf', sample=df['sample_id'].tolist(), region=config['region'])
+        expand(config['output'] + '/bwa-mem2/{sample}/{region}.realigned.bam.all.pdf', sample=df['sample_id'].tolist(), region=config['region']),
+        expand(config['output'] + '/odgi/viz/{region}.png',region=config['region']), #this is still incomplete
 
 #DO NOT USE OUTSIDE BENCHMARK CONTEXT
 rule benchmark:
