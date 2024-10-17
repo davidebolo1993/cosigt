@@ -1,67 +1,67 @@
 #!/usr/bin/Rscript
 
-args <- commandArgs(trailingOnly = TRUE)
-
 library(ggplot2)
 library(rjson)
+library(data.table)
+library(scales)
 
+# Main script logic
+args <- commandArgs(trailingOnly = TRUE)
+
+#Helper function #1
 get_region <- function(x) {
-
-    y<-tail(unlist(strsplit(x, "/")),2)[1]
-
+  tail(unlist(strsplit(x, "/")), 2)[1]
 }
 
-get_sample <- function(x) {
-
-    y<-head(unlist(strsplit(x, "/")),3)[3]
-    z<-head(unlist(strsplit(y, ".", fixed=TRUE)),1)
-
+#Helper function #2
+process_file <- function(file_path, clusters) {
+  df <- fread(file_path, header = TRUE)
+  sample <- basename(dirname(dirname(file_path)))
+  haps <- names(clusters)[grepl(sample, names(clusters))]
+  true_clusters <- sort(c(clusters[[haps[1]]], clusters[[haps[2]]]))
+  predicted_clusters <- sort(c(df$cluster.1[1], df$cluster.2[1]))
+  predicted_haplos <- c(df[[1]][1], df[[2]][1])
+  
+  list(
+    lenient = identical(true_clusters, predicted_clusters),
+    strict = length(grep(sample, predicted_haplos)) == 2
+  )
 }
 
-files<-sort(list.files(args[1], pattern="sorted_combos.tsv", full.names=T,recursive=T))
-region<-unique(do.call(c,lapply(files, get_region)))
-#all_list<-list()
-tpr_list<-list()
 
-for (r in region) {
+files <- sort(list.files(args[1], pattern = "sorted_combos.tsv", full.names = TRUE, recursive = TRUE))
+regions <- unique(sapply(files, get_region))
 
-    json_file<-file.path(args[1],"cluster", paste0(r, ".clusters.json"))
-    clusters<-fromJSON(file=json_file)
-    region_scores<-c()
+tpr_list <- lapply(regions, function(r) {
+  json_file <- file.path(args[2], paste0(r, ".clusters.json"))
+  clusters <- fromJSON(file = json_file)
+  region_files <- files[grepl(r, files)]
+  
+  results <- lapply(region_files, process_file, clusters = clusters)
+  lenient_scores <- sapply(results, `[[`, "lenient")
+  strict_scores <- sapply(results, `[[`, "strict")
+  
+  data.frame(
+    category = rep(c("lenient", "strict"), each = 2),
+    measure = rep(c("tp", "fn"), 2),
+    region = r,
+    score = c(sum(lenient_scores), length(region_files) - sum(lenient_scores),
+              sum(strict_scores), length(region_files) - sum(strict_scores))
+  )
+})
 
-    for (f in files[grepl(r,files)]) {
-    
-        df<-data.table::fread(f)
-        sample<-get_sample(f)
-        haps<-names(clusters)[grepl(sample,names(clusters))]
-        true_clusters<-sort(c(clusters[[haps[1]]], clusters[[haps[2]]]))
-        predicted_clusters<-sort(c(df$c1[1], df$c2[1]))
-        region_scores<-c(region_scores, ifelse(identical(true_clusters,predicted_clusters),1,0))
-        #all_list[[f]]<-data.frame(region=r, sample=sample, value=ifelse(identical(true_clusters,predicted_clusters),1,0))
+tpr_df <- rbindlist(tpr_list)
+tpr_df$measure <- factor(tpr_df$measure, levels = c("fn", "tp"))
+tpr_df$category <- factor(tpr_df$category, levels = c("strict", "lenient"))
 
-    }
+p <- ggplot(tpr_df, aes(x = region, y = score, fill = measure)) +
+  geom_bar(position = "fill", stat = "identity", width = 0.1) +
+  scale_y_continuous(labels = percent_format()) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  scale_fill_manual(values = c("tp" = "darkred", "fn" = "darkblue")) +
+  facet_wrap(~category) +
+  ylab("% score") +
+  xlab("region")
 
-    tpr_list[[r]]<-rbind(c("TP",r,sum(region_scores)),c("FN",r,length(files[grepl(r,files)])-sum(region_scores)))
-
-
-}
-
-tpr_df<-do.call(rbind,tpr_list)
-rownames(tpr_df)<-c()
-df<-data.frame(ind=tpr_df[,1], variable=tpr_df[,2], value=as.numeric(tpr_df[,3]))
-df$ind<-factor(df$ind, levels=c("FN","TP"))
-
-
-#all_df<-do.call(rbind, all_list)
-#rownames(all_df)<-c()
-
-p<-ggplot(df, aes(x = variable, y = value, fill = ind)) + 
-    geom_bar(position = "fill",stat = "identity", width=.5) +
-    # or:
-    # geom_bar(position = position_fill(), stat = "identity") 
-    scale_y_continuous(labels = scales::percent_format()) +
-    theme_bw() + 
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-    scale_fill_manual(values=c("TP" = "darkred", "FN" = "darkblue"))
-
-ggsave("tpr.pdf")
+ggsave(args[3], width = 20)
