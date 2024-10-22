@@ -8,6 +8,9 @@ library(scales)
 # Main script logic
 args <- commandArgs(trailingOnly = TRUE)
 
+# Set data.table threads
+setDTthreads(1)
+
 #Helper function #1
 get_region <- function(x) {
   tail(unlist(strsplit(x, "/")), 2)[1]

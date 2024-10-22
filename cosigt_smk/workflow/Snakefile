@@ -21,11 +21,19 @@ include: 'rules/cosigt.smk'
 include: 'rules/megadepth.smk'
 include: 'rules/benchmark.smk'
 
+cosigt_input=list()
+
+for region in config['region']:
+    for sample in df['sample_id'].tolist():
+        cosigt_input.append(config['output'] + '/cosigt/'+ sample + '/' + region + '/cosigt_genotype.tsv')
+        cosigt_input.append(config['output'] + '/bwa-mem2/'+ sample + '/' + region + '.realigned.bam.all.pdf')
+    cosigt_input.append(config['output'] + '/odgi/viz/' + region + '.png')
+    if region in config['annotations']:
+        cosigt_input.append(config['output'] + '/odgi/untangle/' + region + '.gggenes.pdf')
+
 rule cosigt:
     input:
-        expand(config['output'] + '/cosigt/{sample}/{region}/cosigt_genotype.tsv', sample=df['sample_id'].tolist(), region=config['region']),
-        expand(config['output'] + '/bwa-mem2/{sample}/{region}.realigned.bam.all.pdf', sample=df['sample_id'].tolist(), region=config['region']),
-        expand(config['output'] + '/odgi/viz/{region}.png',region=config['region']), #this is still incomplete
+        cosigt_input
 
 #DO NOT USE OUTSIDE BENCHMARK CONTEXT
 rule benchmark:

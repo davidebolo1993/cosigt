@@ -8,13 +8,14 @@ library(rjson)
 library(dendextend)
 library(ggplot2)
 
+
+# Set data.table threads
+setDTthreads(1)
+
 # Parse command-line arguments
 args <- commandArgs(trailingOnly = TRUE)
 input_file <- args[1]
 output_file <- args[2]
-
-# Set data.table threads
-setDTthreads(1)
 
 # Read and process input data
 df <- fread(input_file)

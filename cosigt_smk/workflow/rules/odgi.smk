@@ -204,8 +204,29 @@ rule annot_names:
 		'benchmarks/{region}.annot_names.benchmark.txt'
 	shell:
 		'''
-		cat <(cut -f 4 {input}) <(cut -f 4 {input} | sed 's/$/_inv/g') > {output}
+		cut -f 4 {input} > {output}
 		'''
+
+rule annot_path:
+	'''
+	https://github.com/davidebolo1993/cosigt
+	'''
+	input:
+		rules.odgi_procbed.output
+	output:
+		config['output'] + '/odgi/procbed/{region}.path.txt'
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
+	benchmark:
+		'benchmarks/{region}.annot_path.benchmark.txt'
+	shell:
+		'''
+		cut -f 1 {input} | uniq > {output}
+		'''
+
 
 rule odgi_inject:
 	'''
@@ -240,7 +261,8 @@ rule odgi_flip:
 	https://github.com/pangenome/odgi
 	'''
 	input:
-		rules.odgi_inject.output,
+		og=rules.odgi_inject.output,
+		txt=rules.annot_path.output
 	output:
 		config['output'] + '/odgi/flip/{region}.og'
 	threads:
@@ -254,11 +276,14 @@ rule odgi_flip:
 		'../envs/odgi.yaml'
 	benchmark:
 		'benchmarks/{region}.odgi_flip.benchmark.txt'
+	params:
+
 	shell:
 		'''
 		odgi flip \
-			-i {input} \
-			-o {output}
+			-i {input.og} \
+			-o {output} \
+			--ref-flips {input.txt}
 		'''	
 
 rule odgi_untangle:
@@ -288,4 +313,33 @@ rule odgi_untangle:
 			-i {input.og} \
 			-j 0.3 \
 			-g > {output}
-		'''	
+		'''
+
+rule plot_gggenes:
+	'''
+	https://github.com/pangenome/odgi
+	'''
+	input:
+		tsv=rules.odgi_untangle.output,
+		json=rules.make_clusters.output
+	output:
+		config['output'] + '/odgi/untangle/{region}.gggenes.pdf'
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
+	container:
+		'docker://davidebolo1993/cosigt_workflow:latest'
+	conda:
+		'../envs/plot.yaml'
+	benchmark:
+		'benchmarks/{region}.plot_gggenes.benchmark.txt'
+	shell:
+		'''
+		Rscript \
+			workflow/scripts/plotgggenes.r \
+			{input.tsv} \
+			{input.json} \
+			{output}
+		'''

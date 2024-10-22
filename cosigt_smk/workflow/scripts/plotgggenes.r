@@ -5,62 +5,76 @@ args <- commandArgs(trailingOnly = TRUE)
 
 library(ggplot2)
 library(gggenes)
+library(data.table)
 library(rjson)
 
-x <- data.table::fread(args[1])
-y <- fromJSON(file=args[2])
-reference<-args[3]
+# Set data.table threads
+setDTthreads(1)
 
-if (!(reference %in% x$molecule)) {
-
-    x$strand<-abs(x$strand-1)
-
-}
-
-x$old_label<-x$molecule
-x$molecule<-gsub("_inv", "", x$molecule)
-c<-c()
-
-for (i in c(1:nrow(x))) {
-
-    if (x$molecule[i] %in% names(y)) {
-
-        c<-c(c, y[[x$molecule[i]]])
+gene_data <- fread(args[1])
+cluster_mapping <- fromJSON(file=args[2])
     
-    } else {
-
-        c<-c(c, "reference")
+# Clean molecule names
+gene_data$molecule <- gsub("_inv", "", gene_data$molecule)
+    
+# Map clusters
+clusters <- sapply(gene_data$molecule, function(mol) {
+    if (mol %in% names(cluster_mapping)) {
+        return(cluster_mapping[[mol]])
     }
+    return("reference")
+})
+    
+gene_data$c <- clusters
+    
+# Filter and order data
+gene_data <- gene_data[order(clusters)]
+gene_data <- subset(gene_data, clusters != "reference")
 
+
+#calculate data with cluster boundary information
+
+gene_data$ymin <- 0
+gene_data$ymax <- 0
+gene_data$old_label <- gene_data$molecule
+gene_data$molecule <- as.numeric(factor(gene_data$molecule, levels=unique(gene_data$molecule)))
+    
+# Calculate boundaries for each cluster
+for (cl in unique(gene_data$c)) {
+    subset_data <- subset(gene_data, (c == cl))
+    first <- as.numeric(head(subset_data, 1)$molecule) - 0.4
+    last <- as.numeric(tail(subset_data, 1)$molecule) + 0.4
+    gene_data[which(gene_data$c == cl),]$ymin <- first
+    gene_data[which(gene_data$c == cl),]$ymax <- last
 }
 
-x$c<-c
-x<-x[order(c),]
-x<-subset(x, c != "reference")
 
-x$ymin<-0
-x$ymax<-0
-x$molecule<-as.numeric(factor(x$molecule, levels=unique(x$molecule)))
-
-for (cl in unique(x$c)) {
-
-    s<-subset(x, (c == cl))
-    first<-as.numeric(head(s,1)$molecule)-0.4
-    last<-as.numeric(tail(s,1)$molecule)+0.4
-    x[which(x$c == cl),]$ymin<-first
-    x[which(x$c == cl),]$ymax<-last
-
-}
-
-p<-ggplot(x, aes(xmin=start, xmax=end, y=molecule, fill=gene, forward=strand, label=gene)) + 
-    geom_gene_arrow(arrowhead_height = unit(3, "mm"), arrowhead_width = unit(1, "mm"), show.legend=FALSE) + 
+#plot
+p<-ggplot(gene_data, aes(xmin=start, xmax=end, y=molecule, 
+                        fill=gene, forward=strand, label=gene)) + 
+    geom_gene_arrow(arrowhead_height = unit(3, "mm"), 
+        arrowhead_width = unit(1, "mm"), 
+        show.legend=FALSE) + 
     scale_fill_brewer(palette = "Set3") +
-    geom_rect(data= data.frame(ymin=unique(x$ymin),ymax=unique(x$ymax),cluster=unique(x$c)), inherit.aes = FALSE,  mapping=aes(xmin = -Inf, xmax = +Inf, ymin = ymin, ymax = ymax, color = cluster), alpha=0.4, show.legend=TRUE, linewidth=1, fill=NA) +
-    #scale_color_brewer(palette = "Dark2") +
+    geom_rect(data = data.frame(
+        ymin=unique(gene_data$ymin),
+        ymax=unique(gene_data$ymax),
+        cluster=unique(gene_data$c)
+    ), 
+    inherit.aes = FALSE,  
+    mapping=aes(xmin = -Inf, xmax = +Inf, 
+                ymin = ymin, ymax = ymax, 
+                color = cluster), 
+        alpha=0.4, show.legend=TRUE, 
+        linewidth=1, fill=NA) +
     geom_gene_label(align = "right") +
     theme_genes() +
     labs(y="haplotype") +
-    scale_y_continuous(breaks=c(1:length(unique(x$old_label))), labels=unique(x$old_label))+
+    scale_y_continuous(
+        breaks=seq_len(length(unique(gene_data$old_label))), 
+        labels=unique(gene_data$old_label)
+    ) +
     guides(fill = "none")
 
-ggsave(paste0(args[3], ".pdf"), height=20, width=20)
+
+ggsave(args[3], height=20, width=20)
