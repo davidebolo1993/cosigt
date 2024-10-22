@@ -99,7 +99,7 @@ def main():
 	additional.add_argument('--binds', help='additional paths to bind for singularity in /path/1,/path/2 format [/localscratch]', type=str, default='/localscratch')
 	additional.add_argument('--tmp', help='SINGULARITY TMPDIR [/tmp]', type=str, default='/tmp')	
 	additional.add_argument('--output', help='output folder [results]', metavar='FOLDER', default='results')
-	additional.add_argument('--profile', help='use profile. If None, do not use profile and run on the local machine [config/slurm]', metavar='FOLDER', default='config/slurm')
+	additional.add_argument('--profile', help='use profile. If None, do not use profile and run on the local machine [config/slurm]', metavar='FOLDER', default='config/slurm', type=str)
 	additional.add_argument('--samplemap', help='tsv file mapping each bam/cram basename to a user-defined id. If None, infer from bam/cram basename [None]', metavar='TSV', type=str, default=None)	
 	additional.add_argument('--threads', help='Number of max concurrent cores for snakemake if no profile is provided (ignored otherwise) [1]', type=int, default=1)
 	#metrics
