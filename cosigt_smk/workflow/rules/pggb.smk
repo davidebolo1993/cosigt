@@ -13,7 +13,7 @@ rule pggb_construct:
 		mem_mb=lambda wildcards, attempt: attempt * config['pggb']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['pggb']['time']
 	container:
-		'docker://ghcr.io/pangenome/pggb:20241022133734c3714f'
+		'docker://ghcr.io/pangenome/pggb:202410231852260e9c9e'
 	conda:
 		'../envs/pggb.yaml'
 	benchmark:
