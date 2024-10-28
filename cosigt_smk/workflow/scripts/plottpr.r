@@ -28,7 +28,11 @@ process_file <- function(file_path, clusters) {
   
   list(
     lenient = identical(true_clusters, predicted_clusters),
-    strict = length(grep(sample, predicted_haplos)) == 2
+    strict = length(grep(sample, predicted_haplos)) == 2,
+    w_lenient = ifelse(identical(true_clusters, predicted_clusters), "", sample),
+    w_strict = ifelse(length(grep(sample, predicted_haplos)) == 2, "", sample),
+    g_lenient = ifelse(identical(true_clusters, predicted_clusters), sample, ""),
+    g_strict = ifelse(length(grep(sample, predicted_haplos)) == 2, sample, "")
   )
 }
 
@@ -44,13 +48,18 @@ tpr_list <- lapply(regions, function(r) {
   results <- lapply(region_files, process_file, clusters = clusters)
   lenient_scores <- sapply(results, `[[`, "lenient")
   strict_scores <- sapply(results, `[[`, "strict")
-  
+  lenient_w_names<-sapply(results, `[[`, "w_lenient")
+  strict_w_names<-sapply(results, `[[`, "w_strict")
+  lenient_g_names<-sapply(results, `[[`, "g_lenient")
+  strict_g_names<-sapply(results, `[[`, "g_strict")
+
   data.frame(
     category = rep(c("lenient", "strict"), each = 2),
     measure = rep(c("tp", "fn"), 2),
     region = r,
     score = c(sum(lenient_scores), length(region_files) - sum(lenient_scores),
-              sum(strict_scores), length(region_files) - sum(strict_scores))
+              sum(strict_scores), length(region_files) - sum(strict_scores)),
+    ids=c(paste(lenient_g_names[lenient_g_names!=""],collapse=";"),paste(lenient_w_names[lenient_w_names!=""],collapse=";"),paste(strict_g_names[strict_g_names!=""],collapse=";"),paste(strict_w_names[strict_w_names!=""],collapse=";"))
   )
 })
 
@@ -69,3 +78,4 @@ p <- ggplot(tpr_df, aes(x = region, y = score, fill = measure)) +
   xlab("region")
 
 ggsave(args[3], width = 20)
+fwrite(tpr_df, filename=gsub("pdf", "tsv", args[3]),col.names=T, row.names=F, sep="\t")
