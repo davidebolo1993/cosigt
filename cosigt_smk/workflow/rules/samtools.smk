@@ -37,7 +37,7 @@ rule samtools_fasta:
 	https://github.com/samtools/samtools
 	'''
 	input:
-		sample=lambda wildcards: glob('resources/alignments/{sample}.*am'.format(sample=wildcards.sample)),
+		sample=lambda wildcards: glob('resources/alignments/*{sample}.*am'.format(sample=wildcards.sample)),
 		bed=rules.make_reference_bed.output
 	output:
 		config['output'] + '/samtools/fasta/{sample}/{region}.fasta.gz'
