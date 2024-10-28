@@ -38,6 +38,6 @@ rule cosigt:
 #DO NOT USE OUTSIDE BENCHMARK CONTEXT
 rule benchmark:
     input:
-        'benchmark/resources.time.pdf',
-        'benchmark/resources.mem.pdf',
-        'benchmark/tpr.pdf'
+        config['output'] + '/benchmark/resources.time.pdf',
+        config['output'] + '/benchmark/resources.mem.pdf',
+        config['output'] + '/benchmark/tpr.pdf'

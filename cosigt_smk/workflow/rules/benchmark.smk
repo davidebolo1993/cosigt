@@ -2,8 +2,8 @@ rule plot_benchmark_time_mem:
     input:
         expand(config['output'] + '/cosigt/{sample}/{region}/cosigt_genotype.tsv', sample=df['sample_id'].tolist(), region=config['region'])
     output:
-        time='benchmark/resources.time.pdf',
-        mem='benchmark/resources.mem.pdf'
+        time=config['output'] + '/benchmark/resources.time.pdf',
+        mem=config['output'] + '/benchmark/resources.mem.pdf'
     threads:
         1
     resources:
@@ -28,7 +28,7 @@ rule plot_benchmark_tpr:
     input:
         expand(config['output'] + '/cosigt/{sample}/{region}/cosigt_genotype.tsv', sample=df['sample_id'].tolist(), region=config['region'])
     output:
-        'benchmark/tpr.pdf'
+        config['output'] + '/benchmark/tpr.pdf'
     threads:
         1
     resources:
