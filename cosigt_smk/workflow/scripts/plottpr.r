@@ -20,6 +20,7 @@ get_region <- function(x) {
 process_file <- function(file_path, clusters) {
   df <- fread(file_path, header = TRUE)
   sample <- basename(dirname(dirname(file_path)))
+  sample<-unlist(strsplit(sample, ".", fixed=TRUE))[1]
   haps <- names(clusters)[grepl(sample, names(clusters))]
   true_clusters <- sort(c(clusters[[haps[1]]], clusters[[haps[2]]]))
   predicted_clusters <- sort(c(df$cluster.1[1], df$cluster.2[1]))
