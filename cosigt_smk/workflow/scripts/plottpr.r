@@ -78,4 +78,4 @@ p <- ggplot(tpr_df, aes(x = region, y = score, fill = measure)) +
   xlab("region")
 
 ggsave(args[3], width = 20)
-fwrite(tpr_df, filename=gsub("pdf", "tsv", args[3]),col.names=T, row.names=F, sep="\t")
+fwrite(tpr_df, gsub("pdf", "tsv", args[3]),col.names=T, row.names=F, sep="\t")
