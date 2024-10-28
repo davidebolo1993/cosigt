@@ -1,0 +1,1 @@
+A small test set for cosigt. See [here](https://davidebolo1993.github.io/cosigtdoc/setup/setup.html#installation-test) for a description.
