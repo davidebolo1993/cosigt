@@ -7,4 +7,5 @@ dependencies:
   - r-nbclust=3.0.1
   - r-ggplot2=3.5.1
   - r-dendextend=1.18.1
+  - r-ggdendro=0.2.0
   - r-base
