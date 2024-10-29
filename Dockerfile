@@ -185,6 +185,6 @@ RUN conda create -y -n renv -c conda-forge -c bioconda \
 	r-dendextend=1.18.1 \
 	r-gggenes=0.5.1 \
 	bioconductor-rtracklayer=1.62.0 \
-	r-ggendro=0.2.0
+	r-ggdendro=0.2.0
 RUN echo "source activate renv" > ~/.bashrc
 ENV PATH /miniconda/envs/renv/bin:$PATH
