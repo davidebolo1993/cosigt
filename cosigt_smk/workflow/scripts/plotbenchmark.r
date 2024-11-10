@@ -37,13 +37,15 @@ for (m in method) {
   for (r in region) {
     f1 <- files_wregion[grep(m, files_wregion)]
     f2 <- f1[grep(r, f1)]
-    df <- rbindlist(lapply(f2, fread))
-    benchmark_list[[length(benchmark_list) + 1]] <- data.frame(
-      region = r,
-      method = m,
-      value.time = df$s,
-      value.mem = df$max_rss
-    )
+    if (length(f2) != 0) {
+      df <- rbindlist(lapply(f2, fread))
+      benchmark_list[[length(benchmark_list) + 1]] <- data.frame(
+        region = r,
+        method = m,
+        value.time = df$s,
+        value.mem = df$max_rss
+      )
+    }
   }
 }
 
