@@ -21,16 +21,18 @@ df <- fread(input_file)
 df$jaccard.distance <- 1 - df$jaccard.similarity
 
 #find outliers
-iqr<-IQR(df$group.a.length)
-q1<-as.numeric(quantile(df$group.a.length,probs=c(0.25)))
-q3<-as.numeric(quantile(df$group.a.length,probs=c(0.75)))
-lb<-q1-iqr*3
-ub<-q3+iqr*3
-#keep only those in range
-newdf<-df[group.a.length >= lb & group.a.length <= ub & group.b.length >= lb & group.b.length <= ub]
-#track excluded
-excluded<-unique(df$group.a[df$group.a%in%newdf$group.a == FALSE])
-df<-newdf
+z.scores.a <- (df$group.a.length - mean(df$group.a.length)) / sd(df$group.a.length)
+z.scores.b <- (df$group.b.length - mean(df$group.b.length)) / sd(df$group.b.length)
+outliers.a<-df[abs(z.scores.a) > 3]
+outliers.b<-df[abs(z.scores.b) > 3]
+outliers<-unique(c(which(abs(z.scores.a) > 3),which(abs(z.scores.b) > 3)))
+if (length(outliers)==0) {
+  excluded<-c()
+} else {
+  newdf<-df[-outliers]
+  excluded<-unique(df$group.a[df$group.a%in%newdf$group.a == FALSE])
+  df<-newdf
+}
 
 # Create distance matrix
 regularMatrix <- acast(df, group.a ~ group.b, value.var = "jaccard.distance")
