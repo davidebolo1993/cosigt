@@ -6,8 +6,7 @@ library(reshape2)
 library(NbClust)
 library(rjson)
 library(dendextend)
-library(ggplot2)
-library(ggdendro)
+library(randomcoloR)
 
 # Set data.table threads
 setDTthreads(1)
@@ -21,21 +20,33 @@ output_file <- args[2]
 df <- fread(input_file)
 df$jaccard.distance <- 1 - df$jaccard.similarity
 
+#find outliers
+iqr<-IQR(df$group.a.length)
+q1<-as.numeric(quantile(df$group.a.length,probs=c(0.25)))
+q3<-as.numeric(quantile(df$group.a.length,probs=c(0.75)))
+lb<-q1-iqr*3
+ub<-q3+iqr*3
+#keep only those in range
+newdf<-df[group.a.length >= lb & group.a.length <= ub & group.b.length >= lb & group.b.length <= ub]
+#track excluded
+excluded<-unique(df$group.a[df$group.a%in%newdf$group.a == FALSE])
+df<-newdf
+
 # Create distance matrix
 regularMatrix <- acast(df, group.a ~ group.b, value.var = "jaccard.distance")
 #max distance if NA
 regularMatrix[is.na(regularMatrix)]<-1
 distanceMatrix <- as.dist(regularMatrix)
 
-
 # Calculate silhouette score and best partition
-max_cluster <- round(length(unique(df$group.a)) / 3)
+max_cluster <- round(length(unique(df$group.a)) / 3) ##control
 res <- NbClust(diss = distanceMatrix, method = "average", index = "silhouette", 
                distance = NULL, max.nc = max_cluster)$Best.partition
 
 # Format results
 res.list <- lapply(split(res, names(res)), unname)
 named_res <- lapply(res.list, function(x, prefix) paste0(prefix, x), prefix = "HaploGroup")
+for (e in excluded) {named_res[[e]] <- "*"}
 jout <- toJSON(named_res)
 
 # Write JSON output
@@ -97,29 +108,36 @@ distance_output <- gsub(".json", ".hapdist.tsv", output_file)
 fwrite(data.frame(h.group=row.names(cluster_dist),cluster_dist), distance_output, row.names = FALSE, col.names = TRUE, sep = "\t")
 
 #plot
+palette <- distinctColorPalette(k)
+
 dend <- as.dendrogram(hc) %>%
-  set("branches_k_color", k = k) %>%
+  set("branches_k_color", value=palette, k = k) %>%
+  set("labels_col", value=palette,k = k) %>%
   set("labels_cex", 0.6)
 
-# Convert dendrogram to ggdendro format for ggplot
-ggd1 <- as.ggdend(dend)
+#map leaf colors to haplogroups
+leaf_colors <- get_leaves_branches_col(dend)
+leaf_names <- get_leaves_attr(dend, "label")
+cluster_map <- data.frame(
+  leaf = as.character(leaf_names),
+  cluster = clusters[leaf_names],
+  color = leaf_colors
+)
+cluster_colors <- sapply(unique(clusters), function(cluster) {
+  leaf_index <- which(clusters == cluster)[1]
+  leaf_colors[leaf_index]
+})
+cluster_info <- data.frame(
+  cluster = paste0("HaploGroup", unique(clusters)),
+  color = cluster_colors
+)
 
-# Extract leaf labels and create a mapping of each label to its HaploGroup
-leaf_labels <- labels(dend)
-cluster_mapping <- data.frame(label = leaf_labels, HaploGroup = paste0("HaploGroup", clusters[leaf_labels]))
-
-# Plot with branches colored by HaploGroup and labels as haplotype names
-p <- ggplot(ggd1$segments) +
-  geom_segment(aes(x = x, y = y, xend = xend, yend = yend, color = factor(cluster_mapping$HaploGroup[match(xend, 1:length(leaf_labels))])),
-               size = 0.8) +
-  geom_text(data = cluster_mapping, aes(x = match(label, leaf_labels), y = -0.05, label = label), 
-            angle = 0, vjust = 0.5, hjust = 0.2, color = "black", size=3) +
-  scale_color_manual(name = "HaploGroup", values = rainbow(k)) +
-  labs(color = "HaploGroup") +
-  theme(legend.position = "right")+
-  theme_minimal() +
-  guides(color = guide_legend(na.translate = FALSE))  +
-  coord_flip()
-
-# Save the plot with branch colors and haplotype labels
-ggsave(gsub(".json", ".pdf", output_file), plot = p, width = 20, height = 15)
+unique_clusters <- cluster_map[!duplicated(cluster_map$cluster), ]
+#actual plot
+pdf(gsub(".json", ".pdf", output_file), width = 20, height = 15)
+dend %>% plot(horiz = TRUE)
+legend("topleft",
+       legend = paste0("HaploGroup", unique_clusters$cluster),
+       fill = unique_clusters$color,
+       cex = 0.6)
+dev.off()
