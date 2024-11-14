@@ -24,8 +24,7 @@ rule impg_project:
 		'''
 		impg \
 		-p {input.paf} \
-		-b {input.bed} \
-		-x | \
+		-b {input.bed} | \
 		grep -v \
 		-f {params.exclude} > {output}
 		'''
