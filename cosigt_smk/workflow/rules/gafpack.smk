@@ -1,6 +1,6 @@
 rule gafpack_coverage:
 	'''
-	https://github.com/ekg/gafpack
+	https://github.com/pangenome/gafpack
 	'''
 	input:
 		gfa=rules.odgi_view.output,

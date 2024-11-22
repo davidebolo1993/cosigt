@@ -126,9 +126,9 @@ RUN wget https://github.com/waveygang/wfmash/releases/download/v0.14.0/wfmash-v0
 ENV PATH /opt/wfmash-v0.14.0/build/bin:$PATH
 
 ##install gafpack
-RUN git clone https://github.com/ekg/gafpack.git \
+RUN git clone https://github.com/pangenome/gafpack.git \
 	&& cd gafpack \
-	&& git checkout cf2e96057c4efe86317caa990b53f1fc1fdc6367 \
+	&& git checkout 84eeab0d860245508729302c5b0ffa2ca159a350 \
 	&& cargo install --force --path . \
 	&& cp target/release/gafpack ../gafpack-tmp \
 	&& cd .. \
