@@ -148,7 +148,7 @@ RUN git clone https://github.com/AndreaGuarracino/gfainject \
 ##install impg
 RUN git clone https://github.com/pangenome/impg \
 	&& cd impg \
-	&& git checkout 4cf6009160ec9d64e9f9972248511a63d6d012a5 \
+	&& git checkout 37b18e18123d92fa5fa824a4e15d8aa7cad3b6db \
 	&& cargo install --force --path . \
 	&& cp target/release/impg ../impg-tmp \
 	&& cd .. \

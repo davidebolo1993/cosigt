@@ -1,6 +1,6 @@
 rule impg_project:
 	'''
-	https://github.com/ekg/impg
+	https://github.com/pangenome/impg
 	'''
 	input:
 		paf=rules.wfmash_align.output,
