@@ -2,4 +2,4 @@ channels:
  - conda-forge
  - bioconda
 dependencies:
-  - gfainject=0.1.0
+  - gfainject=0.2.0

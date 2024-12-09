@@ -21,7 +21,7 @@ rule gafpack_coverage:
 	shell:
 		'''
 		gafpack \
-		-g {input.gfa} \
-		-a {input.gaf} \
+		--gfa {input.gfa} \
+		--gaf {input.gaf} \
 		--len-scale --weight-queries | gzip > {output}
 		'''

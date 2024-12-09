@@ -6,7 +6,7 @@ rule gfainject_inject:
 		gfa=rules.odgi_view.output,
 		bam=rules.bwamem2_mem_samtools_sort.output
 	output:
-		config['output'] + '/gfainject/{sample}/{region}.gaf'
+		config['output'] + '/gfainject/{sample}/{region}.gaf.gz'
 	threads:
 		1
 	resources:
@@ -22,5 +22,5 @@ rule gfainject_inject:
 		'''
 		gfainject \
 		--gfa {input.gfa} \
-		--bam {input.bam} > {output}
+		--bam {input.bam} | gzip > {output}
 		'''
