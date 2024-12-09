@@ -138,7 +138,7 @@ RUN git clone https://github.com/pangenome/gafpack.git \
 ##install gfainject
 RUN git clone https://github.com/AndreaGuarracino/gfainject \
 	&& cd gfainject \
-	&& git checkout cc4e2e070d1c0c883c2296024d5bb970f34820d8 \
+	&& git checkout b32b2a03b90d4c9ae935737b3bd7bd86ca8a2d78 \
 	&& cargo install --force --path . \
 	&& cp target/release/gfainject ../gfainject-tmp \
 	&& cd .. \
