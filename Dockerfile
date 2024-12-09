@@ -128,7 +128,7 @@ ENV PATH /opt/wfmash-v0.14.0/build/bin:$PATH
 ##install gafpack
 RUN git clone https://github.com/pangenome/gafpack.git \
 	&& cd gafpack \
-	&& git checkout 84eeab0d860245508729302c5b0ffa2ca159a350 \
+	&& git checkout 6a0b7940d0ca4b552f5f80b3d1668ed0312080ad \
 	&& cargo install --force --path . \
 	&& cp target/release/gafpack ../gafpack-tmp \
 	&& cd .. \
