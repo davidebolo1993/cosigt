@@ -1,6 +1,6 @@
 rule gafpack_coverage:
 	'''
-	https://github.com/ekg/gafpack
+	https://github.com/pangenome/gafpack
 	'''
 	input:
 		gfa=rules.odgi_view.output,
@@ -21,7 +21,7 @@ rule gafpack_coverage:
 	shell:
 		'''
 		gafpack \
-		-g {input.gfa} \
-		-a {input.gaf} \
-		--len-scale | gzip > {output}
+		--gfa {input.gfa} \
+		--gaf {input.gaf} \
+		--len-scale --weight-queries | gzip > {output}
 		'''

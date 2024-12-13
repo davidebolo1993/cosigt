@@ -2,4 +2,4 @@ channels:
  - conda-forge
  - bioconda
 dependencies:
- - gafpack=0.1.0
+ - gafpack=0.1.2

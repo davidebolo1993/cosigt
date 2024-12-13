@@ -126,9 +126,9 @@ RUN wget https://github.com/waveygang/wfmash/releases/download/v0.14.0/wfmash-v0
 ENV PATH /opt/wfmash-v0.14.0/build/bin:$PATH
 
 ##install gafpack
-RUN git clone https://github.com/ekg/gafpack.git \
+RUN git clone https://github.com/pangenome/gafpack.git \
 	&& cd gafpack \
-	&& git checkout cf2e96057c4efe86317caa990b53f1fc1fdc6367 \
+	&& git checkout 6a0b7940d0ca4b552f5f80b3d1668ed0312080ad \
 	&& cargo install --force --path . \
 	&& cp target/release/gafpack ../gafpack-tmp \
 	&& cd .. \
@@ -138,7 +138,7 @@ RUN git clone https://github.com/ekg/gafpack.git \
 ##install gfainject
 RUN git clone https://github.com/AndreaGuarracino/gfainject \
 	&& cd gfainject \
-	&& git checkout cc4e2e070d1c0c883c2296024d5bb970f34820d8 \
+	&& git checkout b32b2a03b90d4c9ae935737b3bd7bd86ca8a2d78 \
 	&& cargo install --force --path . \
 	&& cp target/release/gfainject ../gfainject-tmp \
 	&& cd .. \
@@ -148,7 +148,7 @@ RUN git clone https://github.com/AndreaGuarracino/gfainject \
 ##install impg
 RUN git clone https://github.com/pangenome/impg \
 	&& cd impg \
-	&& git checkout 4cf6009160ec9d64e9f9972248511a63d6d012a5 \
+	&& git checkout 37b18e18123d92fa5fa824a4e15d8aa7cad3b6db \
 	&& cargo install --force --path . \
 	&& cp target/release/impg ../impg-tmp \
 	&& cd .. \

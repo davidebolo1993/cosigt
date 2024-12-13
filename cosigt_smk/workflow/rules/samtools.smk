@@ -62,7 +62,9 @@ rule samtools_fasta:
 		-L {input.bed} \
 		-M \
 		-b \
-		{input.sample} | samtools fasta \
+		{input.sample} | \
+		samtools sort -n | \
+		samtools fasta \
 		-@ {threads} \
 		- | gzip > {output}
 		'''
