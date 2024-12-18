@@ -116,7 +116,9 @@ server <- function(input, output, session) {
   # Reactive values to hold the loaded vectors
   sample_vector <- reactiveVal()
   summed_vector <- reactiveVal()
-
+  pang_vector1 <- reactiveVal()
+  pang_vector2 <- reactiveVal()
+  
   # Load and compare vectors when button is clicked
   observeEvent(input$load_compare, {
     req(input$sample, input$table, input$row1, input$row2)
@@ -132,6 +134,10 @@ server <- function(input, output, session) {
 
     # Sum the selected rows
     summed_vector(row1_vector + row2_vector)
+    
+    # Store individual vectors
+    pang_vector1(row1_vector)
+    pang_vector2(row2_vector)
   })
 
   # Calculate cosine similarity and angle between the sample vector and summed vector
@@ -154,21 +160,30 @@ server <- function(input, output, session) {
 
     # Data for plotting
     plot_data <- data.frame(
-      x = c(1:length(sample_vector()), 1:length(summed_vector())),
-      y = c(sample_vector(), summed_vector()),
-      Vector = rep(c("Sample Vector", "Pangenome Vector"), each = length(sample_vector()))
+      x = c(1:length(sample_vector()), 
+            1:length(summed_vector()),
+            1:length(pang_vector1()),
+            1:length(pang_vector2())),
+      y = c(sample_vector(), 
+            summed_vector(),
+            pang_vector1(),
+            pang_vector2()),
+      Vector = rep(c("Sample Vector (diploid)", 
+                     "Pangenome Vector (diploid)",
+                     "Pangenome Vector (1st hap)",
+                     "Pangenome Vector (2nd hap)"), 
+                   each = length(sample_vector()))
     )
-
+    
     # Plot using plotly
     plot <- plot_ly(plot_data, x = ~x, y = ~y, color = ~Vector, type = "scatter", mode = "lines+markers") %>%
       layout(title = paste("Comparison of Selected Vectors"),
              xaxis = list(title = "Index"),
-             yaxis = list(title = "Value"))
-
+             yaxis = list(title = "Value"),
+             legend = list(x = 1.1, y = 0.5))
     plot
   })
 }
 
 # Run the Shiny app
 shinyApp(ui = ui, server = server)
-
