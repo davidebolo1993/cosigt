@@ -41,7 +41,7 @@ regularMatrix[is.na(regularMatrix)]<-1
 distanceMatrix <- as.dist(regularMatrix)
 
 # Calculate silhouette score and best partition
-max_cluster <- round(length(unique(df$group.a)) / 3) ##control
+max_cluster <- round(length(unique(df$group.a)) / 5) ##control
 res <- NbClust(diss = distanceMatrix, method = "average", index = "silhouette", 
                distance = NULL, max.nc = max_cluster)$Best.partition
 

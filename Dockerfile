@@ -31,6 +31,7 @@ RUN apt-get -y install \
 	python3-dev \
 	python3-pip \ 
 	libjemalloc-dev \
+	libisal-dev \
 	cmake \
 	make \
 	g++ \
@@ -80,6 +81,15 @@ RUN wget https://github.com/samtools/samtools/releases/download/1.21/samtools-1.
 	&& cp samtools /opt/samtools \
 	&& cd .. \
 	&& rm -rf samtools-1.21
+
+##install strobealign
+RUN git clone https://github.com/ksahlin/strobealign \
+	&& cd strobealign \
+	&& cmake -B build -DCMAKE_C_FLAGS="-msse4.2" -DCMAKE_CXX_FLAGS="-msse4.2" \
+	&& cmake --build build -j 8 \
+	&& cd ..
+
+ENV PATH /opt/strobealign/build:$PATH
 
 ##install bwa-mem
 RUN git clone https://github.com/lh3/bwa.git \
