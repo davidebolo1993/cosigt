@@ -23,5 +23,6 @@ rule gafpack_coverage:
 		gafpack \
 		--gfa {input.gfa} \
 		--gaf {input.gaf} \
-		--len-scale --weight-queries | gzip > {output}
+		--len-scale \
+		--weight-queries | gzip > {output}
 		'''

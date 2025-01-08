@@ -82,15 +82,6 @@ RUN wget https://github.com/samtools/samtools/releases/download/1.21/samtools-1.
 	&& cd .. \
 	&& rm -rf samtools-1.21
 
-##install strobealign
-RUN git clone https://github.com/ksahlin/strobealign \
-	&& cd strobealign \
-	&& cmake -B build -DCMAKE_C_FLAGS="-msse4.2" -DCMAKE_CXX_FLAGS="-msse4.2" \
-	&& cmake --build build -j 8 \
-	&& cd ..
-
-ENV PATH /opt/strobealign/build:$PATH
-
 ##install bwa-mem
 RUN git clone https://github.com/lh3/bwa.git \
 	&& cd bwa \
@@ -158,7 +149,7 @@ RUN git clone https://github.com/AndreaGuarracino/gfainject \
 ##install impg
 RUN git clone https://github.com/pangenome/impg \
 	&& cd impg \
-	&& git checkout 37b18e18123d92fa5fa824a4e15d8aa7cad3b6db \
+	&& git checkout 15248982d5a873b36e5fe4547b265f9f172cfb54 \
 	&& cargo install --force --path . \
 	&& cp target/release/impg ../impg-tmp \
 	&& cd .. \

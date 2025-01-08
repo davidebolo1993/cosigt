@@ -78,14 +78,14 @@ rule odgi_paths_matrix:
 		cut -f 1,4- | gzip > {output}
 		'''
 
-rule odgi_view_len:
+rule odgi_view_node_length:
 	'''
 	https://github.com/pangenome/odgi
 	'''
 	input:
 		rules.odgi_view.output
 	output:
-		config['output'] + '/odgi/view/{region}.len.tsv'
+		config['output'] + '/odgi/view/{region}.node.length.tsv'
 	threads:
 		1
 	resources:
@@ -96,36 +96,11 @@ rule odgi_view_len:
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
-		'benchmarks/{region}.odgi_view_len.benchmark.txt'
+		'benchmarks/{region}.odgi_view_node_length.benchmark.txt'
 	shell:
 		'''
 		grep '^S' {input} | \
 		awk '{{print("node."$2,length($3))}}' OFS="\\t" > {output}
-		'''
-
-rule filter_odgi_matrix:
-	'''
-	https://github.com/davidebolo1993/cosigt
-	'''
-	input:
-		coverage=rules.odgi_chop.output,
-		size=rules.odgi_view_len.output
-	output:
-		config['output'] + '/odgi/paths/matrix_flt/{region}.tsv.gz'
-	threads:
-		1
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['time']
-	container:
-		'docker://davidebolo1993/cosigt_workflow:latest'
-	#conda:
-		#'../envs/odgi.yaml'
-	benchmark:
-		'benchmarks/{region}.filter_odgi_matrix.benchmark.txt'
-	shell:
-		'''
-		flt {input.coverage} {input.size} | gzip > {output}
 		'''
 
 rule odgi_similarity:

@@ -28,6 +28,7 @@ for region in config['region']:
         cosigt_input.append(config['output'] + '/cosigt/'+ sample + '/' + region + '/cosigt_genotype.tsv')
         cosigt_input.append(config['output'] + '/bwa-mem2/'+ sample + '/' + region + '.realigned.bam.all.pdf')
     cosigt_input.append(config['output'] + '/odgi/viz/' + region + '.png')
+    cosigt_input.append(config['output'] + '/odgi/view/' + region + '.node.length.tsv')
     if region in config['annotations']:
         cosigt_input.append(config['output'] + '/odgi/untangle/' + region + '.gggenes.pdf')
 

@@ -23,6 +23,7 @@ rule impg_project:
 	shell:
 		'''
 		impg \
+		query \
 		-p {input.paf} \
 		-b {input.bed} | \
 		grep -v \
