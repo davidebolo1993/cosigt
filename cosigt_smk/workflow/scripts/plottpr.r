@@ -102,13 +102,13 @@ tpr_df <- rbindlist(tpr_list)
 tpr_df$measure <- factor(tpr_df$measure, levels = c("fn", "tp"))
 tpr_df$category <- factor(tpr_df$category, levels = c("strict", "lenient"))
 
-p <- ggplot(tpr_df, aes(x = region, y = score, fill = measure)) +
+p <- ggplot(tpr_df, aes(x = category, y = score, fill = measure)) +
   geom_bar(position = "fill", stat = "identity", width = 0.1) +
   scale_y_continuous(labels = percent_format()) +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1), legend.position = "top") +
   scale_fill_manual(values = c("tp" = "darkred", "fn" = "darkblue")) +
-  facet_wrap(~category) +
+  facet_wrap(~region, ncol = 6) +
   ylab("% score") +
   xlab("region")
 
