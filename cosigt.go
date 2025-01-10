@@ -68,6 +68,7 @@ func ReadBlacklist(filename string) ([]string, error) {
 	return ids, scanner.Err()
 }
 
+
 // ReadGz reads gzip-compressed TSV files containing gafpack and odgi paths data
 func ReadGz(filename string) ([]string, []Vector, error) {
 	file, err := os.Open(filename)

@@ -46,10 +46,10 @@ rule add_target_to_queries:
         'benchmarks/add_target_to_queries.benchmark.txt'
     shell:
         '''
-        cat {input.queries_fasta} {input.target_fasta} | \
+        zcat --force {input.queries_fasta} {input.target_fasta} | \
         awk '/^>/{{f=!d[$1];d[$1]=1}}f' \
         > {output}
-        '''                  
+        '''
 
 rule samtools_faidx_queries:
     '''

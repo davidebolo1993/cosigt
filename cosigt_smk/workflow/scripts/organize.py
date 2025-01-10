@@ -79,7 +79,6 @@ def default_parameters(args):
 	d['output'] = args.output
 	return d
 
-
 def main():
 
 	'''
@@ -90,9 +89,9 @@ def main():
 	#required
 	required = parser.add_argument_group('Required I/O arguments')
 	required.add_argument('-a', '--alignments', help='folder with read-level alignment files (.bam,.cram) - and their indexes (.bai/.csi,.crai). Individuals to genotype', metavar='FOLDER', required=True)
-	required.add_argument('-r','--reference', help='reference file, .fasta format. Same individuals to genotype are aligned to', metavar='FASTA', required=True)
-	required.add_argument('--assemblies', help='assemblies, .fasta format', metavar='FASTA', required=True)
-	required.add_argument('--roi', help='one or more regions of interest in .bed format, with chr in PanSN format (build#chr - e.g. grch38#chr6)', metavar='BED', required=True)
+	required.add_argument('-r','--reference', help='reference file, .fasta format. Same reference the individuals to genotype are aligned to. Optionally, bgzip-compressed', metavar='FASTA', required=True)
+	required.add_argument('--assemblies', help='assemblies, .fasta format. Optionally, bgzip-compressed', metavar='FASTA', required=True)
+	required.add_argument('--roi', help='one or more regions of interest in .bed format, with chr in PanSN format (build#chr - e.g. grch38#chr1)', metavar='BED', required=True)
 	#addition
 	additional = parser.add_argument_group('Additional I/O arguments')
 	additional.add_argument('--blacklist', help='assemblies (one per line) that should not be included in the analysis [None]', metavar='', required=False, default=None)
@@ -101,29 +100,29 @@ def main():
 	additional.add_argument('--output', help='output folder [results]', metavar='FOLDER', default='results')
 	additional.add_argument('--profile', help='use profile. If None, do not use profile and run on the local machine [config/slurm]', metavar='FOLDER', default='config/slurm', type=str)
 	additional.add_argument('--samplemap', help='tsv file mapping each bam/cram basename to a user-defined id. If None, infer from bam/cram basename [None]', metavar='TSV', type=str, default=None)	
-	additional.add_argument('--annotation', help='one or more reference annotations in BED format', metavar='BED', type=str, default=None)
+	additional.add_argument('--annotations', help='gene structures, .gtf format. Optionally gzip-compressed [None]', metavar='GTF', type=str, default=None)
 	#metrics
-	metrics = parser.add_argument_group('Specify #threads, memory and time requirements')
+	metrics = parser.add_argument_group('Specify #threads, memory and time requirements, temp directories')
 	metrics.add_argument('--std_time', help='max time (minutes) - default [1]',type=int, default=1)
 	metrics.add_argument('--std_memory', help='memory (mb) - default [500]',type=int, default=500)
 	metrics.add_argument('--threads', help='number of concurrent cores for snakemake if no profile is provided (ignored otherwise) [1]', type=int, default=1)
 	#alignment
-	metrics.add_argument('--aln_threads', help='# threads - aligner [5]',type=int, default=5)
+	metrics.add_argument('--aln_threads', help='#threads - aligner [5]',type=int, default=5)
 	metrics.add_argument('--aln_time', help='max time (minutes) - aligner [2]',type=int, default=5)
 	metrics.add_argument('--aln_memory', help='max memory (mb) - aligner [5000]',type=int, default=5000)
 	metrics.add_argument('--aln_preset', help='preset for minimap2 [map-ont] - ignore if not using the long branch of cosigt', type=str, default='map-ont')
 	#samtools
-	metrics.add_argument('--sam_threads', help='# threads - samtools (view) [2]',type=int, default=2)
+	metrics.add_argument('--sam_threads', help='#threads - samtools (view) [2]',type=int, default=2)
 	metrics.add_argument('--sam_time', help='max time (minutes) - samtools (view) [5]',type=int, default=5)
 	metrics.add_argument('--sam_memory', help='max memory (mb) - samtools (view) [5000]',type=int, default=5000)
 	#pggb
-	metrics.add_argument('--pggb_threads', help='# threads - pggb [24]',type=int, default=24)
+	metrics.add_argument('--pggb_threads', help='#threads - pggb [24]',type=int, default=24)
 	metrics.add_argument('--pggb_time', help='max time (minutes) - pggb [35]',type=int, default=35)
 	metrics.add_argument('--pggb_memory', help='max memory (mb) - pggb [30000]',type=int, default=30000)
 	metrics.add_argument('--pggb_params', help='additional parameters for pggb [-c 2]',type=str, default='-c 2')
 	metrics.add_argument('--pggb_tmpdir', help='temporary directory - pggb [working directory]',type=str, default=os.getcwd())
 	#wfmash
-	metrics.add_argument('--wfmash_threads', help='# threads - wfmash [24]',type=int, default=24)
+	metrics.add_argument('--wfmash_threads', help='#threads - wfmash [24]',type=int, default=24)
 	metrics.add_argument('--wfmash_time', help='max time (minutes) - wfmash [35]',type=int, default=35)
 	metrics.add_argument('--wfmash_memory', help='max memory (mb) - wfmash [30000]',type=int, default=30000)
 	metrics.add_argument('--wfmash_params', help='additional parameters for wfmash [-s 10k -p 95]',type=str, default='-s 10k -p 95')
@@ -191,18 +190,13 @@ def main():
 					samples_out.write(samplesmap[bnaln] + '\t' + out_aln_file + '\n')
 	#add to config
 	d['samples'] = out_samples
-	#annotations?
-	d['annotations'] = set()
-	if args.annotation is not None:
-		with open(args.annotation, 'r') as annot_in:
-			for line in annot_in:
-				lann=line.rstrip().split('\t')
-				region=lann[4].replace('#','_') + '_' + lann[5] + '_' + lann[6]
-				d['annotations'].add(region)
-				annot_out=os.path.join(out_annotations, region+'.bed')
-				with open(annot_out, 'a') as out_annot:
-					out_annot.write(lann[0] + '\t' + lann[1] + '\t' + lann[2]+ '\t' + lann[3] + '\n')
-	d['annotations'] = list(d['annotations'])
+	#annotations
+	out_annotations_file = ''
+	if args.annotations is not None:
+		out_annotations_file=os.path.join(out_annotations, os.path.basename(args.annotations))
+		#bind if needed
+		args.binds += ',' + os.path.dirname(os.path.abspath(args.annotations))
+	d['annotations'] = out_annotations_file
 	#symlink assemblies 
 	out_assemblies_file=os.path.join(out_fasta, os.path.basename(args.assemblies))
 	try:
@@ -244,7 +238,7 @@ def main():
 			fileout.write(line)
 	os.remove(out_yaml_tmp)
 	#write command - singularity
-	singpath=','.join(list(set([os.path.abspath(args.alignments),os.path.dirname(os.path.abspath(args.assemblies)),os.path.abspath(args.output),os.path.dirname(os.path.abspath(args.reference)),args.binds, os.path.abspath(args.pggb_tmpdir), os.path.abspath(args.wfmash_tmpdir)])))
+	singpath=','.join(list(set([os.path.abspath(args.alignments),os.path.dirname(os.path.abspath(args.assemblies)),os.path.abspath(args.output),os.path.dirname(os.path.abspath(args.reference)),args.binds,os.path.abspath(args.pggb_tmpdir),os.path.abspath(args.wfmash_tmpdir)])))
 	if args.profile is not None:
 		command_singularity_out='SINGULARITY_TMPDIR=' + os.path.abspath(args.tmp) + ' snakemake --profile ' + args.profile + ' --singularity-args "-B '+ singpath + ' -e" cosigt'
 		with open('snakemake.singularity.profile.run.sh', 'w') as out:
