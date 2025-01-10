@@ -194,6 +194,7 @@ def main():
 	out_annotations_file = ''
 	if args.annotations is not None:
 		out_annotations_file=os.path.join(out_annotations, os.path.basename(args.annotations))
+		os.symlink(os.path.abspath(args.annotations), out_annotations_file)
 		#bind if needed
 		args.binds += ',' + os.path.dirname(os.path.abspath(args.annotations))
 	d['annotations'] = out_annotations_file
