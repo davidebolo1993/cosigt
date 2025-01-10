@@ -237,8 +237,7 @@ rule subset_gtf:
 		bedtools intersect \
 		-wa \
 		-a {input.gtf} \
-		-b {input.bed} > 
-		{output} 
+		-b {input.bed} > {output}
 		'''
 
 rule make_annotation_bed:
