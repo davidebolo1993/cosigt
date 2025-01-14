@@ -1,6 +1,7 @@
 rule odgi_chop:
 	'''
 	https://github.com/pangenome/odgi
+	trying to skip this for the time being
 	'''
 	input:
 		rules.pggb_construct.output
@@ -12,7 +13,7 @@ rule odgi_chop:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://pangenome/odgi:1726671973'
+		'docker://pangenome/odgi:1736526388'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -30,7 +31,7 @@ rule odgi_view:
 	https://github.com/pangenome/odgi
 	'''
 	input:
-		rules.odgi_chop.output
+		rules.pggb_construct.output
 	output:
 		config['output'] + '/odgi/view/{region}.gfa'
 	threads:
@@ -39,7 +40,7 @@ rule odgi_view:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://pangenome/odgi:1726671973'
+		'docker://pangenome/odgi:1736526388'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -56,7 +57,7 @@ rule odgi_paths_matrix:
 	https://github.com/pangenome/odgi
 	'''
 	input:
-		rules.odgi_chop.output
+		rules.pggb_construct.output
 	output:
 		config['output'] + '/odgi/paths/matrix/{region}.tsv.gz'
 	threads:
@@ -65,7 +66,7 @@ rule odgi_paths_matrix:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://pangenome/odgi:1726671973'
+		'docker://pangenome/odgi:1736526388'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -91,10 +92,6 @@ rule odgi_view_node_length:
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
-	container:
-		'docker://pangenome/odgi:1726671973'
-	conda:
-		'../envs/odgi.yaml'
 	benchmark:
 		'benchmarks/{region}.odgi_view_node_length.benchmark.txt'
 	shell:
@@ -121,11 +118,14 @@ rule filter_nodes:
 		'../envs/plot.yaml'
 	benchmark:
 		'benchmarks/{region}.filter_nodes.benchmark.txt'
+	params:
+		mask=config['mask']
 	shell:
 		'''
 		Rscript workflow/scripts/filter.r \
 		{input.graph_cov} \
 		{input.node_length} \
+		{params.mask} \
 		{output}
 		'''	
 
@@ -134,7 +134,8 @@ rule odgi_similarity:
 	https://github.com/pangenome/odgi
 	'''
 	input:
-		rules.pggb_construct.output
+		og=rules.pggb_construct.output,
+		mask=rules.filter_nodes.output
 	output:
 		config['output'] + '/odgi/similarity/{region}.tsv'
 	threads:
@@ -143,7 +144,7 @@ rule odgi_similarity:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://pangenome/odgi:1726671973'
+		'docker://pangenome/odgi:1736526388'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -151,7 +152,8 @@ rule odgi_similarity:
 	shell:
 		'''
 		odgi similarity \
-		-i {input} > {output}
+		-i {input.og} \
+		-m  {input.mask} > {output}
 		'''
 
 rule make_clusters:
@@ -196,7 +198,7 @@ rule odgi_viz:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://pangenome/odgi:1726671973'
+		'docker://pangenome/odgi:1736526388'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -284,7 +286,7 @@ rule odgi_procbed:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://pangenome/odgi:1726671973'
+		'docker://pangenome/odgi:1736526388'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -351,7 +353,7 @@ rule odgi_inject:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://pangenome/odgi:1726671973'
+		'docker://pangenome/odgi:1736526388'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -379,7 +381,7 @@ rule odgi_flip:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://pangenome/odgi:1726671973'
+		'docker://pangenome/odgi:1736526388'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -409,7 +411,7 @@ rule odgi_untangle:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://pangenome/odgi:1726671973'
+		'docker://pangenome/odgi:1736526388'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:

@@ -4,6 +4,7 @@ import os
 import glob
 import yaml
 import argparse
+import sys
 from argparse import HelpFormatter
 
 class CustomFormat(HelpFormatter):
@@ -77,6 +78,8 @@ def default_parameters(args):
 	d['default']['time'] =  args.std_time
 	#output
 	d['output'] = args.output
+	#mask
+	d['mask'] = args.mask
 	return d
 
 def main():
@@ -101,6 +104,7 @@ def main():
 	additional.add_argument('--profile', help='use profile. If None, do not use profile and run on the local machine [config/slurm]', metavar='FOLDER', default='config/slurm', type=str)
 	additional.add_argument('--samplemap', help='tsv file mapping each bam/cram basename to a user-defined id. If None, infer from bam/cram basename [None]', metavar='TSV', type=str, default=None)	
 	additional.add_argument('--annotations', help='gene structures, .gtf format. Optionally gzip-compressed [None]', metavar='GTF', type=str, default=None)
+	additional.add_agument('--mask', help='masking criteria. If "no_filter", do not mask nodes in the graph. If a number is provided, mask nodes with length <= that number. If "common_filter", mask nodes that do not exhibit coverage variations across paths. If "common_filter:<number>" combines the "common_filter" and the number filter [no_filter]', type=str, default='no_filter')
 	#metrics
 	metrics = parser.add_argument_group('Specify #threads, memory and time requirements, temp directories')
 	metrics.add_argument('--std_time', help='max time (minutes) - default [1]',type=int, default=1)
@@ -228,6 +232,22 @@ def main():
 			region_out=os.path.join(out_regions, region+'.bed')
 			with open(region_out, 'w') as out_region:
 				out_region.write(l[0] + '\t' + l[1] + '\t' + l[2]+'\n')
+	#check mask
+	if (args.mask != 'no_filter') or (args.mask != 'common_filter'):
+		m=args.mask.split(':')
+		if len(m) != 2:
+			try:
+				int(m[0])
+			except:
+				print('wrong argument to args.mask')
+				sys.exit(1)
+		else:
+			try:
+				m[0] == 'common_filter'
+				int(m[1])
+			except:
+				print('wrong argument to args.mask')
+				sys.exit(1)
 	#dump config
 	yml_out=open(out_yaml_tmp, 'w')
 	yaml.dump(d,yml_out)

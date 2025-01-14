@@ -72,7 +72,7 @@ load_node_lengths <- function(file_path) {
 
 #read nodes mask from file
 load_mask <- function(file_path) {
-  mask <- fread(file_path, header = FALSE, col.names = c("node_id", "mask"))
+  mask <- fread(file_path, header = FALSE, col.names = c("mask"))
   return(mask)
 }
 
@@ -232,6 +232,7 @@ server <- function(input, output, session) {
     # Sum the selected rows
     summed_vector(row1_vector + row2_vector)
     summed_vector2(row3_vector + row4_vector)
+    #load mask
     mask_file(load_mask(input$mask))
 
     # Store individual vectors
@@ -297,7 +298,7 @@ server <- function(input, output, session) {
     # Mask
     mask <- mask_file()
     apply_mask <- mask_active()
-    masked_nodes <- if (apply_mask) mask$mask == 0 else TRUE
+    masked_nodes <- if (apply_mask) mask$mask == 1 else TRUE
 
     # Prepare the plot data using node midpoints for x-coordinates
     plot_data <- data.frame(
@@ -403,7 +404,7 @@ server <- function(input, output, session) {
     # Mask
     mask <- mask_file()
     apply_mask <- mask_active()
-    masked_nodes <- if (apply_mask) mask$mask == 0 else TRUE
+    masked_nodes <- if (apply_mask) mask$mask == 1 else TRUE
 
     # Prepare the plot data for the second plot
     plot_data2 <- data.frame(
