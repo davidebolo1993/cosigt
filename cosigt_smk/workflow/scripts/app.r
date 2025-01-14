@@ -327,7 +327,7 @@ server <- function(input, output, session) {
         type = "scatter",
         mode = "markers",
         name = "Sample Vector (diploid)",
-        marker = list(size = 5, opacity = ifelse(plot_data$masked, 0.9, 0.2)),
+        marker = list(size = 5, opacity = ifelse(plot_data$masked, 0.9, 0.0)),
         text = ~paste("Node ID:", node_id, "<br>Coverage:", y, "<br>Vector: Sample Vector (diploid)"),
         hoverinfo = "text",
         yaxis = "y1"
@@ -341,7 +341,7 @@ server <- function(input, output, session) {
         type = "scatter",
         mode = "markers",
         name = "Pangenome Vector (diploid)",
-        marker = list(size = 5, opacity = ifelse(plot_data$masked, 0.9, 0.2)),
+        marker = list(size = 5, opacity = ifelse(plot_data$masked, 0.9, 0.0)),
         text = ~paste("Node ID:", node_id, "<br>Coverage:", y, "<br>Vector: Pangenome Vector (diploid)"),
         hoverinfo = "text",
         yaxis = "y2"
@@ -355,7 +355,7 @@ server <- function(input, output, session) {
         type = "scatter",
         mode = "markers",
         name = "Pangenome Vector (1st hap)",
-        marker = list(size = 5, opacity = ifelse(plot_data$masked, 0.9, 0.2)),
+        marker = list(size = 5, opacity = ifelse(plot_data$masked, 0.9, 0.0)),
         text = ~paste("Node ID:", node_id, "<br>Coverage:", y, "<br>Vector: Pangenome Vector (1st hap)"),
         hoverinfo = "text",
         yaxis = "y2"
@@ -369,7 +369,7 @@ server <- function(input, output, session) {
         type = "scatter",
         mode = "markers",
         name = "Pangenome Vector (2nd hap)",
-        marker = list(size = 5, opacity = ifelse(plot_data$masked, 0.9, 0.2)),
+        marker = list(size = 5, opacity = ifelse(plot_data$masked, 0.9, 0.0)),
         text = ~paste("Node ID:", node_id, "<br>Coverage:", y, "<br>Vector: Pangenome Vector (2nd hap)"),
         hoverinfo = "text",
         yaxis = "y2"
@@ -433,7 +433,7 @@ server <- function(input, output, session) {
         type = "scatter",
         mode = "markers",
         name = "Sample Vector (diploid)",
-        marker = list(size = 5, opacity = ifelse(plot_data2$masked, 0.9, 0.2)),
+        marker = list(size = 5, opacity = ifelse(plot_data2$masked, 0.9, 0.0)),
         text = ~paste("Node ID:", node_id, "<br>Coverage:", y, "<br>Vector: Sample Vector (diploid)"),
         hoverinfo = "text",
         yaxis = "y1"
@@ -447,7 +447,7 @@ server <- function(input, output, session) {
         type = "scatter",
         mode = "markers",
         name = "Pangenome Vector (diploid)",
-        marker = list(size = 5, opacity = ifelse(plot_data2$masked, 0.9, 0.2)),
+        marker = list(size = 5, opacity = ifelse(plot_data2$masked, 0.9, 0.0)),
         text = ~paste("Node ID:", node_id, "<br>Coverage:", y, "<br>Vector: Pangenome Vector (diploid)"),
         hoverinfo = "text",
         yaxis = "y2"
@@ -461,7 +461,7 @@ server <- function(input, output, session) {
         type = "scatter",
         mode = "markers",
         name = "Pangenome Vector (1st hap)",
-        marker = list(size = 5, opacity = ifelse(plot_data2$masked, 0.9, 0.2)),
+        marker = list(size = 5, opacity = ifelse(plot_data2$masked, 0.9, 0.0)),
         text = ~paste("Node ID:", node_id, "<br>Coverage:", y, "<br>Vector: Pangenome Vector (1st hap)"),
         hoverinfo = "text",
         yaxis = "y2"
@@ -475,7 +475,7 @@ server <- function(input, output, session) {
         type = "scatter",
         mode = "markers",
         name = "Pangenome Vector (2nd hap)",
-        marker = list(size = 5, opacity = ifelse(plot_data2$masked, 0.9, 0.2)),
+        marker = list(size = 5, opacity = ifelse(plot_data2$masked, 0.9, 0.0)),
         text = ~paste("Node ID:", node_id, "<br>Coverage:", y, "<br>Vector: Pangenome Vector (2nd hap)"),
         hoverinfo = "text",
         yaxis = "y2"
