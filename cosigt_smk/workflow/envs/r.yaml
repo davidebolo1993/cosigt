@@ -1,10 +1,17 @@
 channels:
  - conda-forge
+ - bioconda
 dependencies:
   - r-data.table=1.15.4
   - r-rjson=0.2.23
+  - r-ggplot2=3.5.1
+  - r-gggenes=0.5.1
+  - bioconductor-rtracklayer=1.62.0
   - r-reshape2=1.4.4
   - r-nbclust=3.0.1
   - r-dendextend=1.18.1
   - r-randomcolor=1.1.0.1
-  - r-base
+  - r-base=4.3.3
+  - r-tidyverse=2.0.0
+  - r-utils=2.12.3
+  - r-dbscan

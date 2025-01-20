@@ -104,7 +104,7 @@ def main():
 	additional.add_argument('--profile', help='use profile. If None, do not use profile and run on the local machine [config/slurm]', metavar='FOLDER', default='config/slurm', type=str)
 	additional.add_argument('--samplemap', help='tsv file mapping each bam/cram basename to a user-defined id. If None, infer from bam/cram basename [None]', metavar='TSV', type=str, default=None)	
 	additional.add_argument('--annotations', help='gene structures, .gtf format. Optionally gzip-compressed [None]', metavar='GTF', type=str, default=None)
-	additional.add_agument('--mask', help='masking criteria. If "no_filter", do not mask nodes in the graph. If a number is provided, mask nodes with length <= that number. If "common_filter", mask nodes that do not exhibit coverage variations across paths. If "common_filter:<number>" combines the "common_filter" and the number filter [no_filter]', type=str, default='no_filter')
+	additional.add_argument('--mask', help='masking criteria. If "no_filter", do not mask nodes in the graph. If a number is provided, mask nodes with length <= that number. If "common_filter", mask nodes that do not exhibit coverage variations across paths. If "common_filter:<number>" combines the "common_filter" and the number filter [no_filter]', type=str, default='no_filter')
 	#metrics
 	metrics = parser.add_argument_group('Specify #threads, memory and time requirements, temp directories')
 	metrics.add_argument('--std_time', help='max time (minutes) - default [1]',type=int, default=1)
@@ -117,8 +117,8 @@ def main():
 	metrics.add_argument('--aln_preset', help='preset for minimap2 [map-ont] - ignore if not using the long branch of cosigt', type=str, default='map-ont')
 	#samtools
 	metrics.add_argument('--sam_threads', help='#threads - samtools (view) [2]',type=int, default=2)
-	metrics.add_argument('--sam_time', help='max time (minutes) - samtools (view) [5]',type=int, default=5)
-	metrics.add_argument('--sam_memory', help='max memory (mb) - samtools (view) [5000]',type=int, default=5000)
+	metrics.add_argument('--sam_time', help='max time (minutes) - samtools (view) [3]',type=int, default=3)
+	metrics.add_argument('--sam_memory', help='max memory (mb) - samtools (view) [1000]',type=int, default=1000)
 	#pggb
 	metrics.add_argument('--pggb_threads', help='#threads - pggb [24]',type=int, default=24)
 	metrics.add_argument('--pggb_time', help='max time (minutes) - pggb [35]',type=int, default=35)
@@ -198,7 +198,10 @@ def main():
 	out_annotations_file = ''
 	if args.annotations is not None:
 		out_annotations_file=os.path.join(out_annotations, os.path.basename(args.annotations))
-		os.symlink(os.path.abspath(args.annotations), out_annotations_file)
+		try:
+			os.symlink(os.path.abspath(args.annotations), out_annotations_file)
+		except:
+			pass
 		#bind if needed
 		args.binds += ',' + os.path.dirname(os.path.abspath(args.annotations))
 	d['annotations'] = out_annotations_file
@@ -233,7 +236,7 @@ def main():
 			with open(region_out, 'w') as out_region:
 				out_region.write(l[0] + '\t' + l[1] + '\t' + l[2]+'\n')
 	#check mask
-	if (args.mask != 'no_filter') or (args.mask != 'common_filter'):
+	if args.mask != 'no_filter' and args.mask != 'common_filter':
 		m=args.mask.split(':')
 		if len(m) != 2:
 			try:

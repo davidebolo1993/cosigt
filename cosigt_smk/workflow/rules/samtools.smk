@@ -12,7 +12,7 @@ rule make_reference_bed:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://davidebolo1993/cosigt_workflow:latest'
+		'docker://davidebolo1993/bedtools:2.31.0'
 	conda:
 		'../envs/bedtools.yaml'
 	benchmark:
@@ -47,7 +47,7 @@ rule samtools_fasta:
 		mem_mb=lambda wildcards, attempt: attempt * config['samtools']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['samtools']['time']
 	container:
-		'docker://davidebolo1993/cosigt_workflow:latest'
+		'docker://davidebolo1993/samtools:1.21'
 	conda:
 		'../envs/samtools.yaml'	
 	benchmark:
@@ -84,7 +84,7 @@ rule samtools_faidx_extract:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://davidebolo1993/cosigt_workflow:latest'
+		'docker://davidebolo1993/samtools:1.21'
 	benchmark:
 		'benchmarks/{region}.samtools_faidx_extract.benchmark.txt'
 	conda:
@@ -110,7 +110,7 @@ rule samtools_faidx_index:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://davidebolo1993/cosigt_workflow:latest'
+		'docker://davidebolo1993/samtools:1.21'
 	conda:
 		'../envs/samtools.yaml'
 	benchmark:

@@ -1,7 +1,7 @@
 rule odgi_chop:
 	'''
 	https://github.com/pangenome/odgi
-	trying to skip this for the time being
+	skipping this for the time being
 	'''
 	input:
 		rules.pggb_construct.output
@@ -79,7 +79,7 @@ rule odgi_paths_matrix:
 		cut -f 1,4- | gzip > {output}
 		'''
 
-rule odgi_view_node_length:
+rule get_nodes_length:
 	'''
 	https://github.com/pangenome/odgi
 	'''
@@ -93,7 +93,7 @@ rule odgi_view_node_length:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	benchmark:
-		'benchmarks/{region}.odgi_view_node_length.benchmark.txt'
+		'benchmarks/{region}.get_node_length.benchmark.txt'
 	shell:
 		'''
 		grep '^S' {input} | \
@@ -106,16 +106,16 @@ rule filter_nodes:
 	'''	
 	input:
 		graph_cov=rules.odgi_paths_matrix.output,
-		node_length=rules.odgi_view_node_length.output
+		node_length=rules.get_nodes_length.output
 	output:
 		config['output'] + '/odgi/paths/matrix/{region}.mask.tsv'
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://davidebolo1993/cosigt_workflow:latest'
+		'docker://davidebolo1993/renv:4.3.3'
 	conda:
-		'../envs/plot.yaml'
+		'../envs/r.yaml'
 	benchmark:
 		'benchmarks/{region}.filter_nodes.benchmark.txt'
 	params:
@@ -153,7 +153,35 @@ rule odgi_similarity:
 		'''
 		odgi similarity \
 		-i {input.og} \
-		-m  {input.mask} > {output}
+		-m {input.mask} > {output}
+		'''
+
+rule odgi_dissimilarity:
+	'''
+	https://github.com/pangenome/odgi
+	'''
+	input:
+		og=rules.pggb_construct.output,
+		mask=rules.filter_nodes.output
+	output:
+		config['output'] + '/odgi/dissimilarity/{region}.tsv'
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
+	container:
+		'docker://pangenome/odgi:1736526388'
+	conda:
+		'../envs/odgi.yaml'
+	benchmark:
+		'benchmarks/{region}.odgi_dissimilarity.benchmark.txt'
+	shell:
+		'''
+		odgi similarity \
+		-i {input.og} \
+		-m {input.mask} \
+		--distances > {output}
 		'''
 
 rule make_clusters:
@@ -170,9 +198,9 @@ rule make_clusters:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://davidebolo1993/cosigt_workflow:latest'
+		'docker://davidebolo1993/renv:4.3.3'
 	conda:
-		'../envs/cluster.yaml'
+		'../envs/r.yaml'
 	benchmark:
 		'benchmarks/{region}.make_clusters.benchmark.txt'
 	shell:
@@ -180,6 +208,33 @@ rule make_clusters:
 		Rscript workflow/scripts/cluster.r \
 			{input} \
 			{output}
+		'''
+
+rule make_dbscan_clusters:
+	'''
+	https://github.com/davidebolo1993/cosigt
+	'''
+	input:
+		rules.odgi_dissimilarity.output
+	output:
+		config['output'] + '/cluster_dbscan/{region}.clusters.json'
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
+	container:
+		'docker://davidebolo1993/renv:4.3.3'
+	conda:
+		'../envs/r.yaml'
+	benchmark:
+		'benchmarks/{region}.make_clusters.benchmark.txt'
+	shell:
+		'''
+		Rscript workflow/scripts/cluster_dbscan.r \
+			{input} \
+			{output} \
+			0.95
 		'''
 
 rule odgi_viz:
@@ -229,7 +284,7 @@ rule subset_gtf:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://davidebolo1993/cosigt_workflow:latest'
+		'docker://davidebolo1993/bedtools:2.31.0'
 	conda:
 		'../envs/bedtools.yaml'
 	benchmark:
@@ -256,9 +311,9 @@ rule make_annotation_bed:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://davidebolo1993/cosigt_workflow:latest'
+		'docker://davidebolo1993/renv:4.3.3'
 	conda:
-		'../envs/plot.yaml'
+		'../envs/r.yaml'
 	benchmark:
 		'benchmarks/{region}.make_annotation_bed.benchmark.txt'
 	params:
@@ -440,9 +495,38 @@ rule plot_gggenes:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://davidebolo1993/cosigt_workflow:latest'
+		'docker://davidebolo1993/renv:4.3.3'
 	conda:
-		'../envs/plot.yaml'
+		'../envs/r.yaml'
+	benchmark:
+		'benchmarks/{region}.plot_gggenes.benchmark.txt'
+	shell:
+		'''
+		Rscript \
+			workflow/scripts/plotgggenes.r \
+			{input.tsv} \
+			{input.json} \
+			{output}
+		'''
+
+rule plot_gggenes_dbscan:
+	'''
+	https://github.com/pangenome/odgi
+	'''
+	input:
+		tsv=rules.odgi_untangle.output,
+		json=rules.make_dbscan_clusters.output
+	output:
+		config['output'] + '/odgi/untangle_dbscan/{region}.gggenes.pdf'
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['time']
+	container:
+		'docker://davidebolo1993/renv:4.3.3'
+	conda:
+		'../envs/r.yaml'
 	benchmark:
 		'benchmarks/{region}.plot_gggenes.benchmark.txt'
 	shell:

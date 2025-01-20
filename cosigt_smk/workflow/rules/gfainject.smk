@@ -13,7 +13,7 @@ rule gfainject_inject:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://davidebolo1993/cosigt_workflow:latest'
+		'docker://davidebolo1993/gfainject:0.2.0'
 	conda:
 		'../envs/gfainject.yaml'
 	benchmark:

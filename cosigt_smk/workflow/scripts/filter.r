@@ -17,10 +17,12 @@ dflen<-fread(len, header=F)
 keep<-data.frame(V1=dflen$V1, V2 = 1)
 m<-unlist(strsplit(flt, ":"))
 for (i in 2:ncol(dfcov)) {
+   print(i)
    id<-paste0("node.", i-1)
    if ((length(m) == 2 && m[1] == "common_filter") || (length(m) == 1 && m[1] == "common_filter")) {
       if (all(diff(dfcov[[id]]) == 0)) {
-            keep$V2[i]<-0        
+            print(dfcov[[id]])
+            keep$V2[i-1]<-0        
       }
    }
    if ((length(m) == 2 && !is.na(as.numeric(m[2]))) || (length(m) == 1 && !is.na(as.numeric(m[1])))) {
@@ -33,4 +35,4 @@ for (i in 2:ncol(dfcov)) {
 
 #store mask
 keep$V1 <- NULL
-fwrite(keep, file = mask, sep = "\t", row.names = FALSE, col.names = FALSE)
+fwrite(keep, file = mask, sep = "\t", row.names = FALSE, col.names = FALSE) 

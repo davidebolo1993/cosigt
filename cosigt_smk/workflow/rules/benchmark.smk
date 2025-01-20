@@ -10,9 +10,9 @@ rule plot_benchmark_time_mem:
         mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
         time=lambda wildcards, attempt: attempt * config['default']['time']
     container:
-        'docker://davidebolo1993/cosigt_workflow:latest'
+        'docker://davidebolo1993/renv:4.3.3'
     conda:
-        '../envs/plot.yaml'
+        '../envs/r.yaml'
     params:
         benchmark_dir='benchmarks'
     shell:
@@ -35,9 +35,9 @@ rule plot_benchmark_tpr:
         mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
         time=lambda wildcards, attempt: attempt * config['default']['time']
     container:
-        'docker://davidebolo1993/cosigt_workflow:latest'
+        'docker://davidebolo1993/renv:4.3.3'
     conda:
-        '../envs/plot.yaml'
+        '../envs/r.yaml'
     params:
         benchmark_dir=config['output'] + '/cosigt',
         cluster_dir=config['output'] + '/cluster'

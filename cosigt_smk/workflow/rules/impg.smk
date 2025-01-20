@@ -13,7 +13,7 @@ rule impg_project:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://davidebolo1993/cosigt_workflow:latest'
+		'docker://davidebolo1993/impg:0.2.3'
 	conda:
 		'../envs/impg.yaml'
 	benchmark:
@@ -27,5 +27,6 @@ rule impg_project:
 		-p {input.paf} \
 		-b {input.bed} | \
 		grep -v \
+		-E \
 		-f {params.exclude} > {output}
 		'''

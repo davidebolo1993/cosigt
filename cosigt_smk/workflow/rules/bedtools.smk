@@ -12,7 +12,7 @@ rule bedtools_merge:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	container:
-		'docker://davidebolo1993/cosigt_workflow:latest'
+		'docker://davidebolo1993/bedtools:2.31.0'
 	conda:
 		'../envs/bedtools.yaml'
 	benchmark:

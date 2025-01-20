@@ -33,7 +33,6 @@ gene_data <- subset(gene_data, clusters != "reference")
 
 
 #calculate data with cluster boundary information
-
 gene_data$ymin <- 0
 gene_data$ymax <- 0
 gene_data$old_label <- gene_data$molecule

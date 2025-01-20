@@ -12,7 +12,7 @@ rule bwamem2_index:
 		mem_mb=lambda wildcards, attempt: attempt * config['bwa-mem2']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['bwa-mem2']['time']
 	container:
-		'docker://davidebolo1993/cosigt_workflow:latest'
+		'docker://davidebolo1993/bwa-mem2:2.2.1'
 	conda:
 		'../envs/bwa-mem2.yaml'
 	benchmark:
@@ -29,7 +29,7 @@ rule bwamem2_mem_samtools_sort:
 	'''
 	input:
 		fasta_ref=rules.samtools_faidx_extract.output,
-		fai=rules.bwamem2_index.output,
+		ref_index=rules.bwamem2_index.output,
 		fasta_sample=rules.samtools_fasta.output
 	output:
 		config['output'] + '/bwa-mem2/{sample}/{region}.realigned.bam'
@@ -39,7 +39,7 @@ rule bwamem2_mem_samtools_sort:
 		mem_mb=lambda wildcards, attempt: attempt * config['bwa-mem2']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['bwa-mem2']['time']
 	container:
-		'docker://davidebolo1993/cosigt_workflow:latest'
+		'docker://davidebolo1993/bwa-mem2:2.2.1'
 	conda:
 		'../envs/bwa-mem2.yaml'
 	benchmark:
