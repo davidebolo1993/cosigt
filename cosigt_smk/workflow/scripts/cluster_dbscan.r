@@ -42,7 +42,7 @@ distanceMatrix <- as.dist(regularMatrix)
 maxD<-max(distanceMatrix)
 normD<-distanceMatrix/maxD
 #no need to normalize - max_distance here is 1 and values we have are in that range
-res <- dbscan(maxD, eps = 1-similarity_threshold, minPts = 1)$cluster
+res <- dbscan(normD, eps = 1-similarity_threshold, minPts = 1)$cluster
 names(res)<-labels(distanceMatrix)
 
 # Format results
