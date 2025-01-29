@@ -75,7 +75,7 @@ rule samtools_faidx_extract:
 	'''
 	input:
 		fasta=rules.add_target_to_queries.output,
-		bed=rules.bedtools_merge.output
+		bed=rules.filter_outliers.output
 	output:
 		config['output'] + '/samtools/faidx/{region}.fasta'
 	threads:
@@ -92,7 +92,7 @@ rule samtools_faidx_extract:
 	shell:
 		'''
 		samtools faidx \
-		-r <(awk '{{print $1":"$2+1"-"$3}}' {input.bed}) \
+		-r <(awk '{{print $1":"$2"-"$3}}' {input.bed}) \
 		{input.fasta} > {output}
 		'''
 
