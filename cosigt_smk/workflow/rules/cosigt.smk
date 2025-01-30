@@ -40,7 +40,8 @@ rule cosigt_genotype:
 	input:
 		graph_cov_map=rules.odgi_paths_matrix.output,
 		sample_cov_map=rules.gafpack_coverage.output,
-		json=rules.make_clusters.output
+		json=rules.make_clusters.output,
+		mask=rules.filter_nodes.output
 	output:
 		config['output'] + '/cosigt/{sample}/{region}/cosigt_genotype.tsv',
 		config['output'] + '/cosigt/{sample}/{region}/sorted_combos.tsv'
@@ -65,5 +66,6 @@ rule cosigt_genotype:
 		-g {input.sample_cov_map} \
 		-c {input.json} \
 		-o {params.prefix} \
-		-i {params.sample_id}
+		-i {params.sample_id} \
+		-m {input.mask}
 		'''
