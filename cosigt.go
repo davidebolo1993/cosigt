@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -15,7 +16,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"math"
 
 	"github.com/akamensky/argparse"
 	"gonum.org/v1/gonum/stat/combin"
@@ -24,32 +24,59 @@ import (
 // Vector represents a float64 slice for cleaner type declarations
 type Vector []float64
 
-// GetMagnitude calculates the Euclidean magnitude of two vectors
-func GetMagnitude(A, B Vector) float64 {
+// GetMagnitude calculates the Euclidean magnitude of two vectors with optional mask
+func GetMagnitude(A, B Vector, mask []bool) float64 {
 	var ALen, BLen float64
 	for i, a := range A {
-		ALen += a * a
-		BLen += B[i] * B[i]
+		if mask == nil || mask[i] {
+			ALen += a * a
+			BLen += B[i] * B[i]
+		}
 	}
 	return math.Sqrt(ALen * BLen)
 }
 
-// GetDotProduct calculates the dot product of two vectors
-func GetDotProduct(A, B Vector) float64 {
+// GetDotProduct calculates the dot product of two vectors with optional mask
+func GetDotProduct(A, B Vector, mask []bool) float64 {
 	var dotProduct float64
 	for i, a := range A {
-		dotProduct += a * B[i]
+		if mask == nil || mask[i] {
+			dotProduct += a * B[i]
+		}
 	}
 	return dotProduct
 }
 
-// GetCosineSimilarity calculates the cosine similarity between two vectors
-func GetCosineSimilarity(A, B Vector) float64 {
-	euclMagn := GetMagnitude(A, B)
+// GetCosineSimilarity calculates the cosine similarity between two vectors with optional mask
+func GetCosineSimilarity(A, B Vector, mask []bool) float64 {
+	euclMagn := GetMagnitude(A, B, mask)
 	if euclMagn > 0 {
-		return GetDotProduct(A, B) / euclMagn
+		return GetDotProduct(A, B, mask) / euclMagn
 	}
 	return 0
+}
+
+// ReadMask reads a file containing boolean mask values (0/1)
+func ReadMask(filename string) ([]bool, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("error opening mask file: %w", err)
+	}
+	defer file.Close()
+
+	var mask []bool
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		val := strings.TrimSpace(scanner.Text())
+		if val == "1" {
+			mask = append(mask, true)
+		} else if val == "0" {
+			mask = append(mask, false)
+		} else {
+			return nil, fmt.Errorf("invalid mask value: %s (must be 0 or 1)", val)
+		}
+	}
+	return mask, scanner.Err()
 }
 
 // ReadBlacklist reads a file containing paths to exclude
@@ -85,7 +112,7 @@ func ReadGz(filename string) ([]string, []Vector, error) {
 
 	cr := csv.NewReader(gr)
 	cr.Comma = '\t'
-	
+
 	// Skip header
 	if _, err := cr.Read(); err != nil {
 		return nil, nil, fmt.Errorf("error reading header: %w", err)
@@ -209,6 +236,7 @@ func main() {
 	g := parser.String("g", "gaf", &argparse.Options{Required: true, Help: "gzip-compressed gaf (graph alignment format) file for a sample from gafpack"})
 	b := parser.String("b", "blacklist", &argparse.Options{Required: false, Help: "txt file with names of paths to exclude (one per line)"})
 	c := parser.String("c", "cluster", &argparse.Options{Required: false, Help: "cluster json file as generated with cluster.r"})
+	maskFile := parser.String("m", "mask", &argparse.Options{Required: false, Help: "boolean mask to ignore node coverages"})
 	o := parser.String("o", "output", &argparse.Options{Required: true, Help: "folder prefix for output files"})
 	i := parser.String("i", "id", &argparse.Options{Required: true, Help: "sample name"})
 
@@ -239,14 +267,25 @@ func main() {
 		log.Fatalf("Error reading cluster file: %v", err)
 	}
 
-	seen := sync.Map{} // Changed to use sync.Map for concurrency safety
-	m := sync.Map{}    // Changed to use sync.Map for results
+	var mask []bool
+	if *maskFile != "" {
+		mask, err = ReadMask(*maskFile)
+		if err != nil {
+			log.Fatalf("Error reading mask file: %v", err)
+		}
+		if len(mask) != len(gcov[0]) {
+			log.Fatalf("Mask length (%d) does not match vector length (%d)", len(mask), len(gcov[0]))
+		}
+	}
+
+	var seen sync.Map      // Changed to use sync.Map for concurrency safety
+	results := &sync.Map{} // Changed to use sync.Map for results
 	n := len(hapid)
 	k := 2 // fixed ploidy
 
 	numWorkers := runtime.NumCPU()
 	jobs := make(chan []int, numWorkers)
-	results := make(chan map[string]float64, numWorkers)
+	resultsChan := make(chan map[string]float64, numWorkers)
 	var wg sync.WaitGroup
 
 	// Start worker goroutines
@@ -260,23 +299,23 @@ func main() {
 				if len(blck) == 0 || (!SliceContains(hapid[h1], blck) && !SliceContains(hapid[h2], blck)) {
 					sum := SumSlices(gcov[h1], gcov[h2])
 					indiv := hapid[h1] + "$" + hapid[h2]
-					localResults[indiv] = GetCosineSimilarity(sum, bcov[0])
+					localResults[indiv] = GetCosineSimilarity(sum, bcov[0], mask)
 
 					_, seenH1 := seen.LoadOrStore(h1, true)
 					if !seenH1 {
 						sum = SumSlices(gcov[h1], gcov[h1])
 						indiv = hapid[h1] + "$" + hapid[h1]
-						localResults[indiv] = GetCosineSimilarity(sum, bcov[0])
+						localResults[indiv] = GetCosineSimilarity(sum, bcov[0], mask)
 					}
 
 					_, seenH2 := seen.LoadOrStore(h2, true)
 					if !seenH2 {
 						sum = SumSlices(gcov[h2], gcov[h2])
 						indiv = hapid[h2] + "$" + hapid[h2]
-						localResults[indiv] = GetCosineSimilarity(sum, bcov[0])
+						localResults[indiv] = GetCosineSimilarity(sum, bcov[0], mask)
 					}
 				}
-				results <- localResults
+				resultsChan <- localResults
 			}
 		}()
 	}
@@ -293,30 +332,30 @@ func main() {
 
 	// Collect results
 	go func() {
-		for localResults := range results {
+		for localResults := range resultsChan {
 			for k, v := range localResults {
-				m.Store(k, v) // Store result in sync.Map
+				results.Store(k, v) // Store result in sync.Map
 			}
 		}
-		close(results)
+		close(resultsChan)
 	}()
 
 	wg.Wait()
 
 	// Sort results
-	keys := make([]string, 0)
-	m.Range(func(key, value interface{}) bool {
+	var keys []string
+	results.Range(func(key, value interface{}) bool {
 		keys = append(keys, key.(string))
 		return true
 	})
 	sort.SliceStable(keys, func(i, j int) bool {
-		valI, _ := m.Load(keys[i])
-		valJ, _ := m.Load(keys[j])
+		valI, _ := results.Load(keys[i])
+		valJ, _ := results.Load(keys[j])
 		return valI.(float64) > valJ.(float64)
 	})
 
 	// Write output
-	if err := WriteResults(&m, keys, clstr, *o, *i); err != nil {
+	if err := WriteResults(results, keys, clstr, *o, *i); err != nil {
 		log.Fatalf("Error writing results: %v", err)
 	}
 }
