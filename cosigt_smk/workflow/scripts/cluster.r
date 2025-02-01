@@ -13,7 +13,8 @@ setDTthreads(1)
 args <- commandArgs(trailingOnly = TRUE)
 input_file <- args[1]
 output_file <- args[2]
-similarity_threshold<-as.numeric(args[3])
+similarity_threshold<-args[3]
+region_similarity<-round(as.numeric(args[4]),2)
 
 # Read and process input data
 df <- fread(input_file)
@@ -25,8 +26,33 @@ regularMatrix[is.na(regularMatrix)]<-Inf
 normRegularMatrix<-regularMatrix/maxD
 distanceMatrix <- as.dist(normRegularMatrix)
 
-eps<-1-similarity_threshold
-res <- dbscan(distanceMatrix, eps=eps, minPts = 1)$cluster
+if (similarity_threshold != "automatic") { #not used at the moment
+  similarity_threshold<-as.numeric(similarity_threshold)
+  optimal_eps<-1-similarity_threshold
+  res <- dbscan(distanceMatrix, eps=optimal_eps, minPts = 1)$cluster
+} else {
+  #guess the optimal threshold
+  #we test many eps values, in the range to 0.00 to 0.30 dissimilarity (0% to 30%), increasing by 0.01 (1%) at each iteration.
+  #with 0, each haplotype clusters independently, then they start clustering together.
+  #we stop when allowing for larger dissimilarity does not influence much the number of clusters - diff is < 1
+  #for regions that share a lot of similarity (>90%, as defined by the sum of lengths of shared nodes), we ensure that no more than n.hap/10 clusters are generated
+  optimal_eps<-0
+  res<-dbscan(distanceMatrix, eps=optimal_eps, minPts = 1)$cluster
+  pclust<-length(table(res))
+  for (eps in seq(from=0.01,to=0.30, by=0.01)) {
+    res <- dbscan(distanceMatrix, eps=eps, minPts = 1)$cluster
+    cclust<-length(table(res))
+    if (abs(pclust - cclust) <= 1) { #max 1 cluster difference when going from a lower to higher diss threshold
+      if ((region_similarity >= 0.9 && cclust <= round(length(unique(df$group.a))/10)) || region_similarity < 0.9) {
+        optimal_eps<-eps
+        break
+      }
+    }
+    pclust<-cclust
+  }
+}
+
+message("using eps ", optimal_eps)
 names(res)<-labels(distanceMatrix)
 
 # Format results

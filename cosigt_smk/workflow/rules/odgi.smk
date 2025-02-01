@@ -237,7 +237,8 @@ rule make_clusters:
 		Rscript workflow/scripts/cluster.r \
 			{input.matrix} \
 			{output} \
-			0.95
+			automatic \
+			$(cut -f 3 {params.threshold_file} | tail -1)
 		'''
 
 rule odgi_viz:
