@@ -14,6 +14,7 @@ args <- commandArgs(trailingOnly = TRUE)
 bundles_in <- args[1]
 bundles_struct <- args[2]
 bundles_length <- args[3]
+bundles_table <- args[4]
 
 #read in and prepare for further operations
 t <- fread(bundles_in, 
@@ -61,6 +62,7 @@ t<-inner_join(t,hap_info,by=c("contig","hap_struc", "hap_struc_d", "sample_id"))
   mutate(rel_start2 = bstart-hap_block_start,
   rel_end2 = bend-hap_block_start)
 
+fwrite(t, bundles_table, sep="\t",row.names = FALSE,quote=FALSE)
 
 #get representative structs
 representative_haps <- t %>% group_by(contig) %>%
