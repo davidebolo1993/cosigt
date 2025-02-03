@@ -14,4 +14,20 @@ dependencies:
   - r-base=4.3.3
   - r-tidyverse=2.0.0
   - r-utils=2.12.3
-  - r-dbscan
+  - r-dbscan=1.2.2
+	- r-devtools
+  - r-pafr
+	- r-ggnewscale
+	- r-ggforce
+	- bioconductor-s4vectors
+	- bioconductor-bsgenome
+	- bioconductor-genomicranges
+	- bioconductor-biostrings
+	- bioconductor-iranges
+	- bioconductor-genomeinfodb
+	- bioconductor-rsamtools
+	- r-wesanderson
+	- r-abind
+	- r-xml
+	- r-v8
+	- r-curl

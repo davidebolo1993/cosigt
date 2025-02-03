@@ -1,6 +1,4 @@
 #!/usr/bin/Rscript
-## TO BE STRUCTURED AGAIN
-
 args <- commandArgs(trailingOnly = TRUE)
 
 library(ggplot2)
