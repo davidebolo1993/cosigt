@@ -97,7 +97,7 @@ rule minimap2_ava:
 			{input} > {output}
 		'''
 
-rule plot_ava:
+rule plot_pw_and_ava:
 	'''
 	https://github.com/daewoooo/SVbyEye
 	'''

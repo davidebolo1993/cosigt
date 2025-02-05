@@ -3,9 +3,9 @@ rule megadepth_bam_to_bigwig:
 	https://github.com/ChristopherWilks/megadepth
 	'''
 	input:
-		rules.bwamem2_mem_samtools_sort.output
+		rules.minimap2_samtools_sort.output
 	output:
-		config['output'] + '/bwa-mem2/{sample}/{region}.realigned.bam.all.bw'
+		config['output'] + '/minimap2/{sample}/{region}.realigned.bam.all.bw'
 	threads:
 		1
 	resources:
@@ -31,7 +31,7 @@ rule plot_bigwig_coverage:
 	input:
 		rules.megadepth_bam_to_bigwig.output
 	output:
-		config['output'] + '/bwa-mem2/{sample}/{region}.realigned.bam.all.pdf'
+		config['output'] + '/minimap2/{sample}/{region}.realigned.bam.all.pdf'
 	threads:
 		1
 	resources:
