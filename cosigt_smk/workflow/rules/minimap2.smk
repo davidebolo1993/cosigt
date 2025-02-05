@@ -50,7 +50,7 @@ rule minimap2_samtools_sort:
 		minimap2 \
 		-a \
 		-x {params.preset} \
-		-t @{threads} \
+		-t {threads} \
 		{input.ref_index} \
 		{input.fasta_sample} | samtools sort \
 		-@ {threads} \
