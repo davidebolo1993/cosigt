@@ -27,13 +27,13 @@ cosigt_input=list()
 for region in config['region']:
     for sample in df['sample_id'].tolist():
         cosigt_input.append(config['output'] + '/cosigt/'+ sample + '/' + region + '/cosigt_genotype.tsv')
-        cosigt_input.append(config['output'] + '/cosigt/'+ sample + '/' + region + '/ava.pdf')
+        #cosigt_input.append(config['output'] + '/cosigt/'+ sample + '/' + region + '/ava.pdf')
         #cosigt_input.append(config['output'] + '/cosigt_old/'+ sample + '/' + region + '/cosigt_genotype.tsv')
         #cosigt_input.append(config['output'] + '/bwa-mem2/'+ sample + '/' + region + '.realigned.bam.all.pdf') #skip coverage calculation and plotting
     cosigt_input.append(config['output'] + '/odgi/viz/' + region + '.png')
-    cosigt_input.append(config['output'] + '/odgi/dissimilarity/' + region + '.tsv')
-    cosigt_input.append(config['output'] + '/odgi/view/' + region + '.node.length.tsv')
-    cosigt_input.append(config['output'] + '/pgrtk/plot/' + region + '.bclustered.pdf')
+    #cosigt_input.append(config['output'] + '/odgi/dissimilarity/' + region + '.tsv')
+    #cosigt_input.append(config['output'] + '/odgi/view/' + region + '.node.length.tsv')
+    #cosigt_input.append(config['output'] + '/pgrtk/plot/' + region + '.bclustered.pdf')
     if config['annotations'] != '':
         cosigt_input.append(config['output'] + '/odgi/untangle/' + region + '.gggenes.pdf')
         #cosigt_input.append(config['output'] + '/odgi/untangle_old/' + region + '.gggenes.pdf')

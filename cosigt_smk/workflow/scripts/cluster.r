@@ -20,7 +20,7 @@ region_similarity<-round(as.numeric(args[4]),2)
 df <- fread(input_file)
 
 # Create distance matrix
-regularMatrix <- acast(df, group.a ~ group.b, value.var = "estimated.difference.rate")
+regularMatrix <- acast(df, group.a ~ group.b, value.var = "cosine.distance")
 maxD<-max(regularMatrix[!is.na(regularMatrix)])
 regularMatrix[is.na(regularMatrix)]<-Inf
 normRegularMatrix<-regularMatrix/maxD

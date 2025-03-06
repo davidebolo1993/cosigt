@@ -195,7 +195,7 @@ def main():
 	#add to config
 	d['samples'] = out_samples
 	#annotations
-	out_annotations_file = ''
+	out_annotations_file = "''"
 	if args.annotations is not None:
 		out_annotations_file=os.path.join(out_annotations, os.path.basename(args.annotations))
 		try:

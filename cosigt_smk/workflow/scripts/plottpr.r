@@ -112,5 +112,16 @@ p <- ggplot(tpr_df, aes(x = category, y = score, fill = measure)) +
   ylab("% score") +
   xlab("region")
 
-ggsave(args[3], width = 20)
+ggsave(args[3], width = 30, height=40)
 fwrite(tpr_df, gsub("pdf", "tsv", args[3]),col.names=T, row.names=F, sep="\t")
+
+tpr_df$region<-factor(tpr_df$region, levels=unique(sort(tpr_df$region)))
+p2<-ggplot(tpr_df, aes(x = region, y = score, fill = measure)) +
+  geom_bar(position = "fill", stat = "identity", width = 0.1) +
+  scale_y_continuous(labels = percent_format()) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1), legend.position = "top") +
+  scale_fill_manual(values = c("tp" = "darkred", "fn" = "darkblue")) +
+  facet_wrap(~category, nrow = 2)
+
+ggsave(gsub("pdf", "mod.pdf", args[3]), width = 40, height=20)

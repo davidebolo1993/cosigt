@@ -300,6 +300,13 @@ server <- function(input, output, session) {
     apply_mask <- mask_active()
     masked_nodes <- if (apply_mask) mask$mask == 1 else TRUE
 
+    #Normalize by magnitude
+    y1_max <- max(sample_vector(), na.rm = TRUE)
+    y2_max<- max(summed_vector(), na.rm = TRUE)
+
+    normalize_y1 <- function(x) x / y1_max
+    normalize_y2 <- function(x) x / y2_max
+
     # Prepare the plot data using node midpoints for x-coordinates
     plot_data <- data.frame(
       x = (lengths$cumulative_start + lengths$cumulative_end) / 2,  # Node midpoint
@@ -307,6 +314,10 @@ server <- function(input, output, session) {
             summed_vector(),
             pang_vector1(),
             pang_vector2()),
+      y_normalized = c(normalize_y1(sample_vector()),
+                      normalize_y2(summed_vector()),
+                      normalize_y2(pang_vector1()),
+                      normalize_y2(pang_vector2())),
       node_id = rep(node_ids, 4),
       Vector = rep(c("Sample Vector (diploid)",
                     "Pangenome Vector (diploid)",
@@ -323,7 +334,7 @@ server <- function(input, output, session) {
     plot <- plot %>%
       add_trace(
         data = subset(plot_data, Vector == "Sample Vector (diploid)"),
-        x = ~x, y = ~y,
+        x = ~x, y = ~y_normalized,
         type = "scatter",
         mode = "markers",
         name = "Sample Vector (diploid)",
@@ -337,7 +348,7 @@ server <- function(input, output, session) {
     plot <- plot %>%
       add_trace(
         data = subset(plot_data, Vector == "Pangenome Vector (diploid)"),
-        x = ~x, y = ~y,
+        x = ~x, y = ~y_normalized,
         type = "scatter",
         mode = "markers",
         name = "Pangenome Vector (diploid)",
@@ -351,7 +362,7 @@ server <- function(input, output, session) {
     plot <- plot %>%
       add_trace(
         data = subset(plot_data, Vector == "Pangenome Vector (1st hap)"),
-        x = ~x, y = ~y,
+        x = ~x, y = ~y_normalized,
         type = "scatter",
         mode = "markers",
         name = "Pangenome Vector (1st hap)",
@@ -365,7 +376,7 @@ server <- function(input, output, session) {
     plot <- plot %>%
       add_trace(
         data = subset(plot_data, Vector == "Pangenome Vector (2nd hap)"),
-        x = ~x, y = ~y,
+        x = ~x, y = ~y_normalized,
         type = "scatter",
         mode = "markers",
         name = "Pangenome Vector (2nd hap)",
@@ -380,12 +391,13 @@ server <- function(input, output, session) {
       layout(
         title = "Comparison of Selected Vectors",
         xaxis = list(title = "Cumulative Haplotype Length"),
-        yaxis = list(title = "Sample Vector Coverage", side = "left"),
+        yaxis = list(title = "Sample Vector Coverage (Scaled)", side = "left", range=c(-0.1,1.1)),
         yaxis2 = list(
-          title = "Pangenome Vector Coverage",
+          title = "Pangenome Vector Coverage (Scaled)",
           side = "right",
           overlaying = "y",  # Overlay on the same x-axis
-          showgrid = FALSE
+          showgrid = FALSE,
+          range=c(-0.1,1.1)
         ),
         legend = list(x = 1.1, y = 0.5)
       )
@@ -406,6 +418,13 @@ server <- function(input, output, session) {
     apply_mask <- mask_active()
     masked_nodes <- if (apply_mask) mask$mask == 1 else TRUE
 
+    #Normalize by magnitude
+    y1_max <- max(sample_vector(), na.rm = TRUE)
+    y2_max<- max(summed_vector2(), na.rm = TRUE)
+
+    normalize_y1 <- function(x) x / y1_max
+    normalize_y2 <- function(x) x / y2_max
+
     # Prepare the plot data for the second plot
     plot_data2 <- data.frame(
       x = (lengths$cumulative_start + lengths$cumulative_end) / 2,  # Node midpoint
@@ -413,6 +432,10 @@ server <- function(input, output, session) {
             summed_vector2(),
             pang_vector3(),
             pang_vector4()),
+      y_normalized = c(normalize_y1(sample_vector()),
+                      normalize_y2(summed_vector2()),
+                      normalize_y2(pang_vector3()),
+                      normalize_y2(pang_vector4())),
       node_id = rep(node_ids, 4),
       Vector = rep(c("Sample Vector (diploid)",
                     "Pangenome Vector (diploid)",
@@ -429,7 +452,7 @@ server <- function(input, output, session) {
     plot2 <- plot2 %>%
       add_trace(
         data = subset(plot_data2, Vector == "Sample Vector (diploid)"),
-        x = ~x, y = ~y,
+        x = ~x, y = ~y_normalized,
         type = "scatter",
         mode = "markers",
         name = "Sample Vector (diploid)",
@@ -443,7 +466,7 @@ server <- function(input, output, session) {
     plot2 <- plot2 %>%
       add_trace(
         data = subset(plot_data2, Vector == "Pangenome Vector (diploid)"),
-        x = ~x, y = ~y,
+        x = ~x, y = ~y_normalized,
         type = "scatter",
         mode = "markers",
         name = "Pangenome Vector (diploid)",
@@ -457,7 +480,7 @@ server <- function(input, output, session) {
     plot2 <- plot2 %>%
       add_trace(
         data = subset(plot_data2, Vector == "Pangenome Vector (1st hap)"),
-        x = ~x, y = ~y,
+        x = ~x, y = ~y_normalized,
         type = "scatter",
         mode = "markers",
         name = "Pangenome Vector (1st hap)",
@@ -471,7 +494,7 @@ server <- function(input, output, session) {
     plot2 <- plot2 %>%
       add_trace(
         data = subset(plot_data2, Vector == "Pangenome Vector (2nd hap)"),
-        x = ~x, y = ~y,
+        x = ~x, y = ~y_normalized,
         type = "scatter",
         mode = "markers",
         name = "Pangenome Vector (2nd hap)",
@@ -485,12 +508,13 @@ server <- function(input, output, session) {
     plot2 <- plot2 %>%
       layout(
         xaxis = list(title = "Cumulative Haplotype Length"),
-        yaxis = list(title = "Sample Vector Coverage", side = "left"),
+        yaxis = list(title = "Sample Vector Coverage (Scaled)", side = "left", range=c(-0.1,1.1)),
         yaxis2 = list(
-          title = "Pangenome Vector Coverage",
+          title = "Pangenome Vector Coverage (Scaled)",
           side = "right",
           overlaying = "y",  # Overlay on the same x-axis
-          showgrid = FALSE
+          showgrid = FALSE,
+          range=c(-0.1,1.1)
         ),
         legend = list(x = 1.1, y = 0.5)
       )
