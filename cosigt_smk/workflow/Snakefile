@@ -27,7 +27,6 @@ with open(assemblies+index, 'r') as idx:
 			prefix=line.rstrip().split('\t')[0].split('#')[0]
 			batch_set.add(prefix)
 
-print(batch_set)
 
 include: 'rules/wfmash.smk'
 include: 'rules/impg.smk'
