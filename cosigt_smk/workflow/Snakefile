@@ -43,7 +43,6 @@ include: 'rules/cosigt.smk'
 include: 'rules/megadepth.smk'
 include: 'rules/benchmark.smk'
 
-batch_input=list()
 cosigt_input=list()
 	
 for region in config['region']:
