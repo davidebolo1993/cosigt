@@ -3,7 +3,7 @@ rule bedtools_merge:
 	https://github.com/arq5x/bedtools2
 	'''
 	input:
-		rules.impg_project.output
+		rules.concatenate_batches_per_region.output
 	output:
 		config['output'] + '/bedtools/{region}.bed'
 	threads:
@@ -53,4 +53,4 @@ rule filter_outliers:
 		Rscript workflow/scripts/outliers.r \
 		{input} \
 		{output}
-		'''	
+		'''

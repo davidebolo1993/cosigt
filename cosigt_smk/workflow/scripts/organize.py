@@ -92,7 +92,7 @@ def main():
 	#required
 	required = parser.add_argument_group('Required I/O arguments')
 	required.add_argument('-a', '--alignments', help='folder with read-level alignment files (.bam,.cram) - and their indexes (.bai/.csi,.crai). Individuals to genotype', metavar='FOLDER', required=True)
-	required.add_argument('-r','--reference', help='reference file, .fasta format. Same reference the individuals to genotype are aligned to. Optionally, bgzip-compressed', metavar='FASTA', required=True)
+	required.add_argument('-r','--reference', help='reference file, .fasta format.Same reference the individuals to genotype are aligned to. Optionally, bgzip-compressed', metavar='FASTA', required=True)
 	required.add_argument('--assemblies', help='assemblies, .fasta format. Optionally, bgzip-compressed', metavar='FASTA', required=True)
 	required.add_argument('--roi', help='one or more regions of interest in .bed format, with chr in PanSN format (build#chr - e.g. grch38#chr1)', metavar='BED', required=True)
 	#addition
@@ -126,9 +126,9 @@ def main():
 	metrics.add_argument('--pggb_params', help='additional parameters for pggb [-c 2]',type=str, default='-c 2')
 	metrics.add_argument('--pggb_tmpdir', help='temporary directory - pggb [working directory]',type=str, default=os.getcwd())
 	#wfmash
-	metrics.add_argument('--wfmash_threads', help='#threads - wfmash [24]',type=int, default=24)
-	metrics.add_argument('--wfmash_time', help='max time (minutes) - wfmash [35]',type=int, default=35)
-	metrics.add_argument('--wfmash_memory', help='max memory (mb) - wfmash [30000]',type=int, default=30000)
+	metrics.add_argument('--wfmash_threads', help='#threads - wfmash [5]',type=int, default=5)
+	metrics.add_argument('--wfmash_time', help='max time (minutes) - wfmash [10]',type=int, default=10)
+	metrics.add_argument('--wfmash_memory', help='max memory (mb) - wfmash [10000]',type=int, default=10000)
 	metrics.add_argument('--wfmash_params', help='additional parameters for wfmash [-s 10k -p 95]',type=str, default='-s 10k -p 95')
 	metrics.add_argument('--wfmash_tmpdir', help='temporary directory - wfmash [working directory]',type=str, default=os.getcwd())
 	#parse args

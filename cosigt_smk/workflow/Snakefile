@@ -4,9 +4,30 @@ from glob import glob
 configfile: 'config/config.yaml'
 
 df=(pd.read_table(config['samples'], dtype={'sample_id': str, 'cram':str})
-    .set_index('sample_id', drop=False)
-    .sort_index()
+	.set_index('sample_id', drop=False)
+	.sort_index()
 )
+
+assemblies=config['assemblies']
+
+if assemblies.endswith('.fasta') or assemblies.endswith('.fa'):
+	index='.fai'
+elif assemblies.endswith('.fasta.gz') or assemblies.endswith('.fasta.gz.gzi'):
+	index='.gzi'
+else:
+	pass #raise error here instead of pass
+
+if not os.path.exists(assemblies + index):
+	import pyfaidx #required if those are not already indexed
+	pyfaidx.Faidx(assemblies)
+
+batch_set=set()
+
+with open(assemblies+index, 'r') as idx:
+	for line in idx:
+		if 'grch38' not in line:
+			prefix='#'.join(line.rstrip().split('\t')[0].split('#')[:2])
+			batch_set.add(prefix)
 
 include: 'rules/wfmash.smk'
 include: 'rules/impg.smk'
@@ -22,29 +43,28 @@ include: 'rules/cosigt.smk'
 include: 'rules/megadepth.smk'
 include: 'rules/benchmark.smk'
 
+batch_input=list()
 cosigt_input=list()
 
 for region in config['region']:
-    for sample in df['sample_id'].tolist():
-        cosigt_input.append(config['output'] + '/cosigt/'+ sample + '/' + region + '/cosigt_genotype.tsv')
-        #cosigt_input.append(config['output'] + '/cosigt/'+ sample + '/' + region + '/ava.pdf')
-        #cosigt_input.append(config['output'] + '/cosigt_old/'+ sample + '/' + region + '/cosigt_genotype.tsv')
-        #cosigt_input.append(config['output'] + '/bwa-mem2/'+ sample + '/' + region + '.realigned.bam.all.pdf') #skip coverage calculation and plotting
-    cosigt_input.append(config['output'] + '/odgi/viz/' + region + '.png')
-    #cosigt_input.append(config['output'] + '/odgi/dissimilarity/' + region + '.tsv')
-    #cosigt_input.append(config['output'] + '/odgi/view/' + region + '.node.length.tsv')
-    #cosigt_input.append(config['output'] + '/pgrtk/plot/' + region + '.bclustered.pdf')
-    if config['annotations'] != '':
-        cosigt_input.append(config['output'] + '/odgi/untangle/' + region + '.gggenes.pdf')
-        #cosigt_input.append(config['output'] + '/odgi/untangle_old/' + region + '.gggenes.pdf')
+	for batch in batch_set:
+		batch_input.append(config['output'] + '/impg/batches/' + batch + '.' + region + '.bedpe')
+
+for region in config['region']:
+	for sample in df['sample_id'].tolist():
+		cosigt_input.append(config['output'] + '/cosigt/'+ sample + '/' + region + '/cosigt_genotype.tsv')
+	cosigt_input.append(config['output'] + '/odgi/viz/' + region + '.png')
+	if config['annotations'] != '':
+		cosigt_input.append(config['output'] + '/odgi/untangle/' + region + '.gggenes.pdf')
 
 rule cosigt:
-    input:
-        cosigt_input
+	input:
+		batch_input,
+		cosigt_input
 
 #DO NOT USE OUTSIDE BENCHMARK CONTEXT
 rule benchmark:
-    input:
-        config['output'] + '/benchmark/resources.time.pdf',
-        config['output'] + '/benchmark/resources.mem.pdf',
-        config['output'] + '/benchmark/tpr.pdf'
+	input:
+		config['output'] + '/benchmark/resources.time.pdf',
+		config['output'] + '/benchmark/resources.mem.pdf',
+		config['output'] + '/benchmark/tpr.pdf'
