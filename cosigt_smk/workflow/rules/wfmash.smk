@@ -28,37 +28,14 @@ rule pansnspec_target:
 		> {output}
 		'''
 
-rule add_target_to_queries:
+rule samtools_faidx_target:
 	'''
 	https://github.com/davidebolo1993/cosigt
 	'''
 	input:
-		queries_fasta=config['assemblies'],
-		target_fasta=rules.pansnspec_target.output
+		rules.pansnspec_target.output
 	output:
-		 config['output'] + '/wfmash/queries.fa'
-	threads:
-		1
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['time']
-	benchmark:
-		'benchmarks/add_target_to_queries.benchmark.txt'
-	shell:
-		'''
-		zcat --force {input.queries_fasta} {input.target_fasta} | \
-		awk '/^>/{{f=!d[$1];d[$1]=1}}f' \
-		> {output}
-		'''
-
-rule samtools_faidx_queries:
-	'''
-	https://github.com/davidebolo1993/cosigt
-	'''
-	input:
-		rules.add_target_to_queries.output
-	output:
-		config['output'] + '/wfmash/queries.fa.fai'
+		config['output'] + '/wfmash/target.fa.fai'
 	threads:
 		1
 	resources:
@@ -69,19 +46,18 @@ rule samtools_faidx_queries:
 	conda:
 		'../envs/samtools.yaml'
 	benchmark:
-		'benchmarks/samtools_faidx_queries.benchmark.txt'
+		'benchmarks/samtools_faidx_target.benchmark.txt'
 	shell:
 		'''
-		samtools faidx {input.queries}
-		'''                  
-
+		samtools faidx {input}
+		'''
+   
 rule extract_batches:
 	'''
 	https://github.com/davidebolo1993/cosigt
 	'''
 	input:
-		fasta=rules.add_target_to_queries.output,
-		fai=rules.samtools_faidx_queries.output
+		config['assemblies']
 	output:
 		config['output'] + '/wfmash/batches/{batch}.fa'
 	threads:
@@ -96,11 +72,12 @@ rule extract_batches:
 	benchmark:
 		'benchmarks/{batch}.extract_batch.benchmark.txt'
 	params:
-		batch='{batch}'
+		batch='{batch}',
+		fai=config['assemblies'] + '.fai'
 	shell:
 		'''
-		grep -w {params.batch} {input.fai} | while read f; do
-			samtools faidx {input.fasta} $f >> {output}
+		grep -w {params.batch} {params.fai} | while read f; do
+			samtools faidx {input} $f >> {output}
 		done
 		'''
 
@@ -133,8 +110,8 @@ rule wfmash_align_batches:
 	https://github.com/waveygang/wfmash
 	'''
 	input:
-		queries_fasta=rules.extract_batches.output
-		queries_fai=rules.index_batches.output
+		queries_fasta=rules.extract_batches.output,
+		queries_fai=rules.samtools_faidx_batches.output,
 		target_fasta=rules.pansnspec_target.output,
 		target_fai=rules.samtools_faidx_batches.output
 	output:
@@ -178,7 +155,7 @@ rule merge_batches:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default']['time']
 	benchmark:
-		'benchmarks/{batch}.merge_batches.benchmark.txt'
+		'benchmarks/merge_batches.benchmark.txt'
 	shell:
 		'''
 		for f in {input}; do

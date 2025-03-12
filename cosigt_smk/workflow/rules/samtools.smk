@@ -3,7 +3,7 @@ rule make_reference_bed:
 	https://github.com/davidebolo1993/cosigt
 	'''
 	input:
-		rules.impg_project.output
+		rules.concatenate_batches_per_region.output
 	output:
 		config['output'] + '/samtools/bed/{region}.bed'
 	threads:
@@ -74,7 +74,7 @@ rule samtools_faidx_extract:
 	https://github.com/samtools/samtools
 	'''
 	input:
-		fasta=rules.add_target_to_queries.output,
+		fasta=config['assemblies'],
 		bed=rules.filter_outliers.output
 	output:
 		config['output'] + '/samtools/faidx/{region}.fasta'
