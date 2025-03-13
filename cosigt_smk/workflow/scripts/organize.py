@@ -195,7 +195,7 @@ def main():
 	#add to config
 	d['samples'] = out_samples
 	#annotations
-	out_annotations_file = "''"
+	out_annotations_file = ''
 	if args.annotations is not None:
 		out_annotations_file=os.path.join(out_annotations, os.path.basename(args.annotations))
 		try:
@@ -204,6 +204,8 @@ def main():
 			pass
 		#bind if needed
 		args.binds += ',' + os.path.dirname(os.path.abspath(args.annotations))
+	else:
+		out_annotations_file = 'NA'
 	d['annotations'] = out_annotations_file
 	#symlink assemblies 
 	out_assemblies_file=os.path.join(out_fasta, os.path.basename(args.assemblies))

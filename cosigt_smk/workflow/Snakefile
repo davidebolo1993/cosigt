@@ -50,7 +50,7 @@ for region in config['region']:
 	cosigt_input.append(config['output'] + '/impg/merged/' + region + '.bedpe')
 	cosigt_input.extend([config['output'] + '/impg/batches/' + region + '/' + batch + '.bedpe' for batch in batch_set])
 	cosigt_input.append(config['output'] + '/odgi/viz/' + region + '.png')
-	if config['annotations'] != '':
+	if config['annotations'] != 'NA':
 		cosigt_input.append(config['output'] + '/odgi/untangle/' + region + '.gggenes.pdf')
 
 rule cosigt:
