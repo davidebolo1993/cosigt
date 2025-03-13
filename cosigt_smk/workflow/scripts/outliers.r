@@ -30,7 +30,7 @@ diffdf<-do.call(rbind,difflist)
 rownames(diffdf)<-NULL
 regularMatrix <- acast(diffdf, h1~h2, value.var = "diff")
 distanceMatrix <- as.dist(regularMatrix)
-res <- dbscan(distanceMatrix, eps=0.2, minPts = 10)$cluster #
+res <- dbscan(distanceMatrix, eps=0.2, minPts = max(1, nrow(df)/6))$cluster #
 #noise points are 0s
 outliers<-labels(distanceMatrix)[which(res == 0)]
 #remove from df

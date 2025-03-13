@@ -33,7 +33,7 @@ rule impg_project_batches:
 
 rule concatenate_batches_per_region:
 	input:
-		lambda wildcards: glob(config['output'] + '/impg/batches/{region}/*.bedpe'.format(region=wildcards.region))
+		expand(config['output'] + '/impg/batches/{region}/{batch}.bedpe', region='{region}', batch=sorted(batch_set))
 	output:
 		config['output'] + '/impg/merged/{region}.bedpe'
 	threads:

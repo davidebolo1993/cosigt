@@ -17,16 +17,13 @@ rule bedtools_merge:
 		'../envs/bedtools.yaml'
 	benchmark:
 		'benchmarks/{region}.bedtools_merge.benchmark.txt'
-	params:
-		ref_region='resources/regions/{region}.bed'
 	shell:
 		'''
 		bedtools sort \
 		-i {input} | \
 		bedtools merge \
 		-d 200000 \
-		-i - > {output} \
-		&& cat {params.ref_region} >> {output}
+		-i - > {output}
 		'''
 
 rule filter_outliers:

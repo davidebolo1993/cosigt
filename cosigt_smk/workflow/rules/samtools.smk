@@ -75,7 +75,10 @@ rule samtools_faidx_extract:
 	'''
 	input:
 		fasta=config['assemblies'],
-		bed=rules.filter_outliers.output
+		ref=rules.pansnspec_target.output,
+		ref_fai=rules.samtools_faidx_target.output,
+		asm_bed=rules.filter_outliers.output,
+		ref_bed='resources/regions/{region}.bed'
 	output:
 		config['output'] + '/samtools/faidx/{region}.fasta'
 	threads:
@@ -92,8 +95,11 @@ rule samtools_faidx_extract:
 	shell:
 		'''
 		samtools faidx \
-		-r <(awk '{{print $1":"$2"-"$3}}' {input.bed}) \
+		-r <(awk '{{print $1":"$2"-"$3}}' {input.asm_bed}) \
 		{input.fasta} > {output}
+		samtools faidx \
+		-r <(awk '{{print $1":"$2"-"$3}}' {input.ref_bed}) \
+		{input.ref} >> {output}
 		'''
 
 rule samtools_faidx_index:

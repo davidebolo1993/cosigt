@@ -76,7 +76,7 @@ rule extract_batches:
 		fai=config['assemblies'] + '.fai'
 	shell:
 		'''
-		grep -w {params.batch} {params.fai} | while read f; do
+		grep -w {params.batch} {params.fai} | cut -f 1 | while read f; do
 			samtools faidx {input} $f >> {output}
 		done
 		'''
@@ -102,7 +102,7 @@ rule samtools_faidx_batches:
 		'benchmarks/{batch}.index_batches.benchmark.txt'
 	shell:
 		'''
-		samtools index {input}
+		samtools faidx {input}
 		'''    
 
 rule wfmash_align_batches:
