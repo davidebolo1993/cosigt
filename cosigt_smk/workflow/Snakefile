@@ -42,14 +42,18 @@ include: 'rules/cosigt.smk'
 include: 'rules/megadepth.smk'
 include: 'rules/benchmark.smk'
 
+
 cosigt_input=list()
-	
+cosigt_submasks=list()
+
 for region in config['region']:
 	for sample in df['sample_id'].tolist():
 		cosigt_input.append(config['output'] + '/cosigt/'+ sample + '/' + region + '/cosigt_genotype.tsv')
+		cosigt_submasks.append(config['output'] + '/cosigt/'+ sample + '/' + region + '/submasks.done')
 	cosigt_input.append(config['output'] + '/impg/merged/' + region + '.bedpe')
 	cosigt_input.extend([config['output'] + '/impg/batches/' + region + '/' + batch + '.bedpe' for batch in batch_set])
 	cosigt_input.append(config['output'] + '/odgi/viz/' + region + '.png')
+	cosigt_submasks.append(config['output'] + '/odgi/dissimilarity/' + region + '/submasks.done')
 	if config['annotations'] != 'NA':
 		cosigt_input.append(config['output'] + '/odgi/untangle/' + region + '.gggenes.pdf')
 
@@ -57,9 +61,15 @@ rule cosigt:
 	input:
 		cosigt_input
 
-#DO NOT USE OUTSIDE BENCHMARK CONTEXT
+rule cosigt_submasks:
+	input:
+		cosigt_input,
+		cosigt_submasks
+
+#USED ONLY FOR BENCHAMRKING
 rule benchmark:
 	input:
-		config['output'] + '/benchmark/resources.time.pdf',
-		config['output'] + '/benchmark/resources.mem.pdf',
+		#config['output'] + '/benchmark/resources.time.pdf',
+		#config['output'] + '/benchmark/resources.mem.pdf',
+		config['output'] + '/benchmark/tpr.mask.pdf',
 		config['output'] + '/benchmark/tpr.pdf'

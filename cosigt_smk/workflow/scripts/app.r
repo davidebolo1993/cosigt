@@ -43,13 +43,19 @@ list_region_tables <- function(folder) {
   return(file_info)
 }
 
-#list available mask files
+#list available mask and submasks files
 list_region_mask <- function(folder) {
-  files <- list.files(folder, pattern = ".mask.tsv", full.names = TRUE, recursive = TRUE)
+  files <- list.files(folder, pattern = "mask", full.names = TRUE, recursive = TRUE)
   file_info <- data.frame(
     file_path = files,
     region = do.call(c, lapply(files, function(x) unlist(strsplit(basename(x), ".", fixed=TRUE))[[1]]))
   )
+  #adjust
+  for (i in 1:nrow(file_info)) {
+    if (startsWith(file_info$region[i], "mask")) {
+      file_info$region[i]<-unlist(strsplit(basename(dirname(file_info$file_path[i])), "_submasks"))[1]
+    }
+  }
   return(file_info)
 }
 
@@ -210,8 +216,11 @@ server <- function(input, output, session) {
   mask_file<-reactiveVal()
   mask_active <- reactiveVal(FALSE)
   
+  # Load the mask when the toggle button is clicked
   observeEvent(input$toggle_mask, {
-    mask_active(!mask_active()) # Toggle the mask
+    req(input$mask)
+    mask_file(load_mask(input$mask))
+    mask_active(!mask_active()) # Toggle the mask AFTER loading the mask
   })
 
   # Load and compare vectors when button is clicked
@@ -245,12 +254,18 @@ server <- function(input, output, session) {
     lengths <- calculate_cumulative_lengths(lengths)
     node_lengths(lengths)
 
+    # If mask is not loaded yet, load it if available
+    if (is.null(mask_file())) {
+      req(input$mask)
+      mask_file(load_mask(input$mask))
+    }
+
   })
 
   # Calculate cosine similarity and angle between the sample vector and summed vector
   output$cosineSimilarity <- renderText({
-    req(sample_vector(), summed_vector(), mask_file())
-    mask <- mask_file()
+    req(sample_vector(), summed_vector())
+    mask <- if (!is.null(mask_file())) mask_file() else data.frame(mask = rep(1, length(sample_vector())))
     apply_mask <- mask_active()
 
     # Apply the mask
@@ -264,13 +279,13 @@ server <- function(input, output, session) {
     angle <- acos(similarity) * (180 / pi)  # Convert to degrees
 
     HTML(paste("Cosine Similarity (upper plot): ", round(similarity, 4),"; ",
-               "Angle (degrees, upper plot): ", round(angle, 2),
-               sep = ""))
+              "Angle (degrees, upper plot): ", round(angle, 2),
+              sep = ""))
   })
 
   output$cosineSimilarity2 <- renderText({
-    req(sample_vector(), summed_vector2(), mask_file())
-    mask <- mask_file()
+    req(sample_vector(), summed_vector2())
+    mask <- if (!is.null(mask_file())) mask_file() else data.frame(mask = rep(1, length(sample_vector())))
     apply_mask <- mask_active()
 
     # Apply the mask
@@ -284,19 +299,22 @@ server <- function(input, output, session) {
     angle <- acos(similarity) * (180 / pi)  # Convert to degrees
 
     HTML(paste("Cosine Similarity (lower plot): ", round(similarity, 4),"; ",
-               "Angle (degrees, lower plot): ", round(angle, 2),
-               sep = ""))
+              "Angle (degrees, lower plot): ", round(angle, 2),
+              sep = ""))
   })
 
   output$vectorPlot <- renderPlotly({
     req(sample_vector(), summed_vector(), pang_vector1(), pang_vector2(), node_lengths(), mask_file())
+
+    mask <- if (!is.null(mask_file())) mask_file() else data.frame(mask = rep(1, length(sample_vector())))
+    apply_mask <- mask_active()
 
     # Extract node lengths and validate dimensions
     lengths <- node_lengths() 
     node_ids <- seq_along(sample_vector())
 
     # Mask
-    mask <- mask_file()
+    mask <- if (!is.null(mask_file())) mask_file() else data.frame(mask = rep(1, length(sample_vector())))
     apply_mask <- mask_active()
     masked_nodes <- if (apply_mask) mask$mask == 1 else TRUE
 
@@ -414,7 +432,7 @@ server <- function(input, output, session) {
     node_ids <- seq_along(sample_vector())
 
     # Mask
-    mask <- mask_file()
+    mask <- if (!is.null(mask_file())) mask_file() else data.frame(mask = rep(1, length(sample_vector())))
     apply_mask <- mask_active()
     masked_nodes <- if (apply_mask) mask$mask == 1 else TRUE
 

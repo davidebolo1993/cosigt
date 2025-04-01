@@ -11,15 +11,20 @@ setDTthreads(1)
 args <- commandArgs(trailingOnly = TRUE)
 
 get_region <- function(x) {
+  tail(unlist(strsplit(x, "/")), 4)[1]
+}
+
+get_mask <- function(x) {
   tail(unlist(strsplit(x, "/")), 2)[1]
 }
 
 process_file <- function(file_path, clusters, distances) {
 
   df <- fread(file_path, header = TRUE)
-  sample <- basename(dirname(dirname(file_path)))
+  sample <- basename(dirname(dirname(dirname(dirname(file_path)))))
   #in case we have .final, then
   sample<-unlist(strsplit(sample, ".", fixed=TRUE))[1]
+  mask<-basename(dirname(file_path))
   haps <- names(clusters)[grepl(sample, names(clusters))]
   if (length(haps) != 2) {
     true_clusters<-c("ambiguous", "ambiguous")
@@ -41,6 +46,7 @@ process_file <- function(file_path, clusters, distances) {
     g_lenient = ifelse(identical(true_clusters, predicted_clusters), sample, ""),
     g_strict = ifelse(length(grep(sample, predicted_haplos)) == 2, sample, ""),
     sample.id = sample,
+    mask.id = mask,
     hap.1.pred = predicted_haplos[1],
     hap.2.pred = predicted_haplos[2],
     cl.1.pred = predicted_clusters[1],
@@ -55,7 +61,7 @@ process_file <- function(file_path, clusters, distances) {
 
 #only consider files with masks
 files <- sort(list.files(args[1], pattern = "sorted_combos.tsv", full.names = TRUE, recursive = TRUE))
-files<-files[grep("mask", files, invert=T)]
+files<-files[grep("mask", files)]
 regions <- unique(sapply(files, get_region))
 
 tpr_list <- lapply(regions, function(r) {
@@ -81,23 +87,30 @@ tpr_list <- lapply(regions, function(r) {
     cl.2.true<-sapply(results, `[[`, "cl.2.true")
     cl.1.pred.true.dist<-sapply(results, `[[`, "cl.1.pred.true.dist")
     cl.2.pred.true.dist<-sapply(results, `[[`, "cl.2.pred.true.dist")
+    mask<-sapply(results, `[[`, "mask.id")
 
-    #dissimilarity-table, per region
-    diff_table<-fread(file.path(args[3], paste0(r, ".tsv")))
-    
+    #dissimilarity-tables, calculated per-mask
+    masks<-sort(list.files(file.path(args[3], paste0(r, "_submasks")), pattern="tsv", recursive=T, full.names=T))
+    masklist<-list()
+    for (m in masks) {
+        mask_id<-unlist(strsplit(basename(m), ".", fixed=T))[1]
+        masklist[[mask_id]]<-fread(m)
+    }
+
     qvlisth1<-rep(0,length(sample))
     qvlisth2<-rep(0,length(sample))
     TPR<-rep("FN",length(sample))
-
     for (i in 1:length(sample)) {
         TPR[i]<-ifelse(cl.1.pred.true.dist[i] == 0 && cl.2.pred.true.dist[i] == 0, "TP", "FN")
+        mask_id<-mask[i]
+        diffmask_table<-masklist[[mask_id]]
         sample_id<-sample[i]
-        hapst<-unique(grep(sample_id, diff_table$group.a,value=T))
+        hapst<-unique(grep(sample_id, diffmask_table$group.a,value=T))
 
         if (length(hapst) != 2) {
             qvlisth1[i]<- -9999
             qvlisth2[i]<- -9999
-            message("Missing results for sample ", sample_id)
+            message("Missing results for sample ", sample_id,  ", mask ", mask_id)
             next
         }
         hap1t<-hapst[1]
@@ -105,12 +118,12 @@ tpr_list <- lapply(regions, function(r) {
         hap1p<-hap.1.pred[i]
         hap2p<-hap.2.pred[i]
         #combo1 hap1t-hap1p
-        h1th1p<-diff_table[(diff_table$group.a == hap1t & diff_table$group.b == hap1p)][['estimated.difference.rate']]
-        h2th2p<-diff_table[(diff_table$group.a == hap2t & diff_table$group.b == hap2p)][['estimated.difference.rate']]
+        h1th1p<-diffmask_table[(diffmask_table$group.a == hap1t & diffmask_table$group.b == hap1p)][['estimated.difference.rate']]
+        h2th2p<-diffmask_table[(diffmask_table$group.a == hap2t & diffmask_table$group.b == hap2p)][['estimated.difference.rate']]
         e1<-h1th1p+h2th2p
         #other combo
-        h1th2p<-diff_table[(diff_table$group.a == hap1t & diff_table$group.b == hap2p)][['estimated.difference.rate']]
-        h2th1p<-diff_table[(diff_table$group.a == hap2t & diff_table$group.b == hap1p)][['estimated.difference.rate']]
+        h1th2p<-diffmask_table[(diffmask_table$group.a == hap1t & diffmask_table$group.b == hap2p)][['estimated.difference.rate']]
+        h2th1p<-diffmask_table[(diffmask_table$group.a == hap2t & diffmask_table$group.b == hap1p)][['estimated.difference.rate']]
         e2<-h1th2p+h2th1p
         if (e1 <= e2) {
             qvlisth1[i]<-h1th1p
@@ -121,8 +134,8 @@ tpr_list <- lapply(regions, function(r) {
         }
     }
 
-    btab<-data.frame(sample=sample, region=r, hap.1.pred = hap.1.pred, hap.2.pred = hap.2.pred, cl.1.pred = cl.1.pred, cl.2.pred=cl.2.pred, cl.1.true=cl.1.true, cl.2.true=cl.2.true, cl.1.pred.true.dist = cl.1.pred.true.dist, cl.2.pred.true.dist=cl.2.pred.true.dist, qv.1=qvlisth1, qv.2=qvlisth2, TPR=TPR)
-    fwrite(btab, gsub("pdf", paste0(r,".wdist.tsv"), args[4]),col.names=T, row.names=F, sep="\t")
+    btab<-data.frame(sample=sample, region=r, mask.id=mask, hap.1.pred = hap.1.pred, hap.2.pred = hap.2.pred, cl.1.pred = cl.1.pred, cl.2.pred=cl.2.pred, cl.1.true=cl.1.true, cl.2.true=cl.2.true, cl.1.pred.true.dist = cl.1.pred.true.dist, cl.2.pred.true.dist=cl.2.pred.true.dist, qv.1=qvlisth1, qv.2=qvlisth2, TPR=TPR)
+    fwrite(btab, gsub("pdf", paste0(r,".wmask.wdist.tsv"), args[4]),col.names=T, row.names=F, sep="\t")
     btab
 })
 
@@ -130,27 +143,28 @@ tpr_df <- rbindlist(tpr_list)
 tpr_df <- subset(tpr_df, (qv.1 != -9999 & qv.2 != -9999))
 
 data_long <- tpr_df %>%
-  select(qv.1, qv.2, TPR, region) %>%
+  select(mask.id, qv.1, qv.2, TPR, region) %>%
   pivot_longer(cols = c(qv.1, qv.2), names_to = "qv_type", values_to = "qv_value")
 
 #tpr pctg per mask per region
 tpr_summary <- data_long %>%
-  group_by(region) %>%
+  group_by(mask.id, region) %>%
   summarise(TPR_pct = sum(TPR == "TP") / n() * 100, .groups = "drop")
 
-data_long <- left_join(data_long, tpr_summary, by = c("region"))
+data_long <- left_join(data_long, tpr_summary, by = c("mask.id", "region"))
 
 tpr_summary <- data_long %>% 
-  group_by(region) %>% 
+  group_by(mask.id, region) %>% 
   summarise(
     TPR_pct = unique(TPR_pct),
     max_qv_value = max(qv_value)
   ) %>% 
   ungroup()
 
-ggplot(data_long, aes(x = region, y = qv_value)) +
+ggplot(data_long, aes(x = mask.id, y = qv_value)) +
   geom_violin() + 
   geom_jitter(aes(color = TPR), width = 0.4, alpha = 0.7) + 
+  facet_wrap(~region, scales = "free_y", nrow=length(unique(data_long$region))) + 
   geom_text(
     data = tpr_summary,
     aes(label = sprintf("%.1f%%", TPR_pct), y = max_qv_value), 
@@ -159,7 +173,7 @@ ggplot(data_long, aes(x = region, y = qv_value)) +
     size = 3
   ) +
   theme_bw() +
-  labs(x = "region", y = "estimated.difference.rate") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size=10))
+  labs(x = "mask.id", y = "estimated.difference.rate") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggsave(args[4],width = 3*length(unique(tpr_summary$region)), height = 5, limitsize=FALSE)
+ggsave(args[4],width = 2*length(unique(tpr_summary$mask.id)), height = 4*length(unique(tpr_summary$region)), limitsize=FALSE)

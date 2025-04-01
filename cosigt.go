@@ -95,7 +95,6 @@ func ReadBlacklist(filename string) ([]string, error) {
 	return ids, scanner.Err()
 }
 
-
 // ReadGz reads gzip-compressed TSV files containing gafpack and odgi paths data
 func ReadGz(filename string) ([]string, []Vector, error) {
 	file, err := os.Open(filename)
@@ -159,56 +158,106 @@ func ReadJSON(filename string) (map[string]string, error) {
 	return clstr, nil
 }
 
-// WriteResults writes the analysis results to output files
-func WriteResults(m *sync.Map, keys []string, clstr map[string]string, outDir, id string) error {
-	if err := os.MkdirAll(outDir, os.ModePerm); err != nil {
-		return fmt.Errorf("error creating output directory: %w", err)
-	}
+func WriteResults(m *sync.Map, keys []string, clstr map[string]string, outDir, id string, ploidy int) error {
+    if err := os.MkdirAll(outDir, os.ModePerm); err != nil {
+        return fmt.Errorf("error creating output directory: %w", err)
+    }
 
-	sortedCombosFile, err := os.Create(filepath.Join(outDir, "sorted_combos.tsv"))
-	if err != nil {
-		return fmt.Errorf("error creating sorted_combos.tsv: %w", err)
-	}
-	defer sortedCombosFile.Close()
+    sortedCombosFile, err := os.Create(filepath.Join(outDir, "sorted_combos.tsv"))
+    if err != nil {
+        return fmt.Errorf("error creating sorted_combos.tsv: %w", err)
+    }
+    defer sortedCombosFile.Close()
 
-	genotypeFile, err := os.Create(filepath.Join(outDir, "cosigt_genotype.tsv"))
-	if err != nil {
-		return fmt.Errorf("error creating cosigt_genotype.tsv: %w", err)
-	}
-	defer genotypeFile.Close()
+    genotypeFile, err := os.Create(filepath.Join(outDir, "cosigt_genotype.tsv"))
+    if err != nil {
+        return fmt.Errorf("error creating cosigt_genotype.tsv: %w", err)
+    }
+    defer genotypeFile.Close()
 
-	sortedCombosWriter := csv.NewWriter(sortedCombosFile)
-	sortedCombosWriter.Comma = '\t'
-	defer sortedCombosWriter.Flush()
+    sortedCombosWriter := csv.NewWriter(sortedCombosFile)
+    sortedCombosWriter.Comma = '\t'
+    defer sortedCombosWriter.Flush()
 
-	genotypeWriter := csv.NewWriter(genotypeFile)
-	genotypeWriter.Comma = '\t'
-	defer genotypeWriter.Flush()
+    genotypeWriter := csv.NewWriter(genotypeFile)
+    genotypeWriter.Comma = '\t'
+    defer genotypeWriter.Flush()
 
-	// Write headers
-	if err := genotypeWriter.Write([]string{"#sample.id", "haplotype.1", "haplotype.2", "cluster.1", "cluster.2", "cosine.similarity"}); err != nil {
-		return fmt.Errorf("error writing genotype header: %w", err)
-	}
-	if err := sortedCombosWriter.Write([]string{"#haplotype.1", "haplotype.2", "cluster.1", "cluster.2", "cosine.similarity"}); err != nil {
-		return fmt.Errorf("error writing sorted combos header: %w", err)
-	}
+    // Check if cluster information is available
+    hasClusterInfo := len(clstr) > 0
 
-	for i, k := range keys {
-		haps := strings.Split(k, "$")
-		val, _ := m.Load(k) // Fetch value from sync.Map
-		cosineSimilarity := val.(float64)
+    // Create headers with variable number of haplotypes
+    genotypeHeader := []string{"#sample.id"}
+    sortedCombosHeader := []string{}
+    
+    // Add haplotype headers
+    for i := 1; i <= ploidy; i++ {
+        genotypeHeader = append(genotypeHeader, fmt.Sprintf("haplotype.%d", i))
+        sortedCombosHeader = append(sortedCombosHeader, fmt.Sprintf("haplotype.%d", i))
+    }
+    
+    // Add cluster headers only if cluster information is available
+    if hasClusterInfo {
+        for i := 1; i <= ploidy; i++ {
+            genotypeHeader = append(genotypeHeader, fmt.Sprintf("cluster.%d", i))
+            sortedCombosHeader = append(sortedCombosHeader, fmt.Sprintf("cluster.%d", i))
+        }
+    }
+    
+    // Add cosine similarity header
+    genotypeHeader = append(genotypeHeader, "cosine.similarity")
+    sortedCombosHeader = append(sortedCombosHeader, "cosine.similarity")
+    
+    if err := genotypeWriter.Write(genotypeHeader); err != nil {
+        return fmt.Errorf("error writing genotype header: %w", err)
+    }
+    if err := sortedCombosWriter.Write(sortedCombosHeader); err != nil {
+        return fmt.Errorf("error writing sorted combos header: %w", err)
+    }
 
-		if i == 0 {
-			if err := genotypeWriter.Write([]string{id, haps[0], haps[1], clstr[haps[0]], clstr[haps[1]], fmt.Sprintf("%.16f", cosineSimilarity)}); err != nil {
-				return fmt.Errorf("error writing genotype data: %w", err)
-			}
-		}
-		if err := sortedCombosWriter.Write([]string{haps[0], haps[1], clstr[haps[0]], clstr[haps[1]], fmt.Sprintf("%.16f", cosineSimilarity)}); err != nil {
-			return fmt.Errorf("error writing sorted combos data: %w", err)
-		}
-	}
+    for i, k := range keys {
+        haps := strings.Split(k, "$")
+        val, _ := m.Load(k) // Fetch value from sync.Map
+        cosineSimilarity := val.(float64)
+        
+        // Prepare row data
+        genotypeRow := []string{id}
+        sortedCombosRow := []string{}
+        
+        // Add haplotypes
+        for _, hap := range haps {
+            genotypeRow = append(genotypeRow, hap)
+            sortedCombosRow = append(sortedCombosRow, hap)
+        }
+        
+        // Add clusters only if cluster information is available
+        if hasClusterInfo {
+            for _, hap := range haps {
+                clusterVal, exists := clstr[hap]
+                if !exists {
+                    clusterVal = "NA" // Use NA if the cluster information for this haplotype is missing
+                }
+                genotypeRow = append(genotypeRow, clusterVal)
+                sortedCombosRow = append(sortedCombosRow, clusterVal)
+            }
+        }
+        
+        // Add cosine similarity
+        genotypeRow = append(genotypeRow, fmt.Sprintf("%.16f", cosineSimilarity))
+        sortedCombosRow = append(sortedCombosRow, fmt.Sprintf("%.16f", cosineSimilarity))
 
-	return nil
+        if i == 0 {
+            if err := genotypeWriter.Write(genotypeRow); err != nil {
+                return fmt.Errorf("error writing genotype data: %w", err)
+            }
+        }
+        
+        if err := sortedCombosWriter.Write(sortedCombosRow); err != nil {
+            return fmt.Errorf("error writing sorted combos data: %w", err)
+        }
+    }
+
+    return nil
 }
 
 // SliceContains checks if a string is contained in any string of a slice
@@ -231,14 +280,15 @@ func SumSlices(a, b Vector) Vector {
 }
 
 func main() {
-	parser := argparse.NewParser("cosigt", "genotyping loci in pangenome graphs using cosine distance")
-	p := parser.String("p", "paths", &argparse.Options{Required: true, Help: "gzip-compressed tsv file with path names and node coverages from odgi paths"})
-	g := parser.String("g", "gaf", &argparse.Options{Required: true, Help: "gzip-compressed gaf (graph alignment format) file for a sample from gafpack"})
-	b := parser.String("b", "blacklist", &argparse.Options{Required: false, Help: "txt file with names of paths to exclude (one per line)"})
-	c := parser.String("c", "cluster", &argparse.Options{Required: false, Help: "cluster json file as generated with cluster.r"})
-	maskFile := parser.String("m", "mask", &argparse.Options{Required: false, Help: "boolean mask to ignore node coverages"})
+    parser := argparse.NewParser("cosigt", "genotyping loci in pangenome graphs using cosine distance")
+    p := parser.String("p", "paths", &argparse.Options{Required: true, Help: "gzip-compressed tsv file with path names and node coverages from odgi paths"})
+    g := parser.String("g", "gaf", &argparse.Options{Required: true, Help: "gzip-compressed gaf (graph alignment format) file for a sample from gafpack"})
+    b := parser.String("b", "blacklist", &argparse.Options{Required: false, Help: "txt file with names of paths to exclude (one per line)"})
+    c := parser.String("c", "cluster", &argparse.Options{Required: false, Help: "cluster json file as generated with cluster.r"})
+    maskFile := parser.String("m", "mask", &argparse.Options{Required: false, Help: "boolean mask to ignore node coverages"})
+    ploidy := parser.Int("n", "ploidy", &argparse.Options{Required: false, Help: "ploidy level (default: 2)", Default: 2})
 	o := parser.String("o", "output", &argparse.Options{Required: true, Help: "folder prefix for output files"})
-	i := parser.String("i", "id", &argparse.Options{Required: true, Help: "sample name"})
+    i := parser.String("i", "id", &argparse.Options{Required: true, Help: "sample name"})
 
 	if err := parser.Parse(os.Args); err != nil {
 		log.Fatalf("Error parsing arguments: %v", err)
@@ -262,9 +312,17 @@ func main() {
 		}
 	}
 
-	clstr, err := ReadJSON(*c)
-	if err != nil {
-		log.Fatalf("Error reading cluster file: %v", err)
+	//making cluster file non required
+	var clstr map[string]string
+	if *c != "" {
+		var err error
+		clstr, err = ReadJSON(*c)
+		if err != nil {
+			log.Fatalf("Error reading cluster file: %v", err)
+		}
+	} else {
+		// Initialize an empty map if no cluster file is provided
+		clstr = make(map[string]string)
 	}
 
 	var mask []bool
@@ -281,7 +339,7 @@ func main() {
 	var seen sync.Map      // Changed to use sync.Map for concurrency safety
 	results := &sync.Map{} // Changed to use sync.Map for results
 	n := len(hapid)
-	k := 2 // fixed ploidy
+	k := *ploidy
 
 	numWorkers := runtime.NumCPU()
 	jobs := make(chan []int, numWorkers)
@@ -295,26 +353,64 @@ func main() {
 			defer wg.Done()
 			for combo := range jobs {
 				localResults := make(map[string]float64)
-				h1, h2 := combo[0], combo[1]
-				if len(blck) == 0 || (!SliceContains(hapid[h1], blck) && !SliceContains(hapid[h2], blck)) {
-					sum := SumSlices(gcov[h1], gcov[h2])
-					indiv := hapid[h1] + "$" + hapid[h2]
-					localResults[indiv] = GetCosineSimilarity(sum, bcov[0], mask)
-
-					_, seenH1 := seen.LoadOrStore(h1, true)
-					if !seenH1 {
-						sum = SumSlices(gcov[h1], gcov[h1])
-						indiv = hapid[h1] + "$" + hapid[h1]
-						localResults[indiv] = GetCosineSimilarity(sum, bcov[0], mask)
-					}
-
-					_, seenH2 := seen.LoadOrStore(h2, true)
-					if !seenH2 {
-						sum = SumSlices(gcov[h2], gcov[h2])
-						indiv = hapid[h2] + "$" + hapid[h2]
-						localResults[indiv] = GetCosineSimilarity(sum, bcov[0], mask)
+				
+				// Check if any haplotype in combo is in the blacklist
+				skipCombo := false
+				if len(blck) > 0 {
+					for _, idx := range combo {
+						if SliceContains(hapid[idx], blck) {
+							skipCombo = true
+							break
+						}
 					}
 				}
+
+				if !skipCombo {
+					// Create a sum of all haplotypes in the combination
+					var sum Vector
+					var haplotypeIDs []string
+					
+					for _, idx := range combo {
+						if sum == nil {
+							// Initialize sum with the first haplotype
+							sum = make(Vector, len(gcov[idx]))
+							copy(sum, gcov[idx])
+						} else {
+							// Add subsequent haplotypes
+							sum = SumSlices(sum, gcov[idx])
+						}
+						haplotypeIDs = append(haplotypeIDs, hapid[idx])
+					}
+					
+					// Create a combined identifier
+					indiv := strings.Join(haplotypeIDs, "$")
+					localResults[indiv] = GetCosineSimilarity(sum, bcov[0], mask)
+					
+					// Also calculate for each haplotype doubled/tripled/etc. with itself
+					for _, idx := range combo {
+						// Check if we've already seen this homozygous combination
+						_, seenHap := seen.LoadOrStore(idx, true)
+						if !seenHap {
+							// Create homozygous combination
+							homoSum := make(Vector, len(gcov[idx]))
+							homoIDs := make([]string, k)
+							
+							// Sum the same haplotype k times
+							for j := 0; j < k; j++ {
+								if j == 0 {
+									copy(homoSum, gcov[idx])
+								} else {
+									homoSum = SumSlices(homoSum, gcov[idx])
+								}
+								homoIDs[j] = hapid[idx]
+							}
+							
+							homoIndiv := strings.Join(homoIDs, "$")
+							localResults[homoIndiv] = GetCosineSimilarity(homoSum, bcov[0], mask)
+						}
+					}
+				}
+				
 				resultsChan <- localResults
 			}
 		}()
@@ -355,7 +451,7 @@ func main() {
 	})
 
 	// Write output
-	if err := WriteResults(results, keys, clstr, *o, *i); err != nil {
+	if err := WriteResults(results, keys, clstr, *o, *i, *ploidy); err != nil {
 		log.Fatalf("Error writing results: %v", err)
 	}
 }
