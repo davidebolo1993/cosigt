@@ -6,6 +6,7 @@ library(data.table)
 library(scales)
 library(dplyr)
 library(tidyr)
+library(ggrepel)  # Added for repelling text labels
 setDTthreads(1)
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -129,11 +130,12 @@ tpr_list <- lapply(regions, function(r) {
 tpr_df <- rbindlist(tpr_list)
 tpr_df <- subset(tpr_df, (qv.1 != -9999 & qv.2 != -9999))
 
+# Convert data to long format for plotting
 data_long <- tpr_df %>%
-  select(qv.1, qv.2, TPR, region) %>%
+  select(sample, qv.1, qv.2, TPR, region) %>%  # Make sure to include sample
   pivot_longer(cols = c(qv.1, qv.2), names_to = "qv_type", values_to = "qv_value")
 
-#tpr pctg per mask per region
+# Calculate TPR percentage per region
 tpr_summary <- data_long %>%
   group_by(region) %>%
   summarise(
@@ -155,12 +157,47 @@ tpr_summary <- data_long %>%
   ) %>% 
   ungroup()
 
-ggplot(data_long, aes(x = region, y = qv_value)) +
+# Identify outliers
+data_long <- data_long %>%
+  group_by(region) %>%
+  mutate(
+    q1 = quantile(qv_value, 0.25),
+    q3 = quantile(qv_value, 0.75),
+    iqr = q3 - q1,
+    is_outlier = qv_value > q3 + 1.5 * iqr | qv_value < q1 - 1.5 * iqr,
+    # Mark points that are both FN and outliers
+    label_point = ifelse(TPR == "FN" & is_outlier, sample, "")
+  ) %>%
+  ungroup()
+
+# Create jittered coordinates for consistent point and label placement
+set.seed(123)  # For reproducibility
+data_long <- data_long %>%
+  mutate(
+    x_jitter = as.numeric(factor(region)) + runif(n(), -0.2, 0.2),
+    y_jitter = qv_value + runif(n(), -0.01, 0.01) * max(qv_value, na.rm = TRUE)
+  )
+
+# Create the plot
+p <- ggplot(data_long, aes(x = region, y = qv_value)) +
   geom_violin() + 
-  geom_jitter(aes(color = TPR), width = 0.4, alpha = 0.7) + 
+  # Use the jittered coordinates for points
+  geom_point(aes(x = x_jitter, y = y_jitter, color = TPR), alpha = 0.7) + 
+  # Use ggrepel for the labels with the same jittered coordinates
+  geom_text_repel(
+    data = subset(data_long, label_point != ""),
+    aes(x = x_jitter, y = y_jitter, label = label_point),
+    size = 2.5,
+    box.padding = 0.5,
+    point.padding = 0.1,
+    force = 2,
+    segment.size = 0.2,
+    max.overlaps = 20
+  ) +
+  # Add TPR percentage labels at the top
   geom_text(
     data = tpr_summary,
-    aes(label = sprintf("%.1f%% (%d/%d)", TPR_pct, TP_count, total_count), y = max_qv_value), 
+    aes(label = sprintf("%.1f%% (%d/%d)", TPR_pct, TP_count, total_count), y = max_qv_value * 1.05), 
     vjust = -0.5, 
     hjust = 0.5,
     size = 3
@@ -169,4 +206,5 @@ ggplot(data_long, aes(x = region, y = qv_value)) +
   labs(x = "region", y = "estimated.difference.rate") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size=10))
 
-ggsave(args[4],width = 3*length(unique(tpr_summary$region)), height = 5, limitsize=FALSE)
+# Save the plot
+ggsave(args[4], plot = p, width = 3*length(unique(tpr_summary$region)), height = 5, limitsize = FALSE)
