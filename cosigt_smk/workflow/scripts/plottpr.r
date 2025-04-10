@@ -157,6 +157,8 @@ tpr_summary <- data_long %>%
   ) %>% 
   ungroup()
 
+global_max_value <- max(data_long$qv_value, na.rm = TRUE)
+
 # Identify outliers
 data_long <- data_long %>%
   group_by(region) %>%
@@ -182,7 +184,11 @@ data_long <- data_long %>%
 p <- ggplot(data_long, aes(x = region, y = qv_value)) +
   geom_violin() + 
   # Use the jittered coordinates for points
-  geom_point(aes(x = x_jitter, y = y_jitter, color = TPR), alpha = 0.7) + 
+  geom_point(aes(x = x_jitter, y = y_jitter, color = TPR, alpha=TPR)) + 
+  scale_alpha_manual(
+    values = c("FN" = 1.0, "TP" = 0.2),
+    guide = "none"  # Hide the alpha legend since it's redundant with color
+  ) +
   # Use ggrepel for the labels with the same jittered coordinates
   geom_text_repel(
     data = subset(data_long, label_point != ""),
@@ -197,7 +203,7 @@ p <- ggplot(data_long, aes(x = region, y = qv_value)) +
   # Add TPR percentage labels at the top
   geom_text(
     data = tpr_summary,
-    aes(label = sprintf("%.1f%% (%d/%d)", TPR_pct, TP_count, total_count), y = max_qv_value + 0.1), 
+    aes(label = sprintf("%.1f%% (%d/%d)", TPR_pct, TP_count, total_count), y = global_max_value + 0.05), 
     vjust = -0.5, 
     hjust = 0.5,
     size = 3
