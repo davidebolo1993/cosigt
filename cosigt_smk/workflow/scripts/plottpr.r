@@ -197,7 +197,7 @@ p <- ggplot(data_long, aes(x = region, y = qv_value)) +
   # Add TPR percentage labels at the top
   geom_text(
     data = tpr_summary,
-    aes(label = sprintf("%.1f%% (%d/%d)", TPR_pct, TP_count, total_count), y = max_qv_value * 1.05), 
+    aes(label = sprintf("%.1f%% (%d/%d)", TPR_pct, TP_count, total_count), y = max_qv_value + 0.1), 
     vjust = -0.5, 
     hjust = 0.5,
     size = 3
