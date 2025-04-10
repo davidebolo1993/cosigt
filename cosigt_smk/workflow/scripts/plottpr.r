@@ -136,13 +136,20 @@ data_long <- tpr_df %>%
 #tpr pctg per mask per region
 tpr_summary <- data_long %>%
   group_by(region) %>%
-  summarise(TPR_pct = sum(TPR == "TP") / n() * 100, .groups = "drop")
+  summarise(
+    TP_count = sum(TPR == "TP"),
+    total_count = n(),
+    TPR_pct = TP_count / total_count * 100, 
+    .groups = "drop"
+  )
 
 data_long <- left_join(data_long, tpr_summary, by = c("region"))
 
 tpr_summary <- data_long %>% 
   group_by(region) %>% 
   summarise(
+    TP_count = unique(TP_count),
+    total_count = unique(total_count),
     TPR_pct = unique(TPR_pct),
     max_qv_value = max(qv_value)
   ) %>% 
@@ -153,7 +160,7 @@ ggplot(data_long, aes(x = region, y = qv_value)) +
   geom_jitter(aes(color = TPR), width = 0.4, alpha = 0.7) + 
   geom_text(
     data = tpr_summary,
-    aes(label = sprintf("%.1f%%", TPR_pct), y = max_qv_value), 
+    aes(label = sprintf("%.1f%% (%d/%d)", TPR_pct, TP_count, total_count), y = max_qv_value), 
     vjust = -0.5, 
     hjust = 0.5,
     size = 3
