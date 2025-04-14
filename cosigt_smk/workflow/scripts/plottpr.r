@@ -185,19 +185,25 @@ data_long <- data_long %>%
     y_jitter = qv_value + runif(n(), -0.01, 0.01) * max(qv_value, na.rm = TRUE)
   )
 
+num_regions <- length(unique(data_long$region))
+
+# Calculate number of columns (max 20 per row)
+num_cols <- min(20, num_regions)
+
 # Create the plot
-p <- ggplot(data_long, aes(x = region, y = qv_value)) +
+p <- ggplot(data_long, aes(x = 1, y = qv_value)) +
   geom_violin() + 
   # Use the jittered coordinates for points
-  geom_point(aes(x = x_jitter, y = y_jitter, color = TPR, alpha=TPR)) + 
+  geom_point(aes(color = TPR, alpha = TPR), 
+             position = position_jitter(width = 0.2, height = 0)) + 
   scale_alpha_manual(
     values = c("FN" = 1.0, "TP" = 0.2),
     guide = "none"  # Hide the alpha legend since it's redundant with color
   ) +
-  # Use ggrepel for the labels with the same jittered coordinates
+  # Use ggrepel for the labels
   geom_text_repel(
     data = subset(data_long, label_point != ""),
-    aes(x = x_jitter, y = y_jitter, label = label_point),
+    aes(label = label_point),
     size = 2.5,
     box.padding = 0.5,
     point.padding = 0.1,
@@ -208,14 +214,25 @@ p <- ggplot(data_long, aes(x = region, y = qv_value)) +
   # Add TPR percentage labels at the top
   geom_text(
     data = tpr_summary,
-    aes(label = sprintf("%.1f%% (%d/%d)", TPR_pct, TP_count, total_count), y = global_max_value + 0.05), 
+    aes(label = sprintf("%.1f%% (%d/%d)", TPR_pct, TP_count, total_count)), 
+    y = global_max_value + 0.05, 
     vjust = -0.5, 
     hjust = 0.5,
     size = 3
   ) +
+  # Use facet_wrap to create the grid
+  facet_wrap(~ region, ncol = num_cols, scales = "free_x") +
   theme_bw() +
-  labs(x = "region", y = "estimated.difference.rate") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size=10))
+  labs(y = "estimated.difference.rate", x = "") +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    strip.text = element_text(size = 10)
+  )
+
+# Calculate the width based on number of columns
+plot_width <- min(3 * num_cols, 30)  # Cap at 30 inches wide
+plot_height <- 5 * ceiling(num_regions / num_cols)  # Height based on number of rows needed
 
 # Save the plot
-ggsave(args[4], plot = p, width = 3*length(unique(tpr_summary$region)), height = 5, limitsize = FALSE)
+ggsave(args[4], plot = p, width = plot_width, height = plot_height, limitsize = FALSE)
