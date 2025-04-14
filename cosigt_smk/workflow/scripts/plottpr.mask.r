@@ -65,7 +65,8 @@ files<-files[grep("mask", files)]
 regions <- unique(sapply(files, get_region))
 
 tpr_list <- lapply(regions, function(r) {
-
+  
+    message("region ",r)
     json_file <- file.path(args[2], paste0(r, ".clusters.json"))
     clusters <- fromJSON(file = json_file)
     dist_file <-file.path(args[2], paste0(r, ".clusters.hapdist.tsv"))
