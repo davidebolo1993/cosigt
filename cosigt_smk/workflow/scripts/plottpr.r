@@ -115,6 +115,7 @@ tpr_list <- lapply(regions, function(r) {
         h2th1p<-diff_table[(diff_table$group.a == hap2t & diff_table$group.b == hap1p)][['estimated.difference.rate']]
         e2<-h1th2p+h2th1p
         if (length(e1) == 0 || length(e2) == 0) {
+          message("Missing estimates for sample ", sample_id)
           next  # Skip to the next iteration of the loop
         }
         if (e1 <= e2) {
