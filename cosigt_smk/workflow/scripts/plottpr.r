@@ -65,7 +65,7 @@ tpr_list <- lapply(regions, function(r) {
     clusters <- fromJSON(file = json_file)
     dist_file <-file.path(args[2], paste0(r, ".clusters.hapdist.tsv"))
     distances<-fread(dist_file)
-    region_files <- files[grepl(r, files)]
+    region_files <- files[grepl(paste0("\\b", r, "\\b"), files)]
     results <- lapply(region_files, process_file, clusters = clusters, distances=distances)
     lenient_scores <- sapply(results, `[[`, "lenient")
     strict_scores <- sapply(results, `[[`, "strict")
