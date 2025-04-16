@@ -74,4 +74,6 @@ p<-ggplot(gene_data, aes(xmin=start, xmax=end, y=molecule,
     guides(fill = "none")
 
 
-ggsave(args[3], height=20, width=20)
+num_molecules <- length(unique(gene_data$old_label))
+plot_height <- max(5, min(100, num_molecules / 6.5))
+ggsave(args[3], height=plot_height, width=20, limitsize = FALSE)
