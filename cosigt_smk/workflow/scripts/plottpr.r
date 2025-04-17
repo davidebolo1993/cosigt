@@ -60,12 +60,13 @@ files<-files[grep("mask", files, invert=T)]
 regions <- unique(sapply(files, get_region))
 
 tpr_list <- lapply(regions, function(r) {
-
+  
+    message("Region ",r)
     json_file <- file.path(args[2], paste0(r, ".clusters.json"))
     clusters <- fromJSON(file = json_file)
     dist_file <-file.path(args[2], paste0(r, ".clusters.hapdist.tsv"))
     distances<-fread(dist_file)
-    region_files <- files[grepl(r, files)]
+    region_files <- files[grepl(paste0("\\b", r, "\\b"), files)]
     results <- lapply(region_files, process_file, clusters = clusters, distances=distances)
     lenient_scores <- sapply(results, `[[`, "lenient")
     strict_scores <- sapply(results, `[[`, "strict")
@@ -98,7 +99,7 @@ tpr_list <- lapply(regions, function(r) {
         if (length(hapst) != 2) {
             qvlisth1[i]<- -9999
             qvlisth2[i]<- -9999
-            message("Missing results for sample ", sample_id)
+            message("  Missing results for sample ", sample_id)
             next
         }
         hap1t<-hapst[1]
@@ -113,6 +114,12 @@ tpr_list <- lapply(regions, function(r) {
         h1th2p<-diff_table[(diff_table$group.a == hap1t & diff_table$group.b == hap2p)][['estimated.difference.rate']]
         h2th1p<-diff_table[(diff_table$group.a == hap2t & diff_table$group.b == hap1p)][['estimated.difference.rate']]
         e2<-h1th2p+h2th1p
+        if (length(e1) == 0 || length(e2) == 0) {
+          qvlisth1[i]<- -9999
+          qvlisth2[i]<- -9999
+          message("  Missing estimates for sample ", sample_id)
+          next  # Skip to the next iteration of the loop
+        }
         if (e1 <= e2) {
             qvlisth1[i]<-h1th1p
             qvlisth2[i]<-h2th2p
@@ -180,19 +187,25 @@ data_long <- data_long %>%
     y_jitter = qv_value + runif(n(), -0.01, 0.01) * max(qv_value, na.rm = TRUE)
   )
 
+num_regions <- length(unique(data_long$region))
+
+# Calculate number of columns (max 20 per row)
+num_cols <- min(20, num_regions)
+
 # Create the plot
-p <- ggplot(data_long, aes(x = region, y = qv_value)) +
+p <- ggplot(data_long, aes(x = 1, y = qv_value)) +
   geom_violin() + 
   # Use the jittered coordinates for points
-  geom_point(aes(x = x_jitter, y = y_jitter, color = TPR, alpha=TPR)) + 
+  geom_point(aes(color = TPR, alpha = TPR), 
+             position = position_jitter(width = 0.2, height = 0)) + 
   scale_alpha_manual(
     values = c("FN" = 1.0, "TP" = 0.2),
     guide = "none"  # Hide the alpha legend since it's redundant with color
   ) +
-  # Use ggrepel for the labels with the same jittered coordinates
+  # Use ggrepel for the labels
   geom_text_repel(
     data = subset(data_long, label_point != ""),
-    aes(x = x_jitter, y = y_jitter, label = label_point),
+    aes(label = label_point),
     size = 2.5,
     box.padding = 0.5,
     point.padding = 0.1,
@@ -203,14 +216,69 @@ p <- ggplot(data_long, aes(x = region, y = qv_value)) +
   # Add TPR percentage labels at the top
   geom_text(
     data = tpr_summary,
-    aes(label = sprintf("%.1f%% (%d/%d)", TPR_pct, TP_count, total_count), y = global_max_value + 0.05), 
+    aes(label = sprintf("%.1f%% (%d/%d)", TPR_pct, TP_count, total_count)), 
+    y = global_max_value * 1.03, 
     vjust = -0.5, 
     hjust = 0.5,
     size = 3
   ) +
+  ylim(0, y = global_max_value * 1.03) +
+  # Use facet_wrap to create the grid
+  facet_wrap(~ region, ncol = num_cols, scales = "free_x") +
   theme_bw() +
-  labs(x = "region", y = "estimated.difference.rate") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size=10))
+  labs(y = "estimated.difference.rate", x = "") +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    strip.text = element_text(size = 10)
+  )
+
+# Calculate the width based on number of columns
+plot_width <- min(3 * num_cols, 30)  # Cap at 30 inches wide
+plot_height <- 5 * ceiling(num_regions / num_cols)  # Height based on number of rows needed
 
 # Save the plot
-ggsave(args[4], plot = p, width = 3*length(unique(tpr_summary$region)), height = 5, limitsize = FALSE)
+ggsave(args[4], plot = p, width = plot_width, height = plot_height, limitsize = FALSE)
+
+# Add a field for coloring bars based on performance
+tpr_summary <- tpr_summary %>%
+  mutate(performance_category = case_when(
+    TPR_pct >= 95 ~ "High (>= 95%)",
+    TPR_pct >= 80 ~ "Medium (>= 80%)",
+    TRUE ~ "Low (< 80%)"
+  ))
+
+# Create the bar plot
+p2 <- ggplot(tpr_summary, aes(x = reorder(region, TPR_pct, decreasing = T), y = TPR_pct, fill = performance_category)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(
+    values = c("High (>= 95%)" = "#4CAF50", "Medium (>= 80%)" = "#FFC107", "Low (< 80%)" = "#F44336"),
+    breaks = c("High (>= 95%)", "Medium (>= 80%)", "Low (< 80%)")
+  ) +
+  labs(
+    title = "True Positive Rate (TPR) by Region",
+    x = "Region",
+    y = "True Positive Rate (%)",
+    fill = "Performance"
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 6),
+    panel.grid.major.x = element_blank(),
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5)  # Center the title
+  ) +
+  # Add more y-axis tick marks
+  scale_y_continuous(
+    limits = c(0, 100),
+    breaks = seq(0, 100, by = 5)  # Tick marks every 5%
+  )
+
+# Get the base filename without extension
+base_filename <- tools::file_path_sans_ext(args[4])
+# Get the original extension
+original_ext <- tools::file_ext(args[4])
+# Create the bar plot filename with same extension as original
+bar_plot_filename <- paste0(base_filename, ".barplot.", original_ext)
+# Save the bar plot
+ggsave(bar_plot_filename, plot = p2, width = max(10, 0.07 * num_regions), height = 7, limitsize = FALSE)
