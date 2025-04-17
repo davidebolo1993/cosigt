@@ -215,11 +215,12 @@ p <- ggplot(data_long, aes(x = 1, y = qv_value)) +
   geom_text(
     data = tpr_summary,
     aes(label = sprintf("%.1f%% (%d/%d)", TPR_pct, TP_count, total_count)), 
-    y = global_max_value + 0.05, 
+    y = global_max_value * 1.03, 
     vjust = -0.5, 
     hjust = 0.5,
     size = 3
   ) +
+  ylim(0, y = global_max_value * 1.03) +
   # Use facet_wrap to create the grid
   facet_wrap(~ region, ncol = num_cols, scales = "free_x") +
   theme_bw() +
