@@ -66,7 +66,7 @@ regions <- unique(sapply(files, get_region))
 
 tpr_list <- lapply(regions, function(r) {
   
-    message("region ",r)
+    message("Region ",r)
     json_file <- file.path(args[2], paste0(r, ".clusters.json"))
     clusters <- fromJSON(file = json_file)
     dist_file <-file.path(args[2], paste0(r, ".clusters.hapdist.tsv"))
@@ -111,7 +111,7 @@ tpr_list <- lapply(regions, function(r) {
         if (length(hapst) != 2) {
             qvlisth1[i]<- -9999
             qvlisth2[i]<- -9999
-            message("Missing results for sample ", sample_id,  ", mask ", mask_id)
+            message("  Missing results for sample ", sample_id,  ", mask ", mask_id)
             next
         }
         hap1t<-hapst[1]
@@ -127,7 +127,9 @@ tpr_list <- lapply(regions, function(r) {
         h2th1p<-diffmask_table[(diffmask_table$group.a == hap2t & diffmask_table$group.b == hap1p)][['estimated.difference.rate']]
         e2<-h1th2p+h2th1p
         if (length(e1) == 0 || length(e2) == 0) {
-          message("Missing estimates for sample ", sample_id)
+          qvlisth1[i]<- -9999
+          qvlisth2[i]<- -9999
+          message("  Missing estimates for sample ", sample_id)
           next  # Skip to the next iteration of the loop
         }
         if (e1 <= e2) {

@@ -281,4 +281,4 @@ original_ext <- tools::file_ext(args[4])
 # Create the bar plot filename with same extension as original
 bar_plot_filename <- paste0(base_filename, ".barplot.", original_ext)
 # Save the bar plot
-ggsave(bar_plot_filename, plot = p2, width = max(1, 0.07 * num_regions), height = 7, limitsize = FALSE)
+ggsave(bar_plot_filename, plot = p2, width = max(10, 0.07 * num_regions), height = 7, limitsize = FALSE)
