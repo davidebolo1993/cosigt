@@ -1,0 +1,567 @@
+#!/usr/bin/env python3
+import os
+import glob
+import yaml
+import argparse
+import sys
+import gzip
+
+def make_default_config(tmp) -> dict:
+    '''
+    Make default config
+    '''
+    config=dict()
+    #bwa-mem2
+    #5 cores, 5 Gb, 2 min max
+    config['bwa-mem2']=dict()
+    config['bwa-mem2']['threads'] = 5
+    config['bwa-mem2']['mem_mb'] = 5000
+    config['bwa-mem2']['time'] = 2
+    #bwa-mem
+    #5 cores, 5 Gb, 2 min max
+    config['bwa']=dict()
+    config['bwa']['threads'] = 5
+    config['bwa']['mem_mb'] = 5000
+    config['bwa']['time'] =  2
+    #minimap2
+    #5 cores, 5 Gb, 2 min max
+    config['minimap2']=dict()
+    config['minimap2']['threads'] = 5
+    config['minimap2']['mem_mb'] = 5000
+    config['minimap2']['time'] =  2
+    #samtools - this is is only for samtools fasta
+    #2 cores, 2 Gb, 2 min max
+    config['samtools']=dict()
+    config['samtools']['threads'] = 2
+    config['samtools']['mem_mb'] = 2000
+    config['samtools']['time'] = 2
+    #pggb
+    #this really needs to be adjusted based on region length and parameters
+    #but based on the longest jobs observed
+    config['pggb']=dict()
+    config['pggb']['threads'] = 24
+    config['pggb']['mem_mb'] = 10000
+    config['pggb']['time'] =  40
+    config['pggb']['tmpdir'] = tmp
+    config['pggb']['params'] =  '-c 2'
+    #wfmash
+    #this depends a lot on the number of contigs
+    #generated through impg, but kind-of-ok also
+    #considering retries
+    #5 cores, 10 Gb, 20 min max
+    config['wfmash']=dict()
+    config['wfmash']['threads'] = 5
+    config['wfmash']['mem_mb'] = 10000
+    config['wfmash']['time'] =  20
+    config['wfmash']['tmpdir'] = tmp
+    config['wfmash']['params'] =  '-s 10k -p 95'
+    #default - small
+    config['default_small']=dict()
+    config['default_small']['mem_mb'] = 100
+    config['default_small']['time'] =  1
+    #default - mid
+    config['default_mid']=dict()
+    config['default_mid']['mem_mb'] = 500
+    config['default_mid']['time'] =  2
+    #default - high
+    config['default_high']=dict()
+    config['default_high']['mem_mb'] = 2000
+    config['default_high']['time'] =  4
+    #stretcher - only used for benchmarking
+    config['stretcher']=dict()
+    config['stretcher']['mem_mb'] = 5000
+    config['stretcher']['time'] =  10
+    print(f'Config template prepared!')
+    return config
+
+def validate_assembly(asm_path) -> bool:
+    '''
+    Validate assembly file
+    '''
+    if not os.path.exists(asm_path):
+        print(f'Assembly file: {asm_path} does not exist!')
+        return False
+    if not os.access(asm_path, os.R_OK):
+        print(f'Assembly file: {asm_path} is not readable!')
+        return False
+    if not asm_path.endswith('.fasta') and not asm_path.endswith('.fa') and not asm_path.endswith('.fasta.gz') and not asm_path.endswith('.fa.gz'):
+        print(f'Assembly file: {asm_path} is not in the expected format (.fa/.fasta/.fa.gz/.fasta.gz)!')
+        return False
+    if not os.path.exists(asm_path + '.fai'):
+        print(f'Assembly file: {asm_path} is not indexed - expected .fai; samtools faidx {asm_path} and retry!')
+        return False
+    #read contigs and check they follow the PanSN specification
+    with open(asm_path + '.fai', 'r') as idx_in:
+        for line in idx_in:
+            ctg_id=line.split('\t')[0]
+            if len(ctg_id.split('#')) != 3:
+                print(f'Contig: {ctg_id} in assembly file: {asm_path} does not follow PanSN-spec!')
+                return False
+    return True
+    
+def read_assemblies_file(assemblies_file) -> dict():
+    '''
+    Read and validate the assemblies specified in the tsv.
+    Return a dict mapping each chromosome to its assembly
+    '''
+    assemblies_out=dict()
+    if not os.path.exists(assemblies_file):
+        print(f'Table with assemblies: {assemblies_file} does not exist!')
+        sys.exit(1)
+    if not os.access(assemblies_file, os.R_OK):
+        print(f'Table with assemblies: {assemblies_file} is not readable!')
+        sys.exit(1)
+    with open(assemblies_file) as asm_in:
+        for line in asm_in:
+            entries=line.rstrip().split('\t')
+            if len(entries) != 2:
+                print(f'Table with assemblies: {assemblies_file} does not match the expected input format!')
+                sys.exit(1)
+            chrom=entries[0]
+            asm=entries[1]
+            if chrom in assemblies_out:
+                print(f'Table with assemblies: {assemblies_file} contains duplicate chromosome entries!')
+                sys.exit(1)
+            if validate_assembly(asm):
+                assemblies_out[chrom] = os.path.abspath(asm)
+            else:
+                sys.exit(1)
+    print(f'Loaded table with assemblies {assemblies_file}!')
+    return assemblies_out
+
+def read_alignment_map(alignment_map) -> dict():
+    '''
+    If provided, read and validate the alignment map
+    '''
+    aln_map=dict()
+    if alignment_map is None:
+        return None
+    with open(alignment_map, 'r') as map_in:
+        for line in map_in:
+            aln_path,aln_id=line.rstrip().split('\t')
+            if aln_id in aln_map:
+                print(f'Duplicate alignment id {aln_id} in alignment map {alignment_map}!')
+                sys.exit(1)
+            aln_map[os.path.abspath(aln_path)] = aln_id
+    print(f'Loaded alignment map {alignment_map}!')
+    return aln_map
+
+def validate_alignment(alignment) -> bool:
+    '''
+    Validate alignment file
+    '''
+    if not os.path.exists(alignment):
+        print(f'Alignment file: {alignment} does not exist!')
+        return False
+    if not os.access(alignment, os.R_OK):
+        print(f'Alignment file: {alignment} is not readable!')
+        return False
+    if alignment.endswith('.bam'):
+        if not os.path.exists(alignment + '.bai') and not os.path.exists(alignment + '.csi'):
+            print(f'Alignment file: {alignment} is not indexed - expected .bai/.csi; samtools index {alignment} and retry!')
+            return False
+    if alignment.endswith('.cram'):
+        if not os.path.exists(alignment + '.crai'):
+            print(f'Alignment file: {alignment} is not indexed - expected .crai; samtools index {alignment} and retry!')
+            return False
+    return True
+    
+def read_alignments(aln_folder, alignment_map) -> dict():
+    '''
+    Search for alignments in the provided alignment folder
+    Return a dict mapping each alignment to its name
+    '''
+    aln_dict=dict()
+    aln_list=[os.path.abspath(x) for x in glob.glob(aln_folder + '/**/*am*', recursive=True) if not x.endswith('i') and os.path.isfile(x)]
+    for aln in aln_list:
+        if validate_alignment(aln):
+            if alignment_map is None:
+                aln_id='.'.join(os.path.basename(aln).split('.')[:-1])
+                if aln_id in aln_dict:
+                    print(f'Duplicate alignment id {aln_id} when extracting the alignment name from {aln}: matches {aln_dict[aln_id]}. Consider using a dedicated alignment map (--map)!')
+                    sys.exit(1)
+            else:
+                if aln not in alignment_map:
+                    print(f'Alignment {aln} not present in the alignment map provided!')
+                    sys.exit(1)
+                aln_id=alignment_map[aln]
+            aln_dict[aln_id] = aln
+    print(f'Loaded alignments in {aln_folder}!')
+    return aln_dict
+
+def read_bed(bed_file, asm_dict) -> dict():
+    '''
+    Read bed file and organize regions
+    '''
+    bed_dict=dict()
+    if not os.path.exists(bed_file):
+        print(f'Bed file: {bed_file} does not exist!')
+        sys.exit(1)
+    if not os.access(bed_file, os.R_OK):
+        print(f'Bed file: {bed_file} is not readable!')
+        sys.exit(1)
+    with open(bed_file, 'r') as bedin:
+        for line in bedin:
+            bed_entry=line.rstrip().split('\t')
+            if len(bed_entry) < 3:
+                print(f'Invalid entry in {bed_file}: less then 3 columns for entry {bed_entry}')
+            chrom=bed_entry[0]
+            start=bed_entry[1]
+            end=bed_entry[2]
+            if len(bed_entry) == 4:
+                annot=bed_entry[3]
+            else:
+                annot="unknown"
+            if chrom not in asm_dict:
+                print(f'Provided chromosome: {chrom} in bed file {bed_file} is missing in the assemblies')
+                sys.exit(1)
+            if chrom not in bed_dict:
+                bed_dict[chrom] = [(chrom,start,end,annot)]
+            else:
+                bed_dict[chrom].append((chrom,start,end,annot))
+    print(f'Loaded bed file {bed_file}!')    
+    return bed_dict
+    
+def read_genome(genome_file) -> dict():
+    '''
+    Read and validate reference genome
+    '''
+    ref_dict=dict()
+    if not os.path.exists(genome_file):
+        print(f'Genome file: {genome_file} does not exist!')
+        sys.exit(1)
+    if not os.access(genome_file, os.R_OK):
+        print(f'Genome file: {genome_file} is not readable!')
+        sys.exit(1)
+    if not genome_file.endswith('.fasta') and not genome_file.endswith('.fa') and not genome_file.endswith('.fasta.gz') and not genome_file.endswith('.fa.gz') and not genome_file.endswith('.fna') and not genome_file.endswith('.fna.gz'):
+        print(f'Genome file: {genome_file} is not in the expected format (.fa/.fasta/.fna/.fa.gz/.fasta.gz/.fna.gz)!')
+        sys.exit(1)
+    if not os.path.exists(genome_file + '.fai'):
+        print(f'Genome file: {genome_file} is not indexed - expected .fai; samtools faidx {genome_file} and retry!')
+        sys.exit(1)
+    ref_dict[os.path.basename(genome_file)]=os.path.abspath(genome_file)
+    print(f'Loaded reference file {genome_file}!')    
+    return ref_dict
+
+def read_gtf(gtf_file) -> dict():
+    '''
+    Read and validate reference genome
+    '''
+    gtf_dict=dict()
+    if gtf_file is None:
+        gtf_dict['NA'] = 'NA'
+    else:
+        if not os.path.exists(gtf_file):
+            print(f'Gtf file: {gtf_file} does not exist!')
+            sys.exit(1)
+        if not os.access(gtf_file, os.R_OK):
+            print(f'Gtf file: {gtf_file} is not readable!')
+            sys.exit(1)
+        if not gtf_file.endswith('.gtf') and not gtf_file.endswith('.gtf.gz'):
+            print(f'Gtf file: {gtf_file} is not in the expected format (.gtf/.gtf.gz)!')
+            sys.exit(1)
+        gtf_dict[os.path.basename(gtf_file)]=os.path.abspath(gtf_file)
+        print(f'Loaded gtf file {gtf_file}!')    
+    return gtf_dict
+
+def validate_output(output_folder, config_yaml) -> dict():
+    '''
+    Validate output folder
+    '''
+    out_folder=os.path.abspath(output_folder)
+    if not os.access(os.path.dirname(out_folder), os.W_OK):
+        print(f'Parent folder of: {output_folder} is not writable!')
+        sys.exit(1)
+    config_yaml['SINGULARITY_BIND'].add(os.path.dirname(out_folder))
+    config_yaml['output'] = out_folder
+    print(f'Checked output folder {out_folder}!')
+    return config_yaml
+
+def write_assemblies(asm_dict, bed_dict, config_yaml, RESOURCES) -> dict:
+    '''
+    Write assemblies to resources/assemblies
+    Add chromosomes to analyse to config - not all provided if those are not necessary
+    '''
+    asm_dir=os.path.join(RESOURCES, 'assemblies')
+    os.makedirs(asm_dir, exist_ok=True)
+    config_yaml['chromosomes'] = set()
+
+    for k,v in asm_dict.items():
+        if k in bed_dict:
+            asm_folder=os.path.join(asm_dir, k)
+            os.makedirs(asm_folder, exist_ok=True)
+            asm_name=os.path.basename(v)
+            asm_idx_name=asm_name + '.fai'
+            os.symlink(v, os.path.join(asm_folder,asm_name))
+            os.symlink(v + '.fai', os.path.join(asm_folder,asm_name + '.fai'))
+            config_yaml['chromosomes'].add(k)
+            config_yaml['SINGULARITY_BIND'].add(os.path.dirname(v))
+
+    print(f'Added assemblies to {asm_dir}!')
+    return config_yaml
+
+def write_alignments(aln_dict, config_yaml, RESOURCES) -> dict:
+    '''
+    Write alignments to resources/alignments
+    Add samples to analyse to config
+    '''
+    aln_dir=os.path.join(RESOURCES, 'alignments')
+    os.makedirs(aln_dir, exist_ok=True)
+    config_yaml['samples'] = set()
+    for k,v in aln_dict.items():
+        if v.endswith('.bam'):
+            aln_id=k + '.bam'
+            aln_idx='.bai' if os.path.exists(v + '.bai') else '.csi'
+        else:
+            aln_id=k + '.cram'
+            aln_idx='.crai'
+        os.symlink(v, os.path.join(aln_dir,aln_id))
+        os.symlink(v + aln_idx, os.path.join(aln_dir,aln_id + aln_idx))
+        config_yaml['samples'].add(k)
+        config_yaml['SINGULARITY_BIND'].add(os.path.dirname(v))
+    print(f'Added alignments to {aln_dir}!')
+    return config_yaml
+
+def write_regions(bed_dict, config_yaml, RESOURCES) -> dict:
+    '''
+    Write regions to resources/regions
+    Add regions to config
+    '''
+    reg_dir=os.path.join(RESOURCES, 'regions')
+    os.makedirs(reg_dir, exist_ok=True)
+    config_yaml['regions'] = set()
+    config_yaml['all_regions'] = os.path.abspath(os.path.join(reg_dir, 'all_regions.tsv'))
+    with open(config_yaml['all_regions'], 'w') as b_a_out:
+        for k,v in bed_dict.items():
+            bed_dir=os.path.join(reg_dir, k)
+            os.makedirs(bed_dir, exist_ok=True)
+            for subr in v:
+                region_out='_'.join(subr[:-1])
+                b_a_out.write('\t'.join(subr) + '\n')
+                bed_out=os.path.join(bed_dir, region_out + '.bed')
+                with open(bed_out, 'w') as b_out:
+                    b_out.write('\t'.join(subr[:-1]) + '\n')
+                config_yaml['regions'].add(region_out)
+    print(f'Added regions to {reg_dir}!')
+    return config_yaml
+
+def write_reference(genome_dict, config_yaml, RESOURCES) -> dict:
+    '''
+    Write reference to resources/reference
+    Add reference to config
+    '''
+    ref_dir=os.path.join(RESOURCES, 'reference')
+    os.makedirs(ref_dir, exist_ok=True)
+    for k,v in genome_dict.items():
+        os.symlink(v, os.path.join(ref_dir,k))
+        os.symlink(v + '.fai', os.path.join(ref_dir,k + '.fai'))
+    config_yaml['reference'] = os.path.join(os.path.abspath(ref_dir),k)
+    config_yaml['SINGULARITY_BIND'].add(os.path.dirname(v))
+    print(f'Added reference to {ref_dir}!')
+    return config_yaml
+
+def write_gtf(gtf_dict, config_yaml, RESOURCES) -> dict:
+    '''
+    Write gtf to resources/annotations
+    Add gtf to config
+    '''
+    gtf_dir=os.path.join(RESOURCES, 'annotations')
+    os.makedirs(gtf_dir, exist_ok=True)
+    for k,v in gtf_dict.items():
+        if k == 'NA':
+            break
+        else:
+            os.symlink(v, os.path.join(gtf_dir,k))
+    config_yaml['annotations'] = os.path.join(os.path.abspath(gtf_dir),k)
+    config_yaml['SINGULARITY_BIND'].add(os.path.dirname(v))
+    print(f'Added gtf to {gtf_dir}!')
+    return config_yaml
+
+def validate_blacklist(blacklist, config_yaml, RESOURCES):
+    '''
+    Write blacklist
+    Add blacklist to config
+    '''
+    blacklist_dir=os.path.join(RESOURCES, 'blacklist')
+    os.makedirs(blacklist_dir, exist_ok=True)
+    blacklist_out=os.path.join(blacklist_dir, 'blacklist.txt')
+    if blacklist is None:
+        open(blacklist_out, 'w').close()
+    else:
+        if not os.path.exists(blacklist):
+            print(f'Blacklist file: {blacklist} does not exist!')
+            sys.exit(1)
+        if not os.access(blacklist, os.R_OK):
+            print(f'Blacklist file: {blacklist} is not readable!')
+            sys.exit(1)
+        with open(blacklist, 'r') as b_in, open(blacklist_out, 'w') as b_out:
+            for line in b_in:
+                b_out.write(b_in)
+    print(f'Wrote blacklist file {blacklist_out}!')    
+    config_yaml['blacklist'] = os.path.abspath(blacklist_out)
+    return config_yaml    
+
+def write_config(config_yaml, config_out):
+    '''
+    Write config file
+    '''
+    yml_out=open(config_out, 'w')
+    yaml.dump(config_yaml,yml_out)
+    yml_out.close()
+    print(f'Wrote config to {config_out}!')
+
+def find_optimal_bindings(paths, min_coverage_threshold=2):
+    """
+    Find minimal number of paths to bind for singularity
+    """
+    if not paths:
+        return []
+
+    dir_coverage = {}
+    for path in paths:
+        components = path.split('/')
+        current_path = ""
+        for component in components:
+            if not component:
+                continue
+            if current_path:
+                current_path = f"{current_path}/{component}"
+            else:
+                current_path = f"/{component}"
+            if current_path not in dir_coverage:
+                dir_coverage[current_path] = 0
+            dir_coverage[current_path] += 1
+    path_bindings = {}
+    for path in paths:
+        components = path.split('/')
+        best_binding = path        
+        current_path = ""
+        for i, component in enumerate(components):
+            if not component:
+                continue
+            if current_path:
+                current_path = f"{current_path}/{component}"
+            else:
+                current_path = f"/{component}"            
+            if dir_coverage[current_path] >= min_coverage_threshold:
+                best_binding = current_path
+        path_bindings[path] = best_binding
+    bindings = set(path_bindings.values())
+    # Optimize the bindings - if a binding is fully contained within another, remove it
+    optimized_bindings = set()
+    for binding in sorted(bindings, key=len):
+        # Check if any of the existing optimized bindings contain this binding
+        if any(binding.startswith(other_binding + '/') for other_binding in optimized_bindings):
+            continue
+        optimized_bindings.add(binding)
+    if '/' in optimized_bindings and len(optimized_bindings) > 1:
+        optimized_bindings.remove('/')    
+    return sorted(optimized_bindings, key=len)
+
+def setup_arg_parser():
+    '''
+    Simple argument parser
+    '''
+    parser = argparse.ArgumentParser(
+        prog='organize.py', 
+        description='COsine SImilarity-based GenoTyper', 
+        epilog='Developed by Davide Bolognini @ Human Technopole', 
+    )
+    # Required arguments
+    required = parser.add_argument_group('Required I/O arguments')
+    required.add_argument('-a', '--assemblies', help='assemblies individuals to -r will be genotyped against. This is a tab-separated file mapping chromosomes in -b to a FASTA with contigs for that chromosome. FASTA can be bgzip-compressed and must be indexed', metavar='FASTA', required=True)
+    required.add_argument('-g', '--genome', help='reference genome. This is the FASTA regions to -b refers to. FASTA can be bgzip-compressed and must be indexed', metavar='FASTA', required=True)
+    required.add_argument('-r', '--reads', help='individuals to genotype. This is a folder with individual reads aligned to a reference genome (same to -g) in BAM/CRAM format. Alignment files must be indexed (BAI,CSI/CRAI) and will be searched recursively', metavar='FOLDER', required=True)
+    required.add_argument('-b', '--bed', help='regions to genotype. This is a standard BED file', metavar='BED', required=True)
+    required.add_argument('-o', '--output', help='output folder. This is where results from cosigt pipeline will be stored', metavar='FOLDER', required=True)
+    optional = parser.add_argument_group('Optional arguments')
+    optional.add_argument('--map', help='tab-separated file mapping each alignment file (1st column) to an id (2nd column). Guess the name removing file extension otherwise [None]', metavar='', required=False, default=None)
+    optional.add_argument('--gtf', help='GTF file for the reference genome in -g [None]', metavar='', required=False, default=None)
+    optional.add_argument('--tmp', help='tmp directory. Will be used by tools for which a tmp directory can be specified [/tmp]', metavar='', required=False, default='/tmp')
+    optional.add_argument('--pansn', help='PanSN prefix naming for the reference genome [grch38#1#]', metavar='', required=False, default='grch38#1#')
+    optional.add_argument('--profile', help='snakemake profile, if available [None]', metavar='', required=False, default=None)
+    optional.add_argument('--blacklist', help='list of contigs to blacklist - these will not be used during genotyping [None]', metavar='', required=False, default=None)
+    return parser
+
+def main():
+    '''
+    Main
+    '''
+    parser = setup_arg_parser()
+    args = parser.parse_args()
+
+    CWD=os.path.realpath(__file__)
+    BASE=os.path.dirname(os.path.dirname(os.path.dirname(CWD)))
+    RESOURCES=os.path.join(BASE, 'resources')
+    os.makedirs(RESOURCES, exist_ok=True)
+    CONFIG=os.path.join(BASE, 'config')
+    os.makedirs(CONFIG, exist_ok=True)
+
+    if os.path.isdir(RESOURCES):
+        if os.listdir(RESOURCES):
+            print(f"Directory {RESOURCES} is not empty: clean it and retry!")
+            sys.exit(1)
+
+    #READ
+    #initial config
+    #config
+    config=make_default_config(args.tmp)
+    config['SINGULARITY_BIND'] = set()
+    config['SINGULARITY_BIND'].add(args.tmp)
+    config['pansn_prefix'] = args.pansn
+    #assemblies
+    asm_dict=read_assemblies_file(args.assemblies)
+    #print(asm_dict)
+    #alignment map
+    alignment_map=read_alignment_map(args.map)
+    #print(alignment_map)
+    #reads
+    aln_dict=read_alignments(args.reads, alignment_map)
+    #print(aln_dict)
+    #bed file
+    bed_dict=read_bed(args.bed,asm_dict)
+    #print(bed_dict)
+    genome_dict=read_genome(args.genome)
+    #print(genome_dict)
+    gtf_dict=read_gtf(args.gtf)
+    #output
+    config=validate_output(args.output, config)
+
+    #WRITE    
+    #assemblies
+    config=write_assemblies(asm_dict, bed_dict, config, RESOURCES)
+    #alignments
+    config=write_alignments(aln_dict, config, RESOURCES)
+    #regions
+    config=write_regions(bed_dict, config, RESOURCES)
+    #reference
+    config=write_reference(genome_dict, config, RESOURCES)
+    #annotations
+    config=write_gtf(gtf_dict, config, RESOURCES)
+    #blacklist
+    config=validate_blacklist(args.blacklist, config, RESOURCES)
+    
+    #common paths to BIND for singularity
+    paths=find_optimal_bindings(list(config['SINGULARITY_BIND']))
+    del config['SINGULARITY_BIND']
+    #write config
+    config['chromosomes'] = list(config['chromosomes'])
+    config['samples'] = list(config['samples'])
+    config['regions'] = list(config['regions'])
+    write_config(config, os.path.join(CONFIG, 'config.yaml'))
+
+    #write cosigt command
+    cmd='#!/bin/bash\n'
+    if args.profile is not None:
+        cmd +='SINGULARITY_TMPDIR=' + os.path.abspath(args.tmp) + ' snakemake --profile ' + args.profile + ' --singularity-args "-B '+ ','.join(paths) + ' -e" cosigt\n'
+    else: #None profile
+        cmd +='SINGULARITY_TMPDIR=' + os.path.abspath(args.tmp) + ' snakemake --use-singularity --singularity-args "-B '+ ','.join(paths) + ' -e" -j 32 cosigt\n'
+
+    cmd_out=os.path.join(BASE, 'cosigt_smk.sh')
+    with open(cmd_out, 'w') as fout:
+        fout.write(cmd)
+    print(f'Wrote cosigt command to run the the pipeline in: {cmd_out}!')
+    sys.exit(0)
+
+if __name__ == "__main__":
+    main()

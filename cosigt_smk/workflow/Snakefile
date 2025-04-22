@@ -1,0 +1,45 @@
+from glob import glob
+configfile: 'config/config.yaml'
+
+include: 'rules/wfmash.smk'
+include: 'rules/impg.smk'
+include: 'rules/bedtools.smk'
+include: 'rules/samtools.smk'
+include: 'rules/pggb.smk'
+include: 'rules/odgi.smk'
+include: 'rules/bwa-mem2.smk'
+include: 'rules/gfainject.smk'
+include: 'rules/gafpack.smk'
+include: 'rules/cosigt.smk'
+include: 'rules/benchmark.smk'
+
+cosigt_input=set()
+cosigt_submasks=set()
+cosigt_benchmark=set()
+
+for region in config['regions']:
+	chr=region.split('_')[0]
+	for sample in config['samples']:
+		cosigt_input.add(config['output'] + '/cosigt/' + sample + '/' + chr + '/' + region + '/cosigt_genotype.tsv')
+		cosigt_submasks.add(config['output'] + '/cosigt/' + sample + '/' +  chr + '/' + region + '/submasks.done')
+		cosigt_input.add(config['output'] + '/wally/' + sample + '/' + chr + '/' + region + '/wally.done')
+	cosigt_input.add(config['output'] + '/odgi/viz/' + chr + '/' + region + '.png')
+	cosigt_submasks.add(config['output'] + '/odgi/dissimilarity/' + chr + '/' + region + '/submasks.done')
+	if config['annotations'] != 'NA':
+		cosigt_input.add(config['output'] + '/odgi/untangle/' + chr + '/' + region + '.gggenes.pdf')
+	cosigt_benchmark.add(config['output'] + '/benchmark/tpr.edr.png')
+
+rule cosigt:
+	input:
+		list(cosigt_input)
+
+#USED ONLY IN THE DEVELOPMENT STAGE
+rule cosigt_submasks:
+	input:
+		list(cosigt_input),
+		list(cosigt_submasks)
+
+#USED ONLY FOR BENCHAMRKING
+rule benchmark:
+	input:
+		list(cosigt_benchmark)
