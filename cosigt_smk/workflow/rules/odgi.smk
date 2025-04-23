@@ -308,7 +308,7 @@ rule make_annotation_bed:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_high']['time']
+		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:

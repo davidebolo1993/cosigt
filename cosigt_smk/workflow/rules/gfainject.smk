@@ -17,7 +17,7 @@ rule gfainject_inject:
 	conda:
 		'../envs/gfainject.yaml'
 	benchmark:
-		'benchmarks/{sample}.{chr}/{region}.gfainject_inject.benchmark.txt'
+		'benchmarks/{sample}.{chr}.{region}.gfainject_inject.benchmark.txt'
 	shell:
 		'''
 		gfainject \
