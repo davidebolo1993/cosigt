@@ -63,8 +63,8 @@ checkpoint generate_batches:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	benchmark:
 		'benchmarks/{chr}.generate_batches.benchmark.txt'
 	shell:
