@@ -93,8 +93,8 @@ rule samtools_faidx_batches:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default_high']['time']
 	container:
 		'docker://davidebolo1993/samtools:1.21'
 	conda:
