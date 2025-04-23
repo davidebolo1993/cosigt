@@ -127,6 +127,7 @@ rule odgi_dissimilarity_submasks:
 		odgi similarity \
 		-i {input.og} \
 		-m {input.mask} \
+		--all \
 		--distances > {output}
 		'''
 
@@ -202,6 +203,7 @@ rule odgi_dissimilarity:
 		odgi similarity \
 		-i {input.og} \
 		-m {input.mask} \
+		--all \
 		--distances > {output}
 		'''
 
