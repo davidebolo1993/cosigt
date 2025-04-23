@@ -119,7 +119,7 @@ if (k == 1) {
 metrics_output <- gsub(".json", ".metrics.tsv", output_file)
 metrics <- data.frame(
   eps = optimal_eps,
-  num_clusters = k)
+  num_clusters = k
 )
 fwrite(metrics, metrics_output, row.names=FALSE, col.names=TRUE, sep="\t")
 
