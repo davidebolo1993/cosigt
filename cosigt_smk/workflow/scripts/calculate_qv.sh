@@ -4,7 +4,9 @@ indir=$1
 sample=$(basename $indir)
 outfile=$2
 
-touch "$indir/qv.tmp.tsv"
+if [ -f "$indir/qv.tmp.tsv" ]; do
+	rm "$indir/qv.tmp.tsv"
+fi
 
 cat "$indir/ids.tsv" | while read line; do
     fa1=$(echo "$line" | cut -d$'\t' -f 1)
