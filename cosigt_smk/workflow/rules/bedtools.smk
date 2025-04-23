@@ -37,8 +37,8 @@ rule filter_outliers:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default_high']['time']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
