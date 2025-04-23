@@ -29,7 +29,11 @@ tail -n +2 $input_table | while read line; do
         sf2p=$(echo "$h2p" | sed 's/[^a-zA-Z0-9._-]/_/g')
         sf1t=$(echo "$h1t" | sed 's/[^a-zA-Z0-9._-]/_/g')
         sf2t=$(echo "$h2t" | sed 's/[^a-zA-Z0-9._-]/_/g')
-        touch "$outdir/$sample/ids.tsv"  
+
+	if [ -f "$outdir/$sample/ids.tsv" ]; then
+		rm "$outdir/$sample/ids.tsv"
+	fi
+ 
         echo -e "${sf1p}.fasta\t${sf1t}.fasta" >> "$outdir/$sample/ids.tsv"
         echo -e "${sf2p}.fasta\t${sf2t}.fasta" >> "$outdir/$sample/ids.tsv"
         echo -e "${sf1p}.fasta\t${sf2t}.fasta" >> "$outdir/$sample/ids.tsv"
