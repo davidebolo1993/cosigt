@@ -12,7 +12,7 @@ rule odgi_view:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://pangenome/odgi:1738101065'
+		'docker://pangenome/odgi:1745375412'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -38,7 +38,7 @@ rule odgi_paths_matrix:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://pangenome/odgi:1738101065'
+		'docker://pangenome/odgi:1745375412'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -117,7 +117,7 @@ rule odgi_dissimilarity_submasks:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://pangenome/odgi:1738101065'
+		'docker://pangenome/odgi:1745375412'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -193,7 +193,7 @@ rule odgi_dissimilarity:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://pangenome/odgi:1738101065'
+		'docker://pangenome/odgi:1745375412'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -254,7 +254,7 @@ rule odgi_viz:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://pangenome/odgi:1738101065'
+		'docker://pangenome/odgi:1745375412'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -342,7 +342,7 @@ rule odgi_procbed:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://pangenome/odgi:1738101065'
+		'docker://pangenome/odgi:1745375412'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -409,7 +409,7 @@ rule odgi_inject:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://pangenome/odgi:1738101065'
+		'docker://pangenome/odgi:1745375412'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -437,7 +437,7 @@ rule odgi_flip:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://pangenome/odgi:1738101065'
+		'docker://pangenome/odgi:1745375412'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -465,7 +465,7 @@ rule odgi_untangle:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://pangenome/odgi:1738101065'
+		'docker://pangenome/odgi:1745375412'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
