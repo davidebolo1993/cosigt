@@ -4,7 +4,7 @@ indir=$1
 sample=$(basename $indir)
 outfile=$2
 
-if [ -f "$indir/qv.tmp.tsv" ]; do
+if [ -f "$indir/qv.tmp.tsv" ]; then
 	rm "$indir/qv.tmp.tsv"
 fi
 
