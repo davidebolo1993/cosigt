@@ -279,7 +279,8 @@ for (i in 1:num_rows_tpr) {
       legend.box = "horizontal",
       legend.spacing.x = unit(2, "cm"),
       legend.key.size = unit(0.8, "line"),
-      legend.text = element_text(size = 10,margin = margin(r = 10))
+      legend.text = element_text(size = 14, margin = margin(r = 10)),
+      legend.title = element_text(size = 18, margin = margin(r = 25)),
     ) +
     # Make room for the vertical labels
     scale_y_continuous(
@@ -293,7 +294,7 @@ tpr_combined_plot <- plot_grid(plotlist = tpr_bar_plots, ncol = 1, align = 'v', 
 
 #plot dimensions
 tpr_plot_width <- max(15, min(30, bars_per_row * 0.25))
-tpr_plot_height <- 4.9 * num_rows_tpr
+tpr_plot_height <- 5 * num_rows_tpr
 
 ggsave(paste0(output_plot_prefix, ".tpr_bar.png"), plot = tpr_combined_plot,width = tpr_plot_width, height = tpr_plot_height, limitsize = FALSE)
 
@@ -416,7 +417,8 @@ for (i in 1:num_rows_qv) {
       legend.direction = "horizontal",
       legend.box = "horizontal",
       legend.spacing.x = unit(2, "cm"),
-      legend.text = element_text(size = 10,margin = margin(r = 10)),
+      legend.text = element_text(size = 14, margin = margin(r = 10)),
+      legend.title = element_text(size = 18, margin = margin(r = 25)),
       legend.key.size = unit(0.8, "line")
     ) +
     guides(fill = guide_legend(nrow = 1, byrow = TRUE)) +
@@ -430,10 +432,11 @@ for (i in 1:num_rows_qv) {
 
 #calculate dimensions
 qv_plot_width <- max(15, min(30, qv_bars_per_row * 0.25))
-qv_plot_height <- 4.9 * num_rows_qv
+qv_plot_height <- 5 * num_rows_qv
 
 #combine
 qv_combined_plot <- plot_grid(plotlist = qv_bar_plots, ncol = 1, align = 'v', axis = 'lr')
 
 ggsave(paste0(output_plot_prefix, ".qv_bar.png"), plot = qv_combined_plot, width = qv_plot_width, height = qv_plot_height, limitsize = FALSE)
 #done
+
