@@ -210,6 +210,13 @@ num_regions_tpr <- nrow(tpr_summary_sorted)
 num_rows_tpr <- ceiling(num_regions_tpr / max_bars_per_row)
 #how many bars per row
 bars_per_row <- ceiling(num_regions_tpr / num_rows_tpr)
+
+# Calculate the total number of samples for each region for TPR
+tpr_region_samples <- data_long %>%
+  select(region, sample.id) %>%
+  distinct() %>%
+  count(region, name = "sample_count")
+
 tpr_bar_plots <- list()
 
 #split plot into lines
@@ -218,11 +225,34 @@ for (i in 1:num_rows_tpr) {
   end_idx <- min(i * bars_per_row, num_regions_tpr)
   if (start_idx > num_regions_tpr) break
   row_data <- tpr_summary_sorted[start_idx:end_idx, ]
+  
+  # Get the sample counts for these regions
+  region_counts_tpr <- tpr_region_samples %>%
+    filter(region %in% row_data$region)
+  
+  # Create a mapping dataframe that has both region names and tpr values
+  region_mapping <- row_data %>%
+    select(region, tpr_pct)
+  
+  # Join the mapping to get tpr_pct values in the region_counts_tpr dataframe
+  region_counts_with_tpr <- region_counts_tpr %>%
+    left_join(region_mapping, by = "region")
+  
   p <- ggplot(row_data, aes(x = reorder(region, tpr_pct, decreasing = TRUE), y = tpr_pct, fill = accuracy)) +
     geom_bar(stat = "identity") +
     scale_fill_manual(
       values = c("high (>= 95%)" = "#4CAF50", "mid (>= 80%)" = "#FFC107", "low (< 80%)" = "#F44336"),
       breaks = c("high (>= 95%)", "mid (>= 80%)", "low (< 80%)")
+    ) +
+    # Display sample counts vertically
+    geom_text(
+      data = region_counts_with_tpr,
+      aes(x = region, y = 101, label = sample_count),
+      inherit.aes = FALSE,
+      angle = 90,  # Make text vertical
+      hjust = -0.1,   # Align to bottom of text
+      vjust = 0.5, # Center horizontally
+      size = 5.8
     ) +
     labs(
       x = if(i == num_rows_tpr) "region" else "",
@@ -241,8 +271,9 @@ for (i in 1:num_rows_tpr) {
       legend.key.size = unit(0.8, "line"),
       legend.text = element_text(size = 10,margin = margin(r = 10))
     ) +
+    # Make room for the vertical labels
     scale_y_continuous(
-      limits = c(0, 100),
+      limits = c(0, 120),
       breaks = seq(0, 100, by = 10)
     )
   tpr_bar_plots[[i]] <- p
@@ -252,7 +283,7 @@ tpr_combined_plot <- plot_grid(plotlist = tpr_bar_plots, ncol = 1, align = 'v', 
 
 #plot dimensions
 tpr_plot_width <- max(15, min(30, bars_per_row * 0.25))
-tpr_plot_height <- 4.8 * num_rows_tpr
+tpr_plot_height <- 4.9 * num_rows_tpr
 
 ggsave(paste0(output_plot_prefix, ".tpr_bar.png"), plot = tpr_combined_plot,width = tpr_plot_width, height = tpr_plot_height, limitsize = FALSE)
 
@@ -287,12 +318,18 @@ qv_summary <- qv_data %>%
   ) %>%
   ungroup()
 
+# Calculate the total number of samples for each region
+# Divide by 2 because we have qv.1 and qv.2 for each sample
+region_samples <- qv_data %>%
+  select(region, sample.id) %>%
+  distinct() %>%
+  count(region, name = "sample_count")
+
 region_order_df <- qv_summary %>%
   filter(quality == "high: >33") %>%
   group_by(region) %>%
   summarize(high_pct = sum(percent)) %>%
   arrange(desc(high_pct))
-
 
 all_regions <- unique(qv_summary$region)
 missing_regions <- setdiff(all_regions, region_order_df$region)
@@ -317,11 +354,15 @@ for (i in 1:num_rows_qv) {
   end_idx <- min(i * qv_bars_per_row, num_regions_qv)
   if (start_idx > num_regions_qv) break
   regions_in_row <- region_order[start_idx:end_idx]
-
+  
   row_data <- qv_summary_sorted %>%
     filter(region %in% regions_in_row) %>%
     mutate(region = factor(region, levels = regions_in_row)) # Reorder within this subset
-
+  
+  # Get the sample counts for these regions
+  region_counts <- region_samples %>%
+    filter(region %in% regions_in_row)
+  
   p <- ggplot(row_data, aes(x = region, y = percent, fill = quality)) +
     geom_bar(stat = "identity", position = "stack") +
     scale_fill_manual(
@@ -331,6 +372,16 @@ for (i in 1:num_rows_qv) {
         "low: >17, <= 23" = "#FF8C00",
         "very low: <= 17" = "#F44336"
       )
+    ) +
+    # Display sample counts vertically
+    geom_text(
+      data = region_counts,
+      aes(x = region, y = 101, label = sample_count),
+      inherit.aes = FALSE,
+      angle = 90,  # Make text vertical
+      hjust = -0.1,   # Align to bottom of text
+      vjust = 0.5, # Center horizontally
+      size = 5.8
     ) +
     labs(
       x = if(i == num_rows_qv) "region" else "", 
@@ -347,14 +398,19 @@ for (i in 1:num_rows_qv) {
       legend.spacing.x = unit(2, "cm"),
       legend.text = element_text(size = 10,margin = margin(r = 10)),
       legend.key.size = unit(0.8, "line")
-      ) +
-      guides(fill = guide_legend(nrow = 1, byrow = TRUE))
+    ) +
+    guides(fill = guide_legend(nrow = 1, byrow = TRUE)) +
+    # Make room for the vertical labels
+    scale_y_continuous(
+      limits = c(0, 120),
+      breaks = seq(0, 100, by = 10)
+    )
   qv_bar_plots[[i]] <- p
 }
 
 #calculate dimensions
 qv_plot_width <- max(15, min(30, qv_bars_per_row * 0.25))
-qv_plot_height <- 4.8 * num_rows_qv
+qv_plot_height <- 4.9 * num_rows_qv
 
 #combine
 qv_combined_plot <- plot_grid(plotlist = qv_bar_plots, ncol = 1, align = 'v', axis = 'lr')
