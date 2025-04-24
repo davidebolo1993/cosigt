@@ -187,6 +187,9 @@ p_qv <- ggplot(data_long_qv, aes(x = region, y = metric.values)) +
 
 ggsave(paste0(output_plot_prefix, ".qv.png"), plot = p_qv, width = plot_width, height = plot_height, limitsize = FALSE)
 
+# Define maximum bars per row
+max_bars_per_row <- 100
+
 ###### TPR BAR PLOT ######
 # Make performance categories
 tpr_summary <- tpr_summary %>%
