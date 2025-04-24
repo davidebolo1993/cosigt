@@ -187,43 +187,86 @@ p_qv <- ggplot(data_long_qv, aes(x = region, y = metric.values)) +
 
 ggsave(paste0(output_plot_prefix, ".qv.png"), plot = p_qv, width = plot_width, height = plot_height, limitsize = FALSE)
 
-#bars of regions ordered by tpr pct
-#make summary
+###### TPR BAR PLOT ######
+# Make performance categories
 tpr_summary <- tpr_summary %>%
-  mutate(performance_category = case_when(
+  mutate(accuracy = case_when(
     tpr_pct >= 95 ~ "high (>= 95%)",
     tpr_pct >= 80 ~ "mid (>= 80%)",
     TRUE ~ "low (< 80%)"
   ))
 
-#barplot
-p_bar_tpr <- ggplot(tpr_summary, aes(x = reorder(region, tpr_pct, decreasing = T), y = tpr_pct, fill = performance_category)) +
-  geom_bar(stat = "identity") +
-  scale_fill_manual(
-    values = c("high (>= 95%)" = "#4CAF50", "mid (>= 80%)" = "#FFC107", "low (< 80%)" = "#F44336"),
-    breaks = c("high (>= 95%)", "mid (>= 80%)", "low (< 80%)")
-  ) +
-  labs(
-    x = "region",
-    y = "tpr (%)",
-    fill = "performance"
-  ) +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 12),
-    panel.grid.major.x = element_blank(),
-    legend.position = "top",
-    plot.title = element_text(hjust = 0.5)
-  ) +
-  scale_y_continuous(
-    limits = c(0, 100),
-    breaks = seq(0, 100, by = 5)
-  )
+# Sort by TPR percentage
+tpr_summary_sorted <- tpr_summary %>%
+  arrange(desc(tpr_pct))
 
-ggsave(paste0(output_plot_prefix, ".tpr_bar.png"), plot = p_bar_tpr, width = plot_width, height = plot_height, limitsize = FALSE)
+# Calculate number of rows and bars per row for even distribution
+num_regions_tpr <- nrow(tpr_summary_sorted)
+num_rows_tpr <- ceiling(num_regions_tpr / max_bars_per_row)
 
-#qv_bar
-#this should be similar to what locityper does in the paper
+# Calculate how many bars per row for even distribution
+bars_per_row <- ceiling(num_regions_tpr / num_rows_tpr)
+
+# Create a separate data frame for each row with even distribution
+tpr_bar_plots <- list()
+for (i in 1:num_rows_tpr) {
+  start_idx <- (i-1) * bars_per_row + 1
+  end_idx <- min(i * bars_per_row, num_regions_tpr)
+  
+  # Skip if we've processed all regions
+  if (start_idx > num_regions_tpr) break
+  
+  # Get data for this row
+  row_data <- tpr_summary_sorted[start_idx:end_idx, ]
+  
+  # Create the plot for this row
+  p <- ggplot(row_data, aes(x = reorder(region, tpr_pct, decreasing = TRUE), y = tpr_pct, fill = accuracy)) +
+    geom_bar(stat = "identity") +
+    scale_fill_manual(
+      values = c("high (>= 95%)" = "#4CAF50", "mid (>= 80%)" = "#FFC107", "low (< 80%)" = "#F44336"),
+      breaks = c("high (>= 95%)", "mid (>= 80%)", "low (< 80%)")
+    ) +
+    labs(
+      x = if(i == num_rows_tpr) "region" else "", # Only show x label on bottom plot
+      y = "tpr (%)"
+    ) +
+    theme_bw() +
+    theme(
+      axis.title = element_text(size = 20),
+      axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+      panel.grid.major.x = element_blank(),
+      axis.text = element_text(size = 18),
+      plot.title = element_text(size = 22, hjust = 0.5),
+      legend.title = element_text(size = 20),
+      legend.text = element_text(size = 18),
+      legend.position = "top"
+    ) +
+    scale_y_continuous(
+      limits = c(0, 100),
+      breaks = seq(0, 100, by = 10)
+    )
+  
+  tpr_bar_plots[[i]] <- p
+}
+
+# Calculate plot dimensions
+tpr_plot_width <- max(15, min(30, bars_per_row * 0.25))
+tpr_plot_height <- 4.8 * num_rows_tpr
+
+# Combine all plots using cowplot
+library(cowplot)
+if (!requireNamespace("cowplot", quietly = TRUE)) {
+  install.packages("cowplot")
+  library(cowplot)
+}
+
+tpr_combined_plot <- plot_grid(plotlist = tpr_bar_plots, ncol = 1, align = 'v', axis = 'lr')
+
+# Save the combined plot
+ggsave(paste0(output_plot_prefix, ".tpr_bar.png"), plot = tpr_combined_plot, 
+       width = tpr_plot_width, height = tpr_plot_height, limitsize = FALSE)
+
+###### QV BAR PLOT ######
 qv_data <- data_long %>%
   filter(metric %in% c("qv.1", "qv.2")) %>%
   select(region, sample.id, metric, metric.values)
@@ -251,34 +294,90 @@ qv_summary <- qv_data %>%
   ) %>%
   ungroup()
 
-region_order <- qv_summary %>%
+# Sort regions by their high quality percentage for ordering
+region_order_df <- qv_summary %>%
   filter(quality == "high: >33") %>%
-  arrange(desc(percent)) %>%
-  pull(region)
+  group_by(region) %>%
+  summarize(high_pct = sum(percent)) %>%
+  arrange(desc(high_pct))
 
-qv_summary$region <- factor(qv_summary$region, levels = region_order)
+# Make sure all regions are included (including those with no high quality points)
+all_regions <- unique(qv_summary$region)
+missing_regions <- setdiff(all_regions, region_order_df$region)
+if (length(missing_regions) > 0) {
+  missing_df <- data.frame(region = missing_regions, high_pct = 0)
+  region_order_df <- rbind(region_order_df, missing_df)
+}
 
-p_qv_bar<-ggplot(qv_summary, aes(x = region, y = percent, fill = quality)) +
-  geom_bar(stat = "identity", position = "stack") +
-  scale_fill_manual(
-    values = c(
-      "high: >33" = "#4CAF50",
-      "mid: >23, <=33" = "#FFC107",
-      "low: >17, <= 23" = "#FF8C00",
-      "very low: <= 17" = "#F44336"
+region_order <- region_order_df$region
+
+# Create a data frame with all regions in order
+qv_summary_sorted <- qv_summary %>%
+  mutate(region = factor(region, levels = region_order)) %>%
+  arrange(region)
+
+# Calculate number of rows and bars per row for even distribution
+num_regions_qv <- length(unique(qv_summary_sorted$region))
+num_rows_qv <- ceiling(num_regions_qv / max_bars_per_row)
+
+# Calculate how many bars per row for even distribution
+qv_bars_per_row <- ceiling(num_regions_qv / num_rows_qv)
+
+# Create a separate data frame and plot for each row with even distribution
+qv_bar_plots <- list()
+for (i in 1:num_rows_qv) {
+  start_idx <- (i-1) * qv_bars_per_row + 1
+  end_idx <- min(i * qv_bars_per_row, num_regions_qv)
+  
+  # Skip if we've processed all regions
+  if (start_idx > num_regions_qv) break
+  
+  # Get the regions for this row
+  regions_in_row <- region_order[start_idx:end_idx]
+  
+  # Get data for these regions
+  row_data <- qv_summary_sorted %>%
+    filter(region %in% regions_in_row) %>%
+    mutate(region = factor(region, levels = regions_in_row)) # Reorder within this subset
+  
+  # Create the plot for this row
+  p <- ggplot(row_data, aes(x = region, y = percent, fill = quality)) +
+    geom_bar(stat = "identity", position = "stack") +
+    scale_fill_manual(
+      values = c(
+        "high: >33" = "#4CAF50",
+        "mid: >23, <=33" = "#FFC107",
+        "low: >17, <= 23" = "#FF8C00",
+        "very low: <= 17" = "#F44336"
+      )
+    ) +
+    labs(
+      x = if(i == num_rows_qv) "region" else "", # Only show x label on bottom plot
+      y = "pct of QVs"
+    ) +
+    theme_bw() +
+    theme(
+      axis.title = element_text(size = 20),
+      axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+      panel.grid.major.x = element_blank(),
+      axis.text = element_text(size = 18),
+      plot.title = element_text(size = 22, hjust = 0.5),
+      legend.title = element_text(size = 20),
+      legend.text = element_text(size = 18),
+      legend.position = "top"
     )
-  ) +
-  labs(
-    x = "region",
-    y = "pct of QVs",
-    fill = "accuracy",
-    title = "qv metric - quality distribution"
-  ) +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(angle = 90, hjust = 1),
-    legend.position = "top"
-  )
+  
+  qv_bar_plots[[i]] <- p
+}
 
-ggsave(paste0(output_plot_prefix, ".qv_bar.png"), plot = p_qv_bar, width = plot_width, height = plot_height, limitsize = FALSE)
+# Calculate QV plot dimensions based on the number of bars per row
+qv_plot_width <- max(15, min(30, qv_bars_per_row * 0.25))
+qv_plot_height <- 4.8 * num_rows_qv
+
+# Combine all QV plots
+qv_combined_plot <- plot_grid(plotlist = qv_bar_plots, ncol = 1, align = 'v', axis = 'lr')
+
+# Save the combined QV plot
+ggsave(paste0(output_plot_prefix, ".qv_bar.png"), plot = qv_combined_plot, 
+       width = qv_plot_width, height = qv_plot_height, limitsize = FALSE)
 #done
