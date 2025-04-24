@@ -6,6 +6,7 @@ library(data.table)
 library(scales)
 library(dplyr)
 library(tidyr)
+library(cowplot)
 setDTthreads(1)
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -51,8 +52,8 @@ tpr_summary <- data_long %>%
 #precompute a label for plotting
 tpr_summary$label <- sprintf("tpr=%.1f%% (%d/%d), #cl = %d", 
                              tpr_summary$tpr_pct, 
-                             tpr_summary$tp_count, 
-                             tpr_summary$total_count, 
+                             tpr_summary$tp_count/2, #for each sample/haplotype we actually have 2 lines (one w/ )
+                             tpr_summary$total_count/2, #same as above
                              tpr_summary$n_clust)
 
 #left join on the original table
@@ -72,7 +73,7 @@ data_long <- data_long %>%
 
 
 num_regions <- length(unique(data_long$region))
-# Calculate number of columns (max 20 per row)
+#number of columns (max 20 per row)
 num_cols <- min(10, num_regions)
 
 #edr and qv - split here
@@ -187,43 +188,78 @@ p_qv <- ggplot(data_long_qv, aes(x = region, y = metric.values)) +
 
 ggsave(paste0(output_plot_prefix, ".qv.png"), plot = p_qv, width = plot_width, height = plot_height, limitsize = FALSE)
 
+#barplots
 #bars of regions ordered by tpr pct
 #make summary
 tpr_summary <- tpr_summary %>%
-  mutate(performance_category = case_when(
+  mutate(accuracy = case_when(
     tpr_pct >= 95 ~ "high (>= 95%)",
     tpr_pct >= 80 ~ "mid (>= 80%)",
     TRUE ~ "low (< 80%)"
   ))
 
 #barplot
-p_bar_tpr <- ggplot(tpr_summary, aes(x = reorder(region, tpr_pct, decreasing = T), y = tpr_pct, fill = performance_category)) +
-  geom_bar(stat = "identity") +
-  scale_fill_manual(
-    values = c("high (>= 95%)" = "#4CAF50", "mid (>= 80%)" = "#FFC107", "low (< 80%)" = "#F44336"),
-    breaks = c("high (>= 95%)", "mid (>= 80%)", "low (< 80%)")
-  ) +
-  labs(
-    x = "region",
-    y = "tpr (%)",
-    fill = "performance"
-  ) +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 12),
-    panel.grid.major.x = element_blank(),
-    legend.position = "top",
-    plot.title = element_text(hjust = 0.5)
-  ) +
-  scale_y_continuous(
-    limits = c(0, 100),
-    breaks = seq(0, 100, by = 5)
-  )
+#sort by tpr
 
-ggsave(paste0(output_plot_prefix, ".tpr_bar.png"), plot = p_bar_tpr, width = plot_width, height = plot_height, limitsize = FALSE)
+tpr_summary_sorted <- tpr_summary %>%
+  arrange(desc(tpr_pct))
+
+#calculate number of rows and bars per row
+max_bars_per_row <- 100
+num_regions_tpr <- nrow(tpr_summary_sorted)
+num_rows_tpr <- ceiling(num_regions_tpr / max_bars_per_row)
+#how many bars per row
+bars_per_row <- ceiling(num_regions_tpr / num_rows_tpr)
+tpr_bar_plots <- list()
+
+#split plot into lines
+for (i in 1:num_rows_tpr) {
+  start_idx <- (i-1) * bars_per_row + 1
+  end_idx <- min(i * bars_per_row, num_regions_tpr)
+  if (start_idx > num_regions_tpr) break
+  row_data <- tpr_summary_sorted[start_idx:end_idx, ]
+  p <- ggplot(row_data, aes(x = reorder(region, tpr_pct, decreasing = TRUE), y = tpr_pct, fill = accuracy)) +
+    geom_bar(stat = "identity") +
+    scale_fill_manual(
+      values = c("high (>= 95%)" = "#4CAF50", "mid (>= 80%)" = "#FFC107", "low (< 80%)" = "#F44336"),
+      breaks = c("high (>= 95%)", "mid (>= 80%)", "low (< 80%)")
+    ) +
+    labs(
+      x = if(i == num_rows_tpr) "region" else "",
+      y = "tpr (%)"
+    ) +
+    theme_bw() +
+    theme(
+      axis.title = element_text(size = 20),
+      axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+      panel.grid.major.x = element_blank(),
+      axis.text = element_text(size = 18),
+      legend.position = "top",
+      legend.direction = "horizontal",
+      legend.box = "horizontal",
+      legend.spacing.x = unit(2, "cm"),
+      legend.key.size = unit(0.8, "line"),
+      legend.text = element_text(size = 10,margin = margin(r = 10))
+    ) +
+    scale_y_continuous(
+      limits = c(0, 100),
+      breaks = seq(0, 100, by = 10)
+    )
+  tpr_bar_plots[[i]] <- p
+}
+
+tpr_combined_plot <- plot_grid(plotlist = tpr_bar_plots, ncol = 1, align = 'v', axis = 'lr')
+
+#plot dimensions
+tpr_plot_width <- max(15, min(30, bars_per_row * 0.25))
+tpr_plot_height <- 4.8 * num_rows_tpr
+
+ggsave(paste0(output_plot_prefix, ".tpr_bar.png"), plot = tpr_combined_plot,width = tpr_plot_width, height = tpr_plot_height, limitsize = FALSE)
 
 #qv_bar
 #this should be similar to what locityper does in the paper
+#the same logic above applies below
+
 qv_data <- data_long %>%
   filter(metric %in% c("qv.1", "qv.2")) %>%
   select(region, sample.id, metric, metric.values)
@@ -251,34 +287,77 @@ qv_summary <- qv_data %>%
   ) %>%
   ungroup()
 
-region_order <- qv_summary %>%
+region_order_df <- qv_summary %>%
   filter(quality == "high: >33") %>%
-  arrange(desc(percent)) %>%
-  pull(region)
+  group_by(region) %>%
+  summarize(high_pct = sum(percent)) %>%
+  arrange(desc(high_pct))
 
-qv_summary$region <- factor(qv_summary$region, levels = region_order)
 
-p_qv_bar<-ggplot(qv_summary, aes(x = region, y = percent, fill = quality)) +
-  geom_bar(stat = "identity", position = "stack") +
-  scale_fill_manual(
-    values = c(
-      "high: >33" = "#4CAF50",
-      "mid: >23, <=33" = "#FFC107",
-      "low: >17, <= 23" = "#FF8C00",
-      "very low: <= 17" = "#F44336"
-    )
-  ) +
-  labs(
-    x = "region",
-    y = "pct of QVs",
-    fill = "accuracy",
-    title = "qv metric - quality distribution"
-  ) +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(angle = 90, hjust = 1),
-    legend.position = "top"
-  )
+all_regions <- unique(qv_summary$region)
+missing_regions <- setdiff(all_regions, region_order_df$region)
+if (length(missing_regions) > 0) {
+  missing_df <- data.frame(region = missing_regions, high_pct = 0)
+  region_order_df <- rbind(region_order_df, missing_df)
+}
 
-ggsave(paste0(output_plot_prefix, ".qv_bar.png"), plot = p_qv_bar, width = plot_width, height = plot_height, limitsize = FALSE)
+region_order <- region_order_df$region
+
+qv_summary_sorted <- qv_summary %>%
+  mutate(region = factor(region, levels = region_order)) %>%
+  arrange(region)
+
+num_regions_qv <- length(unique(qv_summary_sorted$region))
+num_rows_qv <- ceiling(num_regions_qv / max_bars_per_row)
+qv_bars_per_row <- ceiling(num_regions_qv / num_rows_qv)
+
+qv_bar_plots <- list()
+for (i in 1:num_rows_qv) {
+  start_idx <- (i-1) * qv_bars_per_row + 1
+  end_idx <- min(i * qv_bars_per_row, num_regions_qv)
+  if (start_idx > num_regions_qv) break
+  regions_in_row <- region_order[start_idx:end_idx]
+
+  row_data <- qv_summary_sorted %>%
+    filter(region %in% regions_in_row) %>%
+    mutate(region = factor(region, levels = regions_in_row)) # Reorder within this subset
+
+  p <- ggplot(row_data, aes(x = region, y = percent, fill = quality)) +
+    geom_bar(stat = "identity", position = "stack") +
+    scale_fill_manual(
+      values = c(
+        "high: >33" = "#4CAF50",
+        "mid: >23, <=33" = "#FFC107",
+        "low: >17, <= 23" = "#FF8C00",
+        "very low: <= 17" = "#F44336"
+      )
+    ) +
+    labs(
+      x = if(i == num_rows_qv) "region" else "", 
+      y = "pct of QVs"
+    ) +
+    theme_bw() +
+    theme(
+      axis.title = element_text(size = 20),
+      axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+      axis.text = element_text(size = 18),
+      legend.position = "top",
+      legend.direction = "horizontal",
+      legend.box = "horizontal",
+      legend.spacing.x = unit(2, "cm"),
+      legend.text = element_text(size = 10,margin = margin(r = 10)),
+      legend.key.size = unit(0.8, "line")
+      ) +
+      guides(fill = guide_legend(nrow = 1, byrow = TRUE))
+  qv_bar_plots[[i]] <- p
+}
+
+#calculate dimensions
+qv_plot_width <- max(15, min(30, qv_bars_per_row * 0.25))
+qv_plot_height <- 4.8 * num_rows_qv
+
+#combine
+qv_combined_plot <- plot_grid(plotlist = qv_bar_plots, ncol = 1, align = 'v', axis = 'lr')
+
+ggsave(paste0(output_plot_prefix, ".qv_bar.png"), plot = qv_combined_plot, width = qv_plot_width, height = qv_plot_height, limitsize = FALSE)
 #done
