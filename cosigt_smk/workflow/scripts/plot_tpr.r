@@ -238,6 +238,9 @@ for (i in 1:num_rows_tpr) {
   region_counts_with_tpr <- region_counts_tpr %>%
     left_join(region_mapping, by = "region")
   
+  # Find maximum sample count for color comparison
+  max_sample_count <- max(region_counts_with_tpr$sample_count)
+  
   p <- ggplot(row_data, aes(x = reorder(region, tpr_pct, decreasing = TRUE), y = tpr_pct, fill = accuracy)) +
     geom_bar(stat = "identity") +
     scale_fill_manual(
@@ -247,12 +250,19 @@ for (i in 1:num_rows_tpr) {
     # Display sample counts vertically
     geom_text(
       data = region_counts_with_tpr,
-      aes(x = region, y = 101, label = sample_count),
+      aes(x = region, y = 101, 
+          label = sample_count,
+          color = sample_count < max_sample_count), # Condition for coloring
       inherit.aes = FALSE,
-      angle = 90,  # Make text vertical
-      hjust = -0.1,   # Align to bottom of text
-      vjust = 0.5, # Center horizontally
+      angle = 90,
+      hjust = -0.1,
+      vjust = 0.5,
       size = 5.8
+    ) +
+    # Add scale for the conditional coloring
+    scale_color_manual(
+      values = c("FALSE" = "black", "TRUE" = "red"),
+      guide = "none" # Hide legend for this scale
     ) +
     labs(
       x = if(i == num_rows_tpr) "region" else "",
@@ -363,6 +373,9 @@ for (i in 1:num_rows_qv) {
   region_counts <- region_samples %>%
     filter(region %in% regions_in_row)
   
+  # Find maximum sample count for QV plot
+  max_qv_sample_count <- max(region_counts$sample_count)
+  
   p <- ggplot(row_data, aes(x = region, y = percent, fill = quality)) +
     geom_bar(stat = "identity", position = "stack") +
     scale_fill_manual(
@@ -376,12 +389,19 @@ for (i in 1:num_rows_qv) {
     # Display sample counts vertically
     geom_text(
       data = region_counts,
-      aes(x = region, y = 101, label = sample_count),
+      aes(x = region, y = 101, 
+          label = sample_count,
+          color = sample_count < max_qv_sample_count), # Condition for coloring
       inherit.aes = FALSE,
-      angle = 90,  # Make text vertical
-      hjust = -0.1,   # Align to bottom of text
-      vjust = 0.5, # Center horizontally
+      angle = 90,
+      hjust = -0.1,
+      vjust = 0.5,
       size = 5.8
+    ) +
+    # Add scale for the conditional coloring
+    scale_color_manual(
+      values = c("FALSE" = "black", "TRUE" = "red"),
+      guide = "none" # Hide legend for this scale
     ) +
     labs(
       x = if(i == num_rows_qv) "region" else "", 
