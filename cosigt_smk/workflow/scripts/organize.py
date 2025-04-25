@@ -481,6 +481,7 @@ def setup_arg_parser():
     optional.add_argument('--pansn', help='PanSN prefix naming for the reference genome [grch38#1#]', metavar='', required=False, default='grch38#1#')
     optional.add_argument('--profile', help='snakemake profile, if available [None]', metavar='', required=False, default=None)
     optional.add_argument('--blacklist', help='list of contigs to blacklist - these will not be used during genotyping [None]', metavar='', required=False, default=None)
+    optional.add_argument('--conda', help='prepare for running using conda instead of singularity [False]', action='store_true')
     return parser
 
 def main():
@@ -553,9 +554,15 @@ def main():
     #write cosigt command
     cmd='#!/bin/bash\n'
     if args.profile is not None:
-        cmd +='SINGULARITY_TMPDIR=' + os.path.abspath(args.tmp) + ' snakemake --profile ' + args.profile + ' --singularity-args "-B '+ ','.join(paths) + ' -e" cosigt\n'
-    else: #None profile
-        cmd +='SINGULARITY_TMPDIR=' + os.path.abspath(args.tmp) + ' snakemake --use-singularity --singularity-args "-B '+ ','.join(paths) + ' -e" -j 32 cosigt\n'
+        if not args.conda:
+            cmd +='SINGULARITY_TMPDIR=' + os.path.abspath(args.tmp) + ' snakemake --profile ' + args.profile + ' --singularity-args "-B '+ ','.join(paths) + ' -e" cosigt\n'
+        else:
+            cmd += 'snakemake --profile ' + args.profile + ' cosigt\n'
+    else: #no profile
+        if not args.conda:
+            cmd +='SINGULARITY_TMPDIR=' + os.path.abspath(args.tmp) + ' snakemake --use-singularity --singularity-args "-B '+ ','.join(paths) + ' -e" -j 32 cosigt\n'
+        else:
+            cmd += 'snakemake --use-conda -j 32 cosigt\n'
 
     cmd_out=os.path.join(BASE, 'cosigt_smk.sh')
     with open(cmd_out, 'w') as fout:
