@@ -200,7 +200,6 @@ tpr_summary <- tpr_summary %>%
 
 #barplot
 #sort by tpr
-
 tpr_summary_sorted <- tpr_summary %>%
   arrange(desc(tpr_pct))
 
@@ -211,7 +210,7 @@ num_rows_tpr <- ceiling(num_regions_tpr / max_bars_per_row)
 #how many bars per row
 bars_per_row <- ceiling(num_regions_tpr / num_rows_tpr)
 
-# Calculate the total number of samples for each region for TPR
+#total number of samples per region
 tpr_region_samples <- data_long %>%
   select(region, sample.id) %>%
   distinct() %>%
@@ -226,19 +225,19 @@ for (i in 1:num_rows_tpr) {
   if (start_idx > num_regions_tpr) break
   row_data <- tpr_summary_sorted[start_idx:end_idx, ]
   
-  # Get the sample counts for these regions
+  #sample counts
   region_counts_tpr <- tpr_region_samples %>%
     filter(region %in% row_data$region)
   
-  # Create a mapping dataframe that has both region names and tpr values
+  #region names to tpr
   region_mapping <- row_data %>%
     select(region, tpr_pct)
   
-  # Join the mapping to get tpr_pct values in the region_counts_tpr dataframe
+  #join
   region_counts_with_tpr <- region_counts_tpr %>%
     left_join(region_mapping, by = "region")
   
-  # Find maximum sample count for color comparison
+  #find max
   max_sample_count <- max(region_counts_with_tpr$sample_count)
   
   p <- ggplot(row_data, aes(x = reorder(region, tpr_pct, decreasing = TRUE), y = tpr_pct, fill = accuracy)) +
@@ -247,22 +246,22 @@ for (i in 1:num_rows_tpr) {
       values = c("high (>= 95%)" = "#4CAF50", "mid (>= 80%)" = "#FFC107", "low (< 80%)" = "#F44336"),
       breaks = c("high (>= 95%)", "mid (>= 80%)", "low (< 80%)")
     ) +
-    # Display sample counts vertically
+    #sample counts
     geom_text(
       data = region_counts_with_tpr,
       aes(x = region, y = 101, 
           label = sample_count,
-          color = sample_count < max_sample_count), # Condition for coloring
+          color = sample_count < max_sample_count), #coloring
       inherit.aes = FALSE,
       angle = 90,
       hjust = -0.1,
       vjust = 0.5,
       size = 5.8
     ) +
-    # Add scale for the conditional coloring
+    #conditional coloring scale
     scale_color_manual(
       values = c("FALSE" = "black", "TRUE" = "red"),
-      guide = "none" # Hide legend for this scale
+      guide = "none" #and hide legend
     ) +
     labs(
       x = if(i == num_rows_tpr) "region" else "",
@@ -279,10 +278,10 @@ for (i in 1:num_rows_tpr) {
       legend.box = "horizontal",
       legend.spacing.x = unit(2, "cm"),
       legend.key.size = unit(0.8, "line"),
-      legend.text = element_text(size = 14, margin = margin(r = 10)),
+      legend.text = element_text(size = 14, margin = margin(r = 25)),
       legend.title = element_text(size = 18, margin = margin(r = 25)),
     ) +
-    # Make room for the vertical labels
+    #vertical lables
     scale_y_continuous(
       limits = c(0, 120),
       breaks = seq(0, 100, by = 10)
@@ -329,8 +328,7 @@ qv_summary <- qv_data %>%
   ) %>%
   ungroup()
 
-# Calculate the total number of samples for each region
-# Divide by 2 because we have qv.1 and qv.2 for each sample
+
 region_samples <- qv_data %>%
   select(region, sample.id) %>%
   distinct() %>%
@@ -370,11 +368,9 @@ for (i in 1:num_rows_qv) {
     filter(region %in% regions_in_row) %>%
     mutate(region = factor(region, levels = regions_in_row)) # Reorder within this subset
   
-  # Get the sample counts for these regions
   region_counts <- region_samples %>%
     filter(region %in% regions_in_row)
   
-  # Find maximum sample count for QV plot
   max_qv_sample_count <- max(region_counts$sample_count)
   
   p <- ggplot(row_data, aes(x = region, y = percent, fill = quality)) +
@@ -387,7 +383,7 @@ for (i in 1:num_rows_qv) {
         "very low: <= 17" = "#F44336"
       )
     ) +
-    # Display sample counts vertically
+
     geom_text(
       data = region_counts,
       aes(x = region, y = 101, 
@@ -399,10 +395,10 @@ for (i in 1:num_rows_qv) {
       vjust = 0.5,
       size = 5.8
     ) +
-    # Add scale for the conditional coloring
+
     scale_color_manual(
       values = c("FALSE" = "black", "TRUE" = "red"),
-      guide = "none" # Hide legend for this scale
+      guide = "none" #hide legend
     ) +
     labs(
       x = if(i == num_rows_qv) "region" else "", 
@@ -417,12 +413,13 @@ for (i in 1:num_rows_qv) {
       legend.direction = "horizontal",
       legend.box = "horizontal",
       legend.spacing.x = unit(2, "cm"),
-      legend.text = element_text(size = 14, margin = margin(r = 10)),
+      legend.text = element_text(size = 14, margin = margin(r = 25)),
       legend.title = element_text(size = 18, margin = margin(r = 25)),
       legend.key.size = unit(0.8, "line")
     ) +
     guides(fill = guide_legend(nrow = 1, byrow = TRUE)) +
-    # Make room for the vertical labels
+
+    #make room
     scale_y_continuous(
       limits = c(0, 120),
       breaks = seq(0, 100, by = 10)
@@ -440,3 +437,80 @@ qv_combined_plot <- plot_grid(plotlist = qv_bar_plots, ncol = 1, align = 'v', ax
 ggsave(paste0(output_plot_prefix, ".qv_bar.png"), plot = qv_combined_plot, width = qv_plot_width, height = qv_plot_height, limitsize = FALSE)
 #done
 
+#plot correlating edr values and qv values - re-adapting the same strategy we had before
+
+qv_edr_wide <- data_long %>%
+  filter(metric %in% c("qv.1", "qv.2", "edr.1", "edr.2")) %>%
+  mutate(
+    metric_type = case_when(
+      grepl("^qv", metric) ~ "qv",
+      grepl("^edr", metric) ~ "edr"
+    )
+  ) %>%
+  select(region, pos, sample.id, metric_type, metric.values) %>%
+  group_by(region, pos, sample.id, metric_type) %>%
+  summarize(metric.values = mean(metric.values, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = metric_type, values_from = metric.values)
+
+#region correlations
+region_correlations <- qv_edr_wide %>%
+  group_by(region) %>%
+  summarize(
+    correlation = cor(-qv, edr, use = "complete.obs", method = "pearson"),
+    .groups = "drop"
+  )
+
+#actual plot
+cor_bars_per_row <- max_bars_per_row 
+region_order_cor <- region_correlations %>%
+  arrange(desc(correlation)) %>%
+  pull(region)
+
+num_regions_cor <- length(region_order_cor)
+num_rows_cor <- ceiling(num_regions_cor / cor_bars_per_row)
+
+# Generate plots in chunks
+cor_bar_plots <- list()
+
+for (i in 1:num_rows_cor) {
+  start_idx <- (i - 1) * cor_bars_per_row + 1
+  end_idx <- min(i * cor_bars_per_row, num_regions_cor)
+  if (start_idx > num_regions_cor) break
+  
+  regions_in_row <- region_order_cor[start_idx:end_idx]
+  
+  row_data <- region_correlations %>%
+    filter(region %in% regions_in_row) %>%
+    mutate(region = factor(region, levels = regions_in_row)) # preserve order
+
+  p <- ggplot(row_data, aes(x = region, y = correlation, fill = correlation)) +
+    geom_col() +
+    geom_hline(yintercept = 0, linetype = "dashed") +
+    scale_fill_gradient2(
+      low = "#F44336", mid = "white", high = "#4CAF50", midpoint = 0
+    ) +
+    labs(
+      x = if (i == num_rows_cor) "region" else "",
+      y = "pearson coefficient (-QV vs e.d.r)"
+    ) +
+    theme_bw() +
+    theme(
+      axis.title = element_text(size = 20),
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+      axis.text = element_text(size = 18),
+      legend.position = "none"  # can turn back on if needed
+    )
+
+  cor_bar_plots[[i]] <- p
+}
+
+cor_plot_width <- max(15, min(30, cor_bars_per_row * 0.25))
+cor_plot_height <- 8 * num_rows_cor
+
+cor_combined_plot <- plot_grid(plotlist = cor_bar_plots, ncol = 1, align = 'v', axis = 'lr')
+
+ggsave(paste0(output_plot_prefix, ".correlation_bar.png"),
+       plot = cor_combined_plot,
+       width = cor_plot_width,
+       height = cor_plot_height,
+       limitsize = FALSE)
