@@ -456,7 +456,7 @@ qv_edr_wide <- data_long %>%
 region_correlations <- qv_edr_wide %>%
   group_by(region) %>%
   summarize(
-    correlation = cor(-qv, edr, use = "complete.obs", method = "pearson"),
+    correlation = cor(-qv, edr, use = "complete.obs", method = "spearman"),
     .groups = "drop"
   )
 
@@ -491,7 +491,7 @@ for (i in 1:num_rows_cor) {
     ) +
     labs(
       x = if (i == num_rows_cor) "region" else "",
-      y = "pearson coefficient (-QV vs e.d.r)"
+      y = "spearman coefficient (-QV vs e.d.r)"
     ) +
     theme_bw() +
     theme(
