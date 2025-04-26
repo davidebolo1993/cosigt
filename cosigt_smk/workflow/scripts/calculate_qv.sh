@@ -14,7 +14,6 @@ cat "$indir/ids.tsv" | while read line; do
     QV=$(compute_qv "$fa1" "$fa2")
     echo -e "$fa1\t$fa2\t$QV" >> "$indir/qv.tmp.tsv"
 done
-rm "$indir/out.txt"
 
 #first combination
 sum1=$(head -n 2 "$indir/qv.tmp.tsv" | awk '{sum += $3} END {printf "%.2f", sum}')
