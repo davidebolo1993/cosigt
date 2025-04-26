@@ -67,10 +67,6 @@ def make_default_config(tmp) -> dict:
     config['default_high']=dict()
     config['default_high']['mem_mb'] = 2000
     config['default_high']['time'] =  4
-    #stretcher - only used for benchmarking
-    config['stretcher']=dict()
-    config['stretcher']['mem_mb'] = 5000
-    config['stretcher']['time'] =  10
     print(f'Config template prepared!')
     return config
 

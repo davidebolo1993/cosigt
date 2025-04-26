@@ -119,7 +119,8 @@ def get_samples(wildcards):
 
 rule calculate_qv:
 	'''
-	https://emboss.sourceforge.net
+	https://github.com/Martinsos/edlib
+	https://github.com/davidebolo1993/cosigt
 	'''
 	input:
 		config['output'] + '/benchmark/{chr}/{region}/qv_prep/{sample}/ids.tsv'
@@ -128,10 +129,10 @@ rule calculate_qv:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['stretcher']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['stretcher']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default_high']['time']
 	container:
-		'docker://biocontainers/emboss:v6.6.0dfsg-7b1-deb_cv1'
+		'docker://davidebolo1993/edlib:1.2.7''
 	conda:
 		'../envs/emboss.yaml'
 	params:
