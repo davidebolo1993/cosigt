@@ -132,9 +132,7 @@ rule calculate_qv:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_high']['time']
 	container:
-		'docker://davidebolo1993/edlib:1.2.7''
-	conda:
-		'../envs/emboss.yaml'
+		'docker://davidebolo1993/edlib:1.2.7'
 	params:
 		outdir=config['output'] + '/benchmark/{chr}/{region}/qv_prep/{sample}'
 	shell:
