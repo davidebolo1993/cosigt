@@ -368,8 +368,8 @@ def write_gtf(gtf_dict, config_yaml, RESOURCES) -> dict:
             break
         else:
             os.symlink(v, os.path.join(gtf_dir,k))
-    config_yaml['annotations'] = os.path.join(os.path.abspath(gtf_dir),k)
-    config_yaml['SINGULARITY_BIND'].add(os.path.dirname(v))
+            config_yaml['annotations'] = os.path.join(os.path.abspath(gtf_dir),k)
+            config_yaml['SINGULARITY_BIND'].add(os.path.dirname(v))
     print(f'Added gtf to {gtf_dir}!')
     return config_yaml
 
@@ -478,6 +478,7 @@ def setup_arg_parser():
     optional.add_argument('--profile', help='snakemake profile, if available [None]', metavar='', required=False, default=None)
     optional.add_argument('--blacklist', help='list of contigs to blacklist - these will not be used during genotyping [None]', metavar='', required=False, default=None)
     optional.add_argument('--conda', help='prepare for running using conda instead of singularity [False]', action='store_true')
+    optional.add_argument('--threads', help='run snakemake using that many cores - ignored if using a profile [32]', metavar='', required=False, default=32)
     return parser
 
 def main():
@@ -502,27 +503,27 @@ def main():
     #READ
     #initial config
     #config
-    config=make_default_config(args.tmp)
+    config=make_default_config(os.path.abspath(args.tmp))
     config['SINGULARITY_BIND'] = set()
-    config['SINGULARITY_BIND'].add(args.tmp)
+    config['SINGULARITY_BIND'].add(os.path.abspath(args.tmp))
     config['pansn_prefix'] = args.pansn
     #assemblies
-    asm_dict=read_assemblies_file(args.assemblies)
+    asm_dict=read_assemblies_file(os.path.abspath(args.assemblies))
     #print(asm_dict)
     #alignment map
     alignment_map=read_alignment_map(args.map)
     #print(alignment_map)
     #reads
-    aln_dict=read_alignments(args.reads, alignment_map)
+    aln_dict=read_alignments(os.path.abspath(args.reads), alignment_map)
     #print(aln_dict)
     #bed file
-    bed_dict=read_bed(args.bed,asm_dict)
+    bed_dict=read_bed(os.path.abspath(args.bed),asm_dict)
     #print(bed_dict)
-    genome_dict=read_genome(args.genome)
+    genome_dict=read_genome(os.path.abspath(args.genome))
     #print(genome_dict)
     gtf_dict=read_gtf(args.gtf)
     #output
-    config=validate_output(args.output, config)
+    config=validate_output(os.path.abspath(args.output), config)
 
     #WRITE    
     #assemblies
@@ -556,9 +557,9 @@ def main():
             cmd += 'snakemake --profile ' + args.profile + ' cosigt\n'
     else: #no profile
         if not args.conda:
-            cmd +='SINGULARITY_TMPDIR=' + os.path.abspath(args.tmp) + ' snakemake --use-singularity --singularity-args "-B '+ ','.join(paths) + ' -e" -j 32 cosigt\n'
+            cmd +='SINGULARITY_TMPDIR=' + os.path.abspath(args.tmp) + ' snakemake --use-singularity --singularity-args "-B '+ ','.join(paths) + ' -e" -j ' + str(args.threads) + ' cosigt\n'
         else:
-            cmd += 'snakemake --use-conda -j 32 cosigt\n'
+            cmd += 'snakemake --use-conda -j ' + str(args.threads) + ' cosigt\n'
 
     cmd_out=os.path.join(BASE, 'cosigt_smk.sh')
     with open(cmd_out, 'w') as fout:
