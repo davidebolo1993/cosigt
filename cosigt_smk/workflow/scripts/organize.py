@@ -86,6 +86,10 @@ def validate_assembly(asm_path) -> bool:
     if not os.path.exists(asm_path + '.fai'):
         print(f'Assembly file: {asm_path} is not indexed - expected .fai; samtools faidx {asm_path} and retry!')
         return False
+    if asm_path.endswith('.fasta.gz') or asm_path.endswith('.fa.gz'):
+        if not os.path.exists(asm_path + '.gzi'):
+            print(f'Assembly file: {asm_path} is not indexed - expected .gzi; samtools faidx {asm_path} and retry!')
+            return False
     #read contigs and check they follow the PanSN specification
     with open(asm_path + '.fai', 'r') as idx_in:
         for line in idx_in:
@@ -235,6 +239,10 @@ def read_genome(genome_file) -> dict():
     if not os.path.exists(genome_file + '.fai'):
         print(f'Genome file: {genome_file} is not indexed - expected .fai; samtools faidx {genome_file} and retry!')
         sys.exit(1)
+    if genome_file.endswith('.fasta.gz') or genome_file.endswith('.fa.gz') or genome_file.endswith('.fna.gz'):
+        if not os.path.exists(genome_file + '.gzi'):
+            print(f'Genome file: {genome_file} is not indexed - expected .gzi; samtools faidx {genome_file} and retry!')
+            return False
     ref_dict[os.path.basename(genome_file)]=os.path.abspath(genome_file)
     print(f'Loaded reference file {genome_file}!')    
     return ref_dict
@@ -287,9 +295,10 @@ def write_assemblies(asm_dict, bed_dict, config_yaml, RESOURCES) -> dict:
             asm_folder=os.path.join(asm_dir, k)
             os.makedirs(asm_folder, exist_ok=True)
             asm_name=os.path.basename(v)
-            asm_idx_name=asm_name + '.fai'
             os.symlink(v, os.path.join(asm_folder,asm_name))
             os.symlink(v + '.fai', os.path.join(asm_folder,asm_name + '.fai'))
+            if asm_idx_name.endsiwth('.gz'):
+                os.symlink(v + '.gzi', os.path.join(asm_folder,asm_name + '.gzi')
             config_yaml['chromosomes'].add(k)
             config_yaml['SINGULARITY_BIND'].add(os.path.dirname(v))
 
@@ -351,6 +360,8 @@ def write_reference(genome_dict, config_yaml, RESOURCES) -> dict:
     for k,v in genome_dict.items():
         os.symlink(v, os.path.join(ref_dir,k))
         os.symlink(v + '.fai', os.path.join(ref_dir,k + '.fai'))
+        if v.endsiwth('gz'):
+            os.symlink(v + '.gzi', os.path.join(ref_dir,k + '.gzi'))
     config_yaml['reference'] = os.path.join(os.path.abspath(ref_dir),k)
     config_yaml['SINGULARITY_BIND'].add(os.path.dirname(v))
     print(f'Added reference to {ref_dir}!')
