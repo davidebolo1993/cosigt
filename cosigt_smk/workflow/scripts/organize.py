@@ -360,7 +360,7 @@ def write_reference(genome_dict, config_yaml, RESOURCES) -> dict:
     for k,v in genome_dict.items():
         os.symlink(v, os.path.join(ref_dir,k))
         os.symlink(v + '.fai', os.path.join(ref_dir,k + '.fai'))
-        if v.endsiwth('gz'):
+        if v.endswith('gz'):
             os.symlink(v + '.gzi', os.path.join(ref_dir,k + '.gzi'))
     config_yaml['reference'] = os.path.join(os.path.abspath(ref_dir),k)
     config_yaml['SINGULARITY_BIND'].add(os.path.dirname(v))
