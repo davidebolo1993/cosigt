@@ -298,7 +298,7 @@ def write_assemblies(asm_dict, bed_dict, config_yaml, RESOURCES) -> dict:
             os.symlink(v, os.path.join(asm_folder,asm_name))
             os.symlink(v + '.fai', os.path.join(asm_folder,asm_name + '.fai'))
             if asm_idx_name.endsiwth('.gz'):
-                os.symlink(v + '.gzi', os.path.join(asm_folder,asm_name + '.gzi')
+                os.symlink(v + '.gzi', os.path.join(asm_folder,asm_name + '.gzi'))
             config_yaml['chromosomes'].add(k)
             config_yaml['SINGULARITY_BIND'].add(os.path.dirname(v))
 
