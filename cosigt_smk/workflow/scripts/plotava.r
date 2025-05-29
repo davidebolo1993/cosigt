@@ -17,11 +17,15 @@ pltlist<-list()
 for (i in c(1:length(seqnames))) {
         simplify<-paste(unlist(strsplit(seqnames[i], "#"))[c(1,2)],collapse="#")
         sub.sub.paf<-subset(sub.paf, (q.name == seqnames[i]))
+        if (sum(sub.sub.paf$strand == "-") > sum(sub.sub.paf$strand == "+")) {
+                sub.sub.paf<-flipPaf(paf.table = sub.sub.paf, flip.seqnames=seqnames[i])
+                paf.table<-flipPaf(paf.table = paf.table, flip.seqnames=seqnames[i])
+        }
         pltlist[[simplify]]<-plotMiro(paf.table = sub.sub.paf, binsize = 1000)
 }
 for (l in c(1:length(pltlist))) {
         pdf(file.path(dirname(output_pdf),paste0(names(pltlist)[l], "_to_", ref_path, ".pdf")), width=20, height=5)
-        pltlist[[l]]
+        print(pltlist[[l]])
         dev.off()
 }
 #plot all vs all
