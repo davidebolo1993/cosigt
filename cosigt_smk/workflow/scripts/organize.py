@@ -408,6 +408,34 @@ def validate_blacklist(blacklist, config_yaml, RESOURCES):
     config_yaml['blacklist'] = os.path.abspath(blacklist_out)
     return config_yaml    
 
+def validate_flagger(flagger_blacklist, config_yaml, RESOURCES):
+    '''
+    Write flagger blacklist
+    Add flagger blacklist to config
+    '''
+    flagger_blacklist_dir=os.path.join(RESOURCES, 'flagger')
+    os.makedirs(flagger_blacklist_dir, exist_ok=True)
+    flagger_blacklist_out=os.path.join(flagger_blacklist_dir, 'flagger_blacklist.bed')
+    if flagger_blacklist is None:
+        open(flagger_blacklist_out, 'w').close()
+    else:
+        if not os.path.exists(flagger_blacklist):
+            print(f'Flagger blacklist file: {flagger_blacklist} does not exist!')
+            sys.exit(1)
+        if not os.access(flagger_blacklist, os.R_OK):
+            print(f'Flagger blacklist file: {flagger_blacklist} is not readable!')
+            sys.exit(1)
+        with open(flagger_blacklist, 'r') as fb_in, open(flagger_blacklist_out, 'w') as fb_out:
+            for line in fb_in:
+                ctg_id=line.split('\t')[0]
+                if len(ctg_id.split('#'))!=3:
+                    print(f'Flagger blacklist: {flagger_blacklist} contains contig {ctg_id} which does not follow PanSN-spec!')
+                    sys.exit(1)
+                fb_out.write(fb_in)
+    print(f'Wrote flagger blacklist file to {flagger_blacklist_out}!')    
+    config_yaml['blacklist'] = os.path.abspath(flagger_blacklist_out)
+    return config_yaml
+
 def write_config(config_yaml, config_out):
     '''
     Write config file
@@ -488,6 +516,7 @@ def setup_arg_parser():
     optional.add_argument('--pansn', help='PanSN prefix naming for the reference genome [grch38#1#]', metavar='', required=False, default='grch38#1#')
     optional.add_argument('--profile', help='snakemake profile, if available [None]', metavar='', required=False, default=None)
     optional.add_argument('--blacklist', help='list of contigs to blacklist - these will not be used during genotyping [None]', metavar='', required=False, default=None)
+    optional.add_argument('--flagger', help='regions to exclude for each contigs. This is a standard BED file, with contigs names matching those in -a [None]', metavar='', required=False, default=None)
     optional.add_argument('--conda', help='prepare for running using conda instead of singularity [False]', action='store_true')
     optional.add_argument('--threads', help='run snakemake using that many cores - ignored if using a profile [32]', metavar='', required=False, default=32)
     return parser
