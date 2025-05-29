@@ -38,7 +38,7 @@ rule cosigt:
 #USED TO REALIGN AND VISUALIZE CONTIG-TO-REF
 rule cosit_viz:
 		input:
-			list(cosig_viz)
+			list(cosigt_viz)
 
 #USED ONLY IN THE DEVELOPMENT STAGE
 rule cosigt_submasks:
