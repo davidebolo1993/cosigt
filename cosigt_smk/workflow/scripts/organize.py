@@ -578,6 +578,8 @@ def main():
     config=write_gtf(gtf_dict, config, RESOURCES)
     #blacklist
     config=validate_blacklist(args.blacklist, config, RESOURCES)
+    #flagger blaclist
+    config=validate_flagger(args.flagger, config, RESOURCES)
     
     #common paths to BIND for singularity
     paths=find_optimal_bindings(list(config['SINGULARITY_BIND']))
@@ -587,6 +589,7 @@ def main():
     config['samples'] = list(config['samples'])
     config['regions'] = list(config['regions'])
     write_config(config, os.path.join(CONFIG, 'config.yaml'))
+
 
     #write cosigt command
     cmd='#!/bin/bash\n'
