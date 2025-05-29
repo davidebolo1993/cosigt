@@ -117,7 +117,7 @@ rule samtools_faidx_besthaps_fasta:
 		'benchmarks/{sample}.{chr}.{region}.samtools_faidx_besthaps_fasta.benchmark.txt'
 	shell:
 		'''
-		samtools faidx -r <(grep {params.path} {input.fai} | awk '{{print $1":1-"$2}}') {input.fasta} > {output} \
+		samtools faidx -r <(grep {params.pansn} {input.fai} | awk '{{print $1":1-"$2}}') {input.fasta} > {output} \
 		&& samtools faidx -r <(grep $(cut -f 2 {input.geno} | tail -1) {input.fai} | awk '{{print $1":1-"$2}}') {input.fasta} >> {output} \
 		&& samtools faidx -r <(grep $(cut -f 3 {input.geno} | tail -1) {input.fai} | awk '{{print $1":1-"$2}}') {input.fasta} >> {output}
 		'''
