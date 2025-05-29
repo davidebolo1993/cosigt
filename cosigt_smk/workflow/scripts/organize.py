@@ -431,7 +431,7 @@ def validate_flagger(flagger_blacklist, config_yaml, RESOURCES):
                 if len(ctg_id.split('#'))!=3:
                     print(f'Flagger blacklist: {flagger_blacklist} contains contig {ctg_id} which does not follow PanSN-spec!')
                     sys.exit(1)
-                fb_out.write(fb_in)
+                fb_out.write(line)
     print(f'Wrote flagger blacklist file to {flagger_blacklist_out}!')    
     config_yaml['blacklist'] = os.path.abspath(flagger_blacklist_out)
     return config_yaml
