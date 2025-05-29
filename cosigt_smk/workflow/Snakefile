@@ -36,7 +36,7 @@ rule cosigt:
 		list(cosigt_input)
 
 #USED TO REALIGN AND VISUALIZE CONTIG-TO-REF
-rule cosit_viz:
+rule cosigt_viz:
 		input:
 			list(cosigt_viz)
 
