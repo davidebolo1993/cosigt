@@ -433,7 +433,7 @@ def validate_flagger(flagger_blacklist, config_yaml, RESOURCES):
                     sys.exit(1)
                 fb_out.write(line)
     print(f'Wrote flagger blacklist file to {flagger_blacklist_out}!')    
-    config_yaml['blacklist'] = os.path.abspath(flagger_blacklist_out)
+    config_yaml['flagger_blacklist'] = os.path.abspath(flagger_blacklist_out)
     return config_yaml
 
 def write_config(config_yaml, config_out):
