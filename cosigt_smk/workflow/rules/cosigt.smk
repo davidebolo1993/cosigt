@@ -181,5 +181,5 @@ rule plot_ava:
 			workflow/scripts/plotava.r \
 			{input} \
 			{output} \
-			{params.path}
+			{params.pansn}
 		'''
