@@ -3,7 +3,7 @@ rule bwamem2_index:
 	https://github.com/bwa-mem2/bwa-mem2
 	'''
 	input:
-		rules.samtools_faidx_extract.output
+		rules.bedtools_getfasta.output
 	output:
 		multiext(config['output'] + '/samtools/faidx/{chr}/{region}.fasta', '.bwt.2bit.64', '.pac', '.ann', '.amb', '.0123')	
 	threads:
@@ -28,7 +28,7 @@ rule bwamem2_mem_samtools_sort:
 	https://github.com/samtools/samtools
 	'''
 	input:
-		ref_fasta=rules.samtools_faidx_extract.output,
+		ref_fasta=rules.bedtools_getfasta.output,
 		ref_fai=rules.bwamem2_index.output,
 		sample_fasta=rules.samtools_fasta_mapped.output
 	output:
