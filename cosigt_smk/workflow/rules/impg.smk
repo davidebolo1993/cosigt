@@ -20,6 +20,7 @@ rule impg_project_batches:
 		'benchmarks/{chr}.{region}.{batch}.impg_project_batches.benchmark.txt'
 	params:
 		blacklist=config['blacklist'],
+		flagger_blacklist=config['flagger_blacklist'],
 		pansn=config['pansn_prefix']
 	shell:
 		'''
@@ -29,7 +30,13 @@ rule impg_project_batches:
 		-b <(awk -v var={params.pansn} '{{print var$1,$2,$3}}' OFS="\\t" {input.bed}) | \
 		grep -v \
 		-E \
-		-f {params.blacklist} || true) > {output}
+		-f {params.blacklist} | bedtools \
+		intersect \
+		-a - \
+		-b {params.flagger_blacklist} \
+		-F 0.20 \
+		-v \
+		-wa || true) > {output}
 		'''
 
 rule concatenate_batches_per_region:

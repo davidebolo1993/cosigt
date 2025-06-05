@@ -376,6 +376,7 @@ def write_gtf(gtf_dict, config_yaml, RESOURCES) -> dict:
     os.makedirs(gtf_dir, exist_ok=True)
     for k,v in gtf_dict.items():
         if k == 'NA':
+            config_yaml['annotations'] = k
             break
         else:
             os.symlink(v, os.path.join(gtf_dir,k))

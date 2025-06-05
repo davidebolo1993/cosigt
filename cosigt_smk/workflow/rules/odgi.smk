@@ -238,14 +238,14 @@ rule make_clusters:
 			$(cut -f 3 {params.threshold_file} | tail -1)
 		'''
 
-rule odgi_viz:
+rule viz_odgi:
 	'''
-	https://github.com/pangenome/odgi
-	this is going to change once we can cluster odgi viz directly
+	https://github.com/davidebolo1993/cosigt
 	'''
 	input:
-		og=rules.pggb_construct.output,
-		json=rules.make_clusters.output
+		graph_cov=rules.graph_cov.output,
+		json=rules.make_clusters.output,
+		nodes_length=rules.get_nodes_length.output
 	output:
 		config['output'] + '/odgi/viz/{chr}/{region}.png'
 	threads:
@@ -254,20 +254,19 @@ rule odgi_viz:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://pangenome/odgi:1745375412'
+		'docker://davidebolo1993/renv:4.3.3'
 	conda:
-		'../envs/odgi.yaml'
+		'../envs/r.yaml'
 	benchmark:
-		'benchmarks/{chr}.{region}.odgi_viz.benchmark.txt'
-	params:
-		tsv=config['output'] + '/cluster/{chr}/{region}.clusters.tsv'
+		'benchmarks/{chr}.{region}.viz_odgi.benchmark.txt'
 	shell:
 		'''
-		odgi viz \
-		-i {input.og} \
-		-p <(cut -f 1 {params.tsv} | tail -n+2) \
-		-m \
-		-o {output}
+		Rscript \
+			workflow/scripts/viz_odgi.r \
+			{input.graph_cov} \
+			{input.json} \
+			{input.nodes_length} \
+			{output}
 		'''
 
 rule subset_gtf:

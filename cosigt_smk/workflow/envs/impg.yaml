@@ -3,3 +3,4 @@ channels:
  - bioconda
 dependencies:
   - impg=0.2.3
+  - bedtools=2.31.0

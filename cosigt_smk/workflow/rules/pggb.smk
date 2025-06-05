@@ -30,7 +30,6 @@ rule pggb_construct:
 			-o {params.prefix} \
 			-t {threads} \
 			-D {params.tmpdir} \
-			-n $(wc -l {input.fai}) \
 			{params.flags} \
 		&& mv {params.prefix}/*smooth.final.og {output}
 		rm -rf {params.tmpdir}
