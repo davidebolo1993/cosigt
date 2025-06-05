@@ -3,7 +3,7 @@ rule pggb_construct:
 	https://github.com/pangenome/pggb
 	'''
 	input:
-		fasta=rules.samtools_faidx_extract.output,
+		fasta=rules.bedtools_getfasta.output,
 		fai=rules.samtools_faidx_index.output
 	output:
 		config['output'] + '/pggb/{chr}/{region}.og'

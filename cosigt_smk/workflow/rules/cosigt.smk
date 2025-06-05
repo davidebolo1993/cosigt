@@ -98,7 +98,7 @@ rule samtools_faidx_besthaps_fasta:
 	'''
 	input:
 		geno=rules.cosigt_genotype.output.geno,
-		fasta=rules.samtools_faidx_extract.output,
+		fasta=rules.bedtools_getfasta.output,
 		fai=rules.samtools_faidx_index.output
 	output:
 		config['output'] + '/cosigt/{sample}/{chr}/{region}/viz_files/haplotypes.fasta',
