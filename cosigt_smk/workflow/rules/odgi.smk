@@ -243,7 +243,7 @@ rule viz_odgi:
 	https://github.com/davidebolo1993/cosigt
 	'''
 	input:
-		graph_cov=rules.graph_cov.output,
+		graph_cov=rules.odgi_paths_matrix.output,
 		json=rules.make_clusters.output,
 		nodes_length=rules.get_nodes_length.output
 	output:
