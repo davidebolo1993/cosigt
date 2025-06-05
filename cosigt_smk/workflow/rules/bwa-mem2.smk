@@ -107,7 +107,7 @@ rule wally_viz_alignments:
 	'''
 	input:
 		bed=rules.make_wally_plot_bed.output,
-		fasta=rules.samtools_faidx_extract.output,
+		fasta=rules.bedtools_getfasta.output,
 		sample=rules.bwamem2_mem_samtools_sort.output,
 		sample_index=rules.samtools_index_realigned_bam.output
 	output:
