@@ -264,8 +264,8 @@ rule viz_odgi:
 		Rscript \
 			workflow/scripts/viz_odgi.r \
 			{input.graph_cov} \
-			{input.json} \
 			{input.nodes_length} \
+			{input.json} \
 			{output}
 		'''
 
