@@ -63,7 +63,7 @@ viz_data <- viz_data %>%
   ungroup()
 
 # Function to add padding for small clusters and center haplotypes + add facet padding for all clusters
-add_cluster_padding <- function(data, min_size = 3) {
+add_cluster_padding <- function(data, min_size = 1) {
   # Count paths per cluster
   cluster_counts <- data %>%
     group_by(cluster) %>%
@@ -183,7 +183,7 @@ add_cluster_padding <- function(data, min_size = 3) {
 }
 
 # Apply padding
-viz_data <- add_cluster_padding(viz_data, min_size = 3)
+viz_data <- add_cluster_padding(viz_data, min_size = 1)
 
 # Order clusters and add spacing
 cluster_order <- sort(unique(viz_data$cluster))
