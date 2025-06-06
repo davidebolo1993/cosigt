@@ -190,7 +190,7 @@ cluster_order <- sort(unique(viz_data$cluster))
 viz_data$cluster_num <- match(viz_data$cluster, cluster_order)
 
 # Add vertical spacing between clusters with proper centering
-cluster_spacing <- 2
+cluster_spacing <- 1
 
 # First, create a proper path ordering within each cluster
 path_order_df <- viz_data %>%
@@ -247,7 +247,7 @@ path_labels <- path_order_df %>%
 p <- ggplot(viz_data, aes(x = start_pos, xend = end_pos, 
                            y = y_pos, yend = y_pos, 
                            color = coverage)) +
-    geom_segment(linewidth = 4) +
+    geom_segment(linewidth = 5) +
     # Custom color scale based on coverage values
     scale_color_gradient2(na.value = "transparent") +  # Make padding invisible
     # Add y-axis with haplotype names
@@ -274,4 +274,4 @@ p <- ggplot(viz_data, aes(x = start_pos, xend = end_pos,
       panel.grid.minor.y = element_blank()
     )
 
-ggsave(args[4], width=30, height=max(5, 0.5*length(unique(viz_data$path_name))))
+ggsave(args[4], width=30, height=max(5, 0.2*length(unique(viz_data$path_name))), limitsize=FALSE)
