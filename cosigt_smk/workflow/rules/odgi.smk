@@ -101,7 +101,6 @@ def get_submasks(wildcards):
 	submask_files = glob(checkpoint_output + '/*tsv')
 	return [os.path.basename(f).split('.')[0] for f in submask_files]
 
-
 rule odgi_dissimilarity_submasks:
 	'''
 	https://github.com/pangenome/odgi
