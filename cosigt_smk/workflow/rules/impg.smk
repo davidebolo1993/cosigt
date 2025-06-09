@@ -6,7 +6,8 @@ rule impg_project_batches:
 		paf=rules.wfmash_align_batches.output,
 		bed=lambda wildcards: glob('resources/regions/{chr}/{region}.bed'.format(chr=wildcards.chr, region=wildcards.region))
 	output:
-		config['output'] + '/impg/{chr}/batches/{region}/{batch}.bedpe'
+		unfiltered=config['output'] + '/impg/{chr}/batches/{region}/{batch}.bedpe',
+		filtered=config['output'] + '/impg/{chr}/batches/{region}/{batch}.filtered.bedpe'
 	threads:
 		1
 	resources:
@@ -21,7 +22,8 @@ rule impg_project_batches:
 	params:
 		blacklist=config['blacklist'],
 		flagger_blacklist=config['flagger_blacklist'],
-		pansn=config['pansn_prefix']
+		pansn=config['pansn_prefix'],
+		region='{region}'
 	shell:
 		'''
 		(impg \
@@ -36,7 +38,8 @@ rule impg_project_batches:
 		-b {params.flagger_blacklist} \
 		-F 0.20 \
 		-v \
-		-wa || true) > {output}
+		-wa || true) > {output.unfiltered}
+		sh workflow/scripts/check_flanks.sh {output.unfiltered} {params.region} 0.1 > {output.filtered}
 		'''
 
 rule concatenate_batches_per_region:
@@ -44,7 +47,7 @@ rule concatenate_batches_per_region:
 	https://github.com/davidebolo1993/cosigt
 	'''
 	input:
-		lambda wildcards: expand(config['output'] + '/impg/{chr}/batches/{region}/{batch}.bedpe', chr='{chr}', region='{region}', batch=get_batches(wildcards))
+		lambda wildcards: expand(config['output'] + '/impg/{chr}/batches/{region}/{batch}.filtered.bedpe', chr='{chr}', region='{region}', batch=get_batches(wildcards))
 	output:
 		config['output'] + '/impg/{chr}/merged/{region}.bedpe'
 	threads:

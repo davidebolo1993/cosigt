@@ -15,14 +15,14 @@ coverage_file<-args[1]
 node_length_file<-args[2]
 cluster_file<-args[3]
 
-#mode nodes
+#mod nodes
 pad_node_ids <- function(ids) {
   node_nums <- as.integer(sub("node\\.", "", ids))
   sprintf("node.%06d", node_nums)
 }
 
 #read inputs
-#pangenome coverage over nodes, 
+#pangenome coverage over nodes 
 coverage_data <- fread(coverage_file, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
 coverage_long <- coverage_data %>%
     pivot_longer(cols = -path.name, names_to = "node_id", values_to = "coverage") %>%
@@ -50,10 +50,8 @@ clustering_df <- data.frame(
 viz_data <- merge(coverage_long, length_df, by = "node_id")
 viz_data <- merge(viz_data, clustering_df, by = "path_name", all.x = TRUE)
 
-# Calculate cumulative positions for each path
-# FIXED: Sort by node_id first to maintain genomic order
 viz_data <- viz_data %>%
-  arrange(node_id, path_name) %>%  # Changed from arrange(path_name, node_id)
+  arrange(node_id, path_name) %>% 
   group_by(path_name) %>%
   mutate(
     cumulative_length = cumsum(length),
@@ -63,6 +61,7 @@ viz_data <- viz_data %>%
   ungroup()
 
 # Function to add padding for small clusters and center haplotypes + add facet padding for all clusters
+# THIS WAS BUILT WITH THE HELP OF CLAUDE
 add_cluster_padding <- function(data, min_size = 1) {
   # Count paths per cluster
   cluster_counts <- data %>%
@@ -185,14 +184,11 @@ add_cluster_padding <- function(data, min_size = 1) {
 # Apply padding
 viz_data <- add_cluster_padding(viz_data, min_size = 1)
 
-# Order clusters and add spacing
 cluster_order <- sort(unique(viz_data$cluster))
 viz_data$cluster_num <- match(viz_data$cluster, cluster_order)
 
-# Add vertical spacing between clusters with proper centering
 cluster_spacing <- 1
 
-# First, create a proper path ordering within each cluster
 path_order_df <- viz_data %>%
   select(cluster, path_name) %>%
   distinct() %>%
@@ -219,7 +215,6 @@ path_order_df <- viz_data %>%
   mutate(path_order_in_cluster = row_number()) %>%
   ungroup()
 
-# Calculate cluster offsets (no need for extra facet_padding here since we're adding actual padding rows)
 cluster_sizes <- path_order_df %>%
   group_by(cluster) %>%
   summarise(cluster_size = max(path_order_in_cluster), .groups = "drop") %>%
@@ -228,43 +223,39 @@ cluster_sizes <- path_order_df %>%
     cluster_offset = cumsum(lag(cluster_size + cluster_spacing, default = 0))
   )
 
-# Merge back and calculate final y positions
 path_order_df <- path_order_df %>%
   left_join(cluster_sizes, by = "cluster") %>%
   mutate(y_pos = cluster_offset + path_order_in_cluster)
 
-# Merge y positions back to main data
 viz_data <- viz_data %>%
   left_join(path_order_df %>% select(cluster, path_name, y_pos), by = c("cluster", "path_name"))
 
-# Create labels dataframe for y-axis (only for real haplotypes, exclude all padding)
 path_labels <- path_order_df %>%
   filter(!grepl("__PADDING|__FACET_PADDING", path_name)) %>%  # Exclude all padding paths
   select(path_name, y_pos, cluster) %>%
   arrange(y_pos)
 
-#viz
+#actual viz
 p <- ggplot(viz_data, aes(x = start_pos, xend = end_pos, 
                            y = y_pos, yend = y_pos, 
                            color = coverage)) +
     geom_segment(linewidth = 5) +
-    # Custom color scale based on coverage values
-    scale_color_gradient2(na.value = "transparent") +  # Make padding invisible
-    # Add y-axis with haplotype names
+    #Andrea asked for this
+    scale_color_gradientn(
+      colours = colorRampPalette(rev(brewer.pal(11, "Spectral")))(100),
+      na.value = "transparent"
+    ) +
     scale_y_continuous(
       breaks = path_labels$y_pos,
       labels = path_labels$path_name,
       expand = c(0.02, 0.02)
     ) +
-    # Facet by cluster with spacing
     facet_grid(cluster ~ ., scales = "free_y", space = "free_y") +
-    # Labels
     labs(
       x = "Genomic Position",
       y = "Haplotypes",
       color = "Coverage"
     ) +
-    # Theme similar to odgi viz
     theme_minimal() +
     theme_bw() +
     theme(

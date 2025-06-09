@@ -5,7 +5,7 @@ rule bedtools_merge:
 	input:
 		rules.concatenate_batches_per_region.output
 	output:
-		config['output'] + '/bedtools/{chr}/unfiltered/{region}.bed'
+		config['output'] + '/bedtools/{chr}/{region}.bed'
 	threads:
 		1
 	resources:
