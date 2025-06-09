@@ -236,27 +236,32 @@ path_labels <- path_order_df %>%
   arrange(y_pos)
 
 
-custom_colors <- c(
-  "white",                     # coverage = 0
-  "grey60",                    # coverage = 1
-  colorRampPalette(brewer.pal(11, "Spectral"))(100)  # coverage >= 2
+spectral_colors <- brewer.pal(11, "Spectral")  # 11-color spectral
+max_cov_palette <- 2 + length(spectral_colors) - 1  # max coverage before clamping
+
+color_map <- c(
+  "0" = "white",
+  "1" = "grey60"
 )
 
-values <- c(0, 1, seq(2, max(viz_data$coverage, na.rm=TRUE), length.out = 100))
+for (i in 2:max_cov_palette) {
+  color_map[as.character(i)] <- spectral_colors[i - 1]  # offset by 1
+}
 
+#mod viz data
+viz_data$coverage_clamped <- as.character(
+  ifelse(viz_data$coverage >= max_cov_palette, max_cov_palette, viz_data$coverage)
+)
 
 #actual viz
 p <- ggplot(viz_data, aes(x = start_pos, xend = end_pos, 
                            y = y_pos, yend = y_pos, 
-                           color = coverage)) +
+                           color = coverage_clamped)) +
     geom_segment(linewidth = 5) +
     #Andrea asked for this
-    scale_color_gradientn(
-      colors = custom_colors,
-      values = scales::rescale(values),
-      na.value = "transparent",
-      limits = c(0, max(viz_data$coverage, na.rm=TRUE)),
-      oob = scales::squish
+    scale_color_manual(
+      values = color_map,
+      na.value = "transparent"
     ) +
     scale_y_continuous(
       breaks = path_labels$y_pos,
@@ -275,7 +280,8 @@ p <- ggplot(viz_data, aes(x = start_pos, xend = end_pos,
       axis.text.y = element_text(size = 8),
       strip.text.y = element_text(angle = 0, hjust = 0),
       panel.grid.major.y = element_blank(),
-      panel.grid.minor.y = element_blank()
+      panel.grid.minor.y = element_blank(),
+      legend.position="none"
     )
 
 ggsave(args[4], width=30, height=max(5, 0.2*length(unique(viz_data$path_name))), limitsize=FALSE)
