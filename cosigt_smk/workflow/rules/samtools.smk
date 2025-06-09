@@ -41,7 +41,7 @@ rule samtools_faidx_index:
 	input:
 		rules.bedtools_getfasta.output
 	output:
-		config['output'] + '/samtools/faidx/{chr}/{region}.fasta.fai'
+		config['output'] + '/bedtools/getfasta/{chr}/{region}.fasta.fai'
 	threads:
 		1
 	resources:
