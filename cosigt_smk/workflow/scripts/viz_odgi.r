@@ -235,6 +235,16 @@ path_labels <- path_order_df %>%
   select(path_name, y_pos, cluster) %>%
   arrange(y_pos)
 
+
+custom_colors <- c(
+  "white",                     # coverage = 0
+  "grey60",                    # coverage = 1
+  colorRampPalette(brewer.pal(11, "Spectral"))(100)  # coverage >= 2
+)
+
+values <- c(0, 1, seq(2, max(viz_data$coverage, na.rm=TRUE), length.out = 100))
+
+
 #actual viz
 p <- ggplot(viz_data, aes(x = start_pos, xend = end_pos, 
                            y = y_pos, yend = y_pos, 
@@ -242,8 +252,11 @@ p <- ggplot(viz_data, aes(x = start_pos, xend = end_pos,
     geom_segment(linewidth = 5) +
     #Andrea asked for this
     scale_color_gradientn(
-      colours = colorRampPalette(rev(brewer.pal(11, "Spectral")))(100),
-      na.value = "transparent"
+      colors = custom_colors,
+      values = scales::rescale(values),
+      na.value = "transparent",
+      limits = c(0, max(viz_data$coverage, na.rm=TRUE)),
+      oob = scales::squish
     ) +
     scale_y_continuous(
       breaks = path_labels$y_pos,
