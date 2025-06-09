@@ -34,7 +34,7 @@ rule impg_project_batches:
 		-b <(awk -v var={params.pansn} '{{print var$1,$2,$3}}' OFS="\\t" {input.bed}) > {output.unfiltered}
 		(grep -v \
 		-E \
-		-f {params.blacklist} | bedtools \
+		-f {params.blacklist} {output.unfiltered} | bedtools \
 		intersect \
 		-a - \
 		-b {params.flagger_blacklist} \
