@@ -268,6 +268,34 @@ def read_gtf(gtf_file) -> dict():
         print(f'Loaded gtf file {gtf_file}!')    
     return gtf_dict
 
+def read_proteins(proteins_file) -> dict():
+    '''
+    Read and validate proteins sequences
+    '''
+    proteins_dict=dict()
+    if proteins_file is None:
+        proteins_dict['NA'] = 'NA'
+    else:
+        if not os.path.exists(proteins_file):
+            print(f'Proteins FASTA file: {proteins_file} does not exist!')
+            sys.exit(1)
+        if not os.access(proteins_file, os.R_OK):
+            print(f'Proteins FASTA file: {proteins_file} is not readable!')
+            sys.exit(1)
+        if not proteins_file.endswith('.fasta') and not proteins_file.endswith('.fa') and not proteins_file.endswith('.fasta.gz') and not proteins_file.endswith('.fa.gz') and not proteins_file.endswith('.fna') and not proteins_file.endswith('.fna.gz'):
+            print(f'Proteins FASTA file: {proteins_file} is not in the expected format (.fa/.fasta/.fna/.fa.gz/.fasta.gz/.fna.gz)!')
+            sys.exit(1)
+        if not os.path.exists(proteins_file + '.fai'):
+            print(f'Proteins FASTA file: {proteins_file} is not indexed - expected .fai; samtools faidx {proteins_file} and retry!')
+            sys.exit(1)
+        if proteins_file.endswith('.fasta.gz') or proteins_file.endswith('.fa.gz') or proteins_file.endswith('.fna.gz'):
+            if not os.path.exists(proteins_file + '.gzi'):
+                print(f'Proteins FASTA file: {proteins_file} is not indexed - expected .gzi; samtools faidx {proteins_file} and retry!')
+                return False
+        proteins_dict[os.path.basename(proteins_file)]=os.path.abspath(proteins_file)
+        print(f'Loaded proteins FASTA file {proteins_file}!')    
+    return proteins_dict
+
 def validate_output(output_folder, config_yaml) -> dict():
     '''
     Validate output folder
@@ -376,13 +404,34 @@ def write_gtf(gtf_dict, config_yaml, RESOURCES) -> dict:
     os.makedirs(gtf_dir, exist_ok=True)
     for k,v in gtf_dict.items():
         if k == 'NA':
-            config_yaml['annotations'] = k
+            config_yaml['gtf'] = k
             break
         else:
             os.symlink(v, os.path.join(gtf_dir,k))
-            config_yaml['annotations'] = os.path.join(os.path.abspath(gtf_dir),k)
+            config_yaml['gtf'] = os.path.join(os.path.abspath(gtf_dir),k)
             config_yaml['SINGULARITY_BIND'].add(os.path.dirname(v))
     print(f'Added gtf to {gtf_dir}!')
+    return config_yaml
+
+def write_proteins(proteins_dict, config_yaml, RESOURCES) -> dict:
+    '''
+    Write proteins fasta to resources/annotations
+    Add proteins to config   
+    '''
+    proteins_dir=os.path.join(RESOURCES, 'annotations')
+    os.makedirs(proteins_dir, exist_ok=True)
+    for k,v in proteins_dict.items():
+        if k == 'NA':
+            config_yaml['proteins'] = k
+            break
+        else:
+            os.symlink(v, os.path.join(proteins_dir,k))
+            os.symlink(v + '.fai', os.path.join(proteins_dir,k + '.fai'))
+            if v.endswith('gz'):
+                os.symlink(v + '.gzi', os.path.join(proteins_dir,k + '.gzi'))
+            config_yaml['proteins'] = os.path.join(os.path.abspath(proteins_dir),k)
+            config_yaml['SINGULARITY_BIND'].add(os.path.dirname(v))
+    print(f'Added proteins to {proteins_dir}!')
     return config_yaml
 
 def validate_blacklist(blacklist, config_yaml, RESOURCES):
@@ -512,12 +561,13 @@ def setup_arg_parser():
     required.add_argument('-o', '--output', help='output folder. This is where results from cosigt pipeline will be stored', metavar='FOLDER', required=True)
     optional = parser.add_argument_group('Optional arguments')
     optional.add_argument('--map', help='tab-separated file mapping each alignment file (1st column) to an id (2nd column). Guess the name removing file extension otherwise [None]', metavar='', required=False, default=None)
-    optional.add_argument('--gtf', help='GTF file for the reference genome in -g [None]', metavar='', required=False, default=None)
+    optional.add_argument('--gtf', help='Gene annotation on the reference chromosomes in GTF format [None]', metavar='', required=False, default=None)
+    optional.add_argument('--proteins', help='Protein-coding transcript translation sequences in FASTA format.  FASTA can be bgzip-compressed and must be indexed [None]', metavar='', required=False, default=None)
     optional.add_argument('--tmp', help='tmp directory. Will be used by tools for which a tmp directory can be specified [/tmp]', metavar='', required=False, default='/tmp')
     optional.add_argument('--pansn', help='PanSN prefix naming for the reference genome [grch38#1#]', metavar='', required=False, default='grch38#1#')
     optional.add_argument('--profile', help='snakemake profile, if available [None]', metavar='', required=False, default=None)
     optional.add_argument('--blacklist', help='list of contigs to blacklist - these will not be used during genotyping [None]', metavar='', required=False, default=None)
-    optional.add_argument('--flagger', help='regions to exclude for each contigs. This is a standard BED file, with contigs names matching those in -a [None]', metavar='', required=False, default=None)
+    optional.add_argument('--flagger', help='regions to exclude for each contigs. This is a standard BED file coming from flagger, with contigs names matching those of the assemblies in -a [None]', metavar='', required=False, default=None)
     optional.add_argument('--conda', help='prepare for running using conda instead of singularity [False]', action='store_true')
     optional.add_argument('--threads', help='run snakemake using that many cores - ignored if using a profile [32]', metavar='', required=False, default=32)
     return parser
@@ -535,6 +585,12 @@ def main():
     os.makedirs(RESOURCES, exist_ok=True)
     CONFIG=os.path.join(BASE, 'config')
     os.makedirs(CONFIG, exist_ok=True)
+
+    #check conflicts
+
+    if (args.gtf is None and args.proteins is not None) or (args.gtf is not None and args.proteins is None):
+        print(f"When providing argument to --gtf, also an argument to --proteins must be specified")
+        sys.exit(1)
 
     if os.path.isdir(RESOURCES):
         if os.listdir(RESOURCES):
@@ -563,6 +619,9 @@ def main():
     genome_dict=read_genome(os.path.abspath(args.genome))
     #print(genome_dict)
     gtf_dict=read_gtf(args.gtf)
+    #print(gtf_dict)
+    proteins_dict=read_proteins(args.proteins)
+    #print(proteins_dict)
     #output
     config=validate_output(os.path.abspath(args.output), config)
 
@@ -577,6 +636,7 @@ def main():
     config=write_reference(genome_dict, config, RESOURCES)
     #annotations
     config=write_gtf(gtf_dict, config, RESOURCES)
+    config=write_proteins(proteins_dict, config, RESOURCES)
     #blacklist
     config=validate_blacklist(args.blacklist, config, RESOURCES)
     #flagger blaclist
@@ -590,7 +650,6 @@ def main():
     config['samples'] = list(config['samples'])
     config['regions'] = list(config['regions'])
     write_config(config, os.path.join(CONFIG, 'config.yaml'))
-
 
     #write cosigt command
     cmd='#!/bin/bash\n'

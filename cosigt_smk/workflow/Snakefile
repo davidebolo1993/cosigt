@@ -7,6 +7,7 @@ include: 'rules/bedtools.smk'
 include: 'rules/samtools.smk'
 include: 'rules/pggb.smk'
 include: 'rules/odgi.smk'
+include: 'rules/pangene.smk'
 include: 'rules/bwa-mem2.smk'
 include: 'rules/gfainject.smk'
 include: 'rules/gafpack.smk'
@@ -27,8 +28,8 @@ for region in config['regions']:
 		cosigt_viz.add(config['output'] + '/cosigt/' + sample + '/' + chr + '/' + region + '/ava.pdf')
 	cosigt_input.add(config['output'] + '/odgi/viz/' + chr + '/' + region + '.png')
 	cosigt_submasks.add(config['output'] + '/odgi/dissimilarity/' + chr + '/' + region + '/submasks.done')
-	if config['annotations'] != 'NA':
-		cosigt_input.add(config['output'] + '/odgi/untangle/' + chr + '/' + region + '.gggenes.pdf')
+	if config['gtf'] != 'NA' and config['proteins'] != 'NA':
+		cosigt_input.add(config['output'] + '/pangene/viz/' + chr + '/' + region + '/genes.png')
 	cosigt_benchmark.add(config['output'] + '/benchmark/tpr.edr.png')
 
 rule cosigt:
