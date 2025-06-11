@@ -274,7 +274,6 @@ p <- ggplot(viz_data, aes(x = start_pos, xend = end_pos,
       y = "Haplotypes",
       color = "Coverage"
     ) +
-    theme_minimal() +
     theme_bw() +
     theme(
       axis.text.y = element_text(size = 8),

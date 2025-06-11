@@ -88,26 +88,47 @@ rule pangene_graph:
 		pangene {input} --bed > {output}
 		'''
 
-rule pangene_viz:
+rule pangene_graph_to_bed:
 	'''
 	https://github.com/davidebolo1993/cosigt
 	'''
 	input:
 		rules.pangene_graph.output
 	output:
+		config['output'] + '/pangene/viz/{chr}/{region}/plot.bed'
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+	benchmark:
+		'benchmarks/{chr}.{region}.pangene_graph_to_bed.benchmark.txt'
+	shell:
+		'''
+		sh workflow/scripts/convert_bed.sh {input} > {output}
+		'''
+
+rule pangene_viz:
+	'''
+	https://github.com/davidebolo1993/cosigt
+	'''
+	input:
+		bed=rules.pangene_graph_to_bed.output,
+		json=rules.make_clusters.output
+	output:
 		config['output'] + '/pangene/viz/{chr}/{region}/genes.png'
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://davidebolo1993/pangene:1.1'
+		'docker://davidebolo1993/renv:4.3.3'
 	conda:
-		'../envs/pangene.yaml'
+		'../envs/r.yaml'
 	benchmark:
 		'benchmarks/{chr}.{region}.pangene_viz.benchmark.txt'
 	shell:
 		'''
-		touch {output}
+		Rscript workflow/scripts/plotgggenes.r {input.bed} {input.json} {output}
 		'''
