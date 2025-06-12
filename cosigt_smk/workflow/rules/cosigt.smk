@@ -161,7 +161,7 @@ rule plot_ava:
 	input:
 		rules.minimap2_ava.output
 	output:
-		config['output'] + '/cosigt/{sample}/{chr}/{region}/ava.pdf',
+		config['output'] + '/cosigt/{sample}/{chr}/{region}/ava.png',
 	threads:
 		1
 	resources:

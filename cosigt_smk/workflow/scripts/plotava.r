@@ -5,7 +5,7 @@ args <- commandArgs(trailingOnly = TRUE)
 library(SVbyEye)
 
 input_paf<-args[1]
-output_pdf<-args[2]
+output_png<-args[2]
 ref_path<-args[3]
 
 #read
@@ -24,11 +24,11 @@ for (i in c(1:length(seqnames))) {
         pltlist[[simplify]]<-plotMiro(paf.table = sub.sub.paf, binsize = 1000)
 }
 for (l in c(1:length(pltlist))) {
-        pdf(file.path(dirname(output_pdf),paste0(names(pltlist)[l], "_to_", ref_path, ".pdf")), width=20, height=5)
+        pdf(file.path(dirname(output_png),paste0(names(pltlist)[l], "_to_", ref_path, ".pdf")), width=20, height=5)
         print(pltlist[[l]])
         dev.off()
 }
 #plot all vs all
-pdf(output_pdf, width=20, height=10)
-plotAVA(paf.table = paf.table, binsize=5000)
+pdf(output_png, width=20, height=10)
+plotAVA(paf.table = paf.table, binsize=1000)
 dev.off()
