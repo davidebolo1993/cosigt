@@ -35,6 +35,8 @@ if (any(annot_tsv$V4 != "unkown")) {
   #match annotation in that case
   data_long$region <- annot_tsv$V4[match(data_long$pos, annot_tsv$id)]
 }
+# Filter to only keep regions that are in the annotation file
+data_long <- data_long %>% filter(pos %in% annot_tsv$id)
 
 #calculate tpr_per_region
 tpr_summary <- data_long %>%
