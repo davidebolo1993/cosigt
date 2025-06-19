@@ -246,7 +246,7 @@ rule viz_odgi:
 		json=rules.make_clusters.output,
 		nodes_length=rules.get_nodes_length.output
 	output:
-		config['output'] + '/odgi/viz/{chr}/{region}.png'
+		config['output'] + '/odgi/viz/{chr}/{region}/{region}_viz.png'
 	threads:
 		1
 	resources:

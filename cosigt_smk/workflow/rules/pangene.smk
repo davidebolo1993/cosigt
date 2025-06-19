@@ -114,9 +114,10 @@ rule pangene_viz:
 	'''
 	input:
 		bed=rules.pangene_graph_to_bed.output,
+		fai=rules.samtools_faidx_index.output,
 		json=rules.make_clusters.output
 	output:
-		config['output'] + '/pangene/viz/{chr}/{region}/genes.png'
+		config['output'] + '/pangene/viz/{chr}/{region}/{region}_genes.png'
 	threads:
 		1
 	resources:
@@ -130,5 +131,5 @@ rule pangene_viz:
 		'benchmarks/{chr}.{region}.pangene_viz.benchmark.txt'
 	shell:
 		'''
-		Rscript workflow/scripts/plotgggenes.r {input.bed} {input.json} {output}
+		Rscript workflow/scripts/plotgggenes.r {input.bed} {input.json} {input.fai} {output}
 		'''

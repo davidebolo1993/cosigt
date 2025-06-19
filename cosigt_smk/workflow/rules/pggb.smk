@@ -2,6 +2,9 @@ import math
 import os
 
 def parse_fai_and_set_flags(fai_input):
+	'''
+	Dynamically set flags to pggb
+	'''
 
 	#this stuff should be namedlist, but need to check
 	if hasattr(fai_input, 'fai'):

@@ -22,17 +22,17 @@ cosigt_viz=set()
 refine_input=set()
 
 for region in config['regions']:
-	chr=region.split('_')[0]
+	chrom=region.split('_')[0]
 	for sample in config['samples']:
-		cosigt_input.add(config['output'] + '/cosigt/' + sample + '/' + chr + '/' + region + '/cosigt_genotype.tsv')
-		cosigt_submasks.add(config['output'] + '/cosigt/' + sample + '/' +  chr + '/' + region + '/submasks.done')
-		cosigt_input.add(config['output'] + '/wally/' + sample + '/' + chr + '/' + region + '/wally.done')
-		cosigt_viz.add(config['output'] + '/cosigt/' + sample + '/' + chr + '/' + region + '/ava.png')
-	cosigt_input.add(config['output'] + '/odgi/viz/' + chr + '/' + region + '.png')
-	cosigt_submasks.add(config['output'] + '/odgi/dissimilarity/' + chr + '/' + region + '/submasks.done')
-	refine_input.add(config['output'] + '/refine/' + chr + '/' + region + '/roi_refined.bed')
+		cosigt_input.add(config['output'] + '/cosigt/' + sample + '/' + chrom + '/' + region + '/cosigt_genotype.tsv')
+		cosigt_submasks.add(config['output'] + '/cosigt/' + sample + '/' +  chrom + '/' + region + '/submasks.done')
+		cosigt_input.add(config['output'] + '/wally/' + sample + '/' + chrom + '/' + region + '/wally.done')
+		cosigt_viz.add(config['output'] + '/cosigt/' + sample + '/' + chrom + '/' + region + '/ava.png')
+	cosigt_input.add(config['output'] + '/odgi/viz/' + chrom + '/' + region + '/' + region + '_viz.png')
+	cosigt_submasks.add(config['output'] + '/odgi/dissimilarity/' + chrom + '/' + region + '/submasks.done')
+	refine_input.add(config['output'] + '/refine/' + chrom + '/' + region + '/roi_refined.bed')
 	if config['gtf'] != 'NA' and config['proteins'] != 'NA':
-		cosigt_input.add(config['output'] + '/pangene/viz/' + chr + '/' + region + '/genes.png')
+		cosigt_input.add(config['output'] + '/pangene/viz/' + chrom + '/' + region + '/' + region + '_genes.png')
 	cosigt_benchmark.add(config['output'] + '/benchmark/tpr.edr.png')
 
 #COSIGT COMMAND
