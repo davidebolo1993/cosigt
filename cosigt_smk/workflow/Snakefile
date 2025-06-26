@@ -16,7 +16,6 @@ include: 'rules/benchmark.smk'
 include: 'rules/refine.smk'
 
 cosigt_input=set()
-cosigt_submasks=set()
 cosigt_benchmark=set()
 cosigt_viz=set()
 refine_input=set()
@@ -24,15 +23,13 @@ refine_input=set()
 for region in config['regions']:
 	chrom=region.split('_')[0]
 	for sample in config['samples']:
-		cosigt_input.add(config['output'] + '/cosigt/' + sample + '/' + chrom + '/' + region + '/cosigt_genotype.tsv')
-		cosigt_submasks.add(config['output'] + '/cosigt/' + sample + '/' +  chrom + '/' + region + '/submasks.done')
+		cosigt_input.add(config['output'] + '/cosigt/' + sample + '/' + chrom + '/' + region + '/' + region + '.cosigt_genotype.tsv')
 		cosigt_input.add(config['output'] + '/wally/' + sample + '/' + chrom + '/' + region + '/wally.done')
-		cosigt_viz.add(config['output'] + '/cosigt/' + sample + '/' + chrom + '/' + region + '/ava.png')
-	cosigt_input.add(config['output'] + '/odgi/viz/' + chrom + '/' + region + '/' + region + '_viz.png')
-	cosigt_submasks.add(config['output'] + '/odgi/dissimilarity/' + chrom + '/' + region + '/submasks.done')
-	refine_input.add(config['output'] + '/refine/' + chrom + '/' + region + '/roi_refined.bed')
+		cosigt_viz.add(config['output'] + '/cosigt/' + sample + '/' + chrom + '/' + region + '/viz/' + region + '.ava.png')
+	cosigt_input.add(config['output'] + '/odgi/viz/' + chrom + '/' + region + '/' + region + '.viz.png')
+	refine_input.add(config['output'] + '/refine/regions_refined.bed')
 	if config['gtf'] != 'NA' and config['proteins'] != 'NA':
-		cosigt_input.add(config['output'] + '/pangene/viz/' + chrom + '/' + region + '/' + region + '_genes.png')
+		cosigt_input.add(config['output'] + '/pangene/viz/' + chrom + '/' + region + '/' + region + '.genes.png')
 	cosigt_benchmark.add(config['output'] + '/benchmark/tpr.edr.png')
 
 #COSIGT COMMAND
@@ -47,14 +44,8 @@ rule refine:
 
 #USED TO REALIGN AND VISUALIZE CONTIG-TO-REF
 rule cosigt_viz:
-		input:
-			list(cosigt_viz)
-
-#USED ONLY IN THE DEVELOPMENT STAGE
-rule cosigt_submasks:
 	input:
-		list(cosigt_input),
-		list(cosigt_submasks)
+		list(cosigt_viz)
 
 #USED ONLY FOR BENCHAMRKING
 rule benchmark:

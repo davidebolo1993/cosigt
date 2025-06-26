@@ -1,12 +1,43 @@
+
+rule subset_gtf:
+	'''
+	https://github.com/davidebolo1993/cosigt
+	- Subset the gtf file to the region of interest
+	'''
+	input:
+		gtf=config['gtf'],
+		bed=rules.make_reference_bed.output
+	output:
+		config['output'] + '/annotations/{chr}/{region}/{region}.gtf.gz'
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+	container:
+		'docker://davidebolo1993/bedtools:2.31.0'
+	conda:
+		'../envs/bedtools.yaml'
+	benchmark:
+		'benchmarks/{chr}.{region}.subset_gtf.benchmark.txt'
+	shell:
+		'''
+		bedtools intersect \
+		-wa \
+		-a {input.gtf} \
+		-b {input.bed} | gzip > {output}
+		'''
+
 rule pangene_getaa:
 	'''
 	https://github.com/lh3/pangene
+	- Extract protein sequences from annotation
 	'''
 	input:
 		gtf=rules.subset_gtf.output,
 		proteins=config['proteins']
 	output:
-		config['output'] + '/pangene/proteins/{chr}/{region}/proteins.faa'
+		config['output'] + '/pangene/proteins/{chr}/{region}/{region}.faa.gz'
 	threads:
 		1
 	resources:
@@ -24,18 +55,20 @@ rule pangene_getaa:
 			getaa \
 			-c \
 			{input.gtf} \
-			{input.proteins} > {output}
+			{input.proteins} | bgzip > {output}
 		'''
 
 checkpoint pangene_prepare:
 	'''
 	https://github.com/lh3/miniprot
+	- Protein-to-assemblies alignment using miniprot
+	- Flip paf files if they do not match the reference cds orientation
 	'''
 	input:
-		asm=rules.bedtools_getfasta.output,
+		asm=rules.bedtools_getfasta.output.fasta,
 		proteins=rules.pangene_getaa.output
 	output:
-		directory(config['output'] + '/pangene/assemblies/{chr}/{region}_single_assemblies')
+		temp(directory(config['output'] + '/pangene/assemblies/{chr}/{region}/single_assemblies'))
 	threads:
 		1
 	resources:
@@ -56,22 +89,24 @@ checkpoint pangene_prepare:
 
 def get_subpafs(wildcards):
 	'''
-	extract sub-pafs
+	https://github.com/davidebolo1993/cosigt
+	- Needed to get the wildcard name
 	'''
 	chromosome=wildcards.chr
 	region=wildcards.region
 	checkpoint_output = checkpoints.pangene_prepare.get(chr=chromosome, region=region).output[0]
-	subpafs_files = glob(checkpoint_output + '/*_oriented.paf')
+	subpafs_files = glob(checkpoint_output + '/*_oriented.paf.gz')
 	return [os.path.basename(f).split('_oriented')[0] for f in subpafs_files]
 
 rule pangene_graph:
 	'''
 	https://github.com/lh3/pangene
+	- Construct the pangene graph and convert to a suitable format
 	'''
 	input:
-		lambda wildcards: expand(config['output'] + '/pangene/assemblies/{chr}/{region}_single_assemblies/{asm}_oriented.paf', chr=wildcards.chr, region=wildcards.region, asm=get_subpafs(wildcards))
+		lambda wildcards: expand(config['output'] + '/pangene/assemblies/{chr}/{region}/single_assemblies/{asm}_oriented.paf.gz', chr=wildcards.chr, region=wildcards.region, asm=get_subpafs(wildcards))
 	output:
-		config['output'] + '/pangene/assemblies/{chr}/{region}/pangene_graph.bed'
+		config['output'] + '/pangene/assemblies/{chr}/{region}/pangene.plot.bed.gz'
 	threads:
 		1
 	resources:
@@ -83,41 +118,25 @@ rule pangene_graph:
 		'../envs/pangene.yaml'
 	benchmark:
 		'benchmarks/{chr}.{region}.pangene_graph.benchmark.txt'
+	params:
+		paf_folder=config['output'] + '/pangene/assemblies/{chr}/{region}/single_assemblies'
 	shell:
 		'''
-		pangene {input} --bed > {output}
-		'''
-
-rule pangene_graph_to_bed:
-	'''
-	https://github.com/davidebolo1993/cosigt
-	'''
-	input:
-		rules.pangene_graph.output
-	output:
-		config['output'] + '/pangene/viz/{chr}/{region}/plot.bed'
-	threads:
-		1
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
-	benchmark:
-		'benchmarks/{chr}.{region}.pangene_graph_to_bed.benchmark.txt'
-	shell:
-		'''
-		sh workflow/scripts/convert_bed.sh {input} > {output}
+		pangene {input} --bed | sh workflow/scripts/convert_bed.sh - | gzip > {output}
+		rm -rf {params.paf_folder}
 		'''
 
 rule pangene_viz:
 	'''
 	https://github.com/davidebolo1993/cosigt
+	- Plot gggenes-like visualisation of pangene results
 	'''
 	input:
-		bed=rules.pangene_graph_to_bed.output,
-		fai=rules.samtools_faidx_index.output,
+		bed=rules.pangene_graph.output,
+		fai=rules.bedtools_getfasta.output.fai,
 		json=rules.make_clusters.output
 	output:
-		config['output'] + '/pangene/viz/{chr}/{region}/{region}_genes.png'
+		config['output'] + '/pangene/viz/{chr}/{region}/{region}.genes.png'
 	threads:
 		1
 	resources:

@@ -2,9 +2,10 @@
 rule generate_expanded_regions:
 	'''
 	https://github.com/davidebolo1993/cosigt
+	- Expand given region on the right and on the left flank
 	'''
 	output:
-		bed=expand(config['output'] + '/refine/regions_expanded/{{chr}}/{{region}}/flank{flank}.bed', flank=range(0, 60000, 10000))
+		temp(expand(config['output'] + '/refine/regions_expanded/{{chr}}/{{region}}/flank{flank}.bed', flank=range(0, 60000, 10000)))
 	run:
 		import os
 		outdir=os.path.dirname(output[0])
@@ -18,44 +19,25 @@ rule generate_expanded_regions:
 			with open(f'{outdir}/flank{flank}.bed', 'w') as f:
 				f.write(f'{base_chr}\t{new_start}\t{new_end}\n')
 
-rule concatenate_paf_batches_per_region:
-	'''
-	https://github.com/davidebolo1993/cosigt
-	'''
-	input:
-		lambda wildcards: expand(config['output'] + '/wfmash/{chr}/batches/paf/{batch}.paf', chr='{chr}', batch=get_batches(wildcards))
-	output:
-		config['output'] + '/wfmash/{chr}/merged/all_batches.paf'
-	threads:
-		1
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_high']['time']
-	benchmark:
-		'benchmarks/{chr}.concatenate_paf_batches_per_region.txt'
-	shell:
-		'''
-		cat {input} > {output}
-		'''
-
 rule impg_project_batches_expanded:
 	'''
 	https://github.com/pangenome/impg
+	- Same stuff as impg.smk but expanding for flanks
 	'''
 	input:
-		paf=rules.concatenate_paf_batches_per_region.output,
+		paf=get_merged_paf,
 		bed=lambda wildcards: config['output'] + f'/refine/regions_expanded/{wildcards.chr}/{wildcards.region}/flank{wildcards.flank}.bed'
 	output:
-		unfiltered=config['output'] + '/refine/impg/{chr}/{region}/flank{flank}/unfiltered.bedpe',
-		noblck=config['output'] + '/refine/impg/{chr}/{region}/flank{flank}/noblck.bedpe',
-		merged=config['output'] + '/refine/impg/{chr}/{region}/flank{flank}/noblck.merged.bedpe',
-		filtered=config['output'] + '/refine/impg/{chr}/{region}/flank{flank}/noblck.merged.filtered.bedpe'
+		unfiltered=temp(config['output'] + '/refine/impg/{chr}/{region}/flank{flank}/unfiltered.bedpe.gz'),
+		noblck=temp(config['output'] + '/refine/impg/{chr}/{region}/flank{flank}/noblck.bedpe.gz'),
+		merged=temp(config['output'] + '/refine/impg/{chr}/{region}/flank{flank}/noblck.merged.bedpe.gz'),
+		filtered=temp(config['output'] + '/refine/impg/{chr}/{region}/flank{flank}/noblck.merged.filtered.bedpe.gz')
 	threads: 1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://davidebolo1993/impg:0.2.3'
+		'docker://davidebolo1993/impg:0.2.4'
 	conda:
 		'../envs/impg.yaml'
 	benchmark:
@@ -68,24 +50,31 @@ rule impg_project_batches_expanded:
 	shell:
 		'''
 		impg \
-		query \
-		-p {input.paf} \
-		-b <(awk -v var={params.pansn} '{{print var$1,$2,$3}}' OFS="\t" {input.bed}) > {output.unfiltered}
-		(grep -v -E -f {params.blacklist} {output.unfiltered} | \
-		bedtools intersect -a - -b {params.flagger_blacklist} -F 0.20 -v -wa | \
-		bedtools sort -i - || true) > {output.noblck}
-		(sh workflow/scripts/bedpe_merge.sh {output.noblck} 200000 || true) > {output.merged}
-		(sh workflow/scripts/bedpe_filter_refine.sh {output.merged} {input.bed} 1000 || true) > {output.filtered}
+			query \
+			-p {input.paf} \
+			-b <(awk -v var={params.pansn} '{{print var$1,$2,$3}}' OFS="\\t" {input.bed}) | gzip > {output.unfiltered}
+		(zgrep -v \
+			-E \
+			-f {params.blacklist} {output.unfiltered} | bedtools \
+			intersect \
+			-a - \
+			-b {params.flagger_blacklist} \
+			-F 0.1 \
+			-v \
+			-wa | bedtools sort -i - || true) | gzip > {output.noblck}
+		(zcat {output.noblck} | sh workflow/scripts/bedpe_merge.sh - 200000 || true) | gzip > {output.merged}
+		(zcat {output.merged} | sh workflow/scripts/bedpe_filter.sh - {params.region} 1000 || true) | gzip > {output.filtered}
 		'''
 
 rule count_haplotypes_per_flank:
 	'''
 	https://github.com/davidebolo1993/cosigt
+	- Number of contigs survived
 	'''
 	input:
-		config['output'] + '/refine/impg/{chr}/{region}/flank{flank}/noblck.merged.filtered.bedpe'
+		rules.impg_project_batches_expanded.output.filtered
 	output:
-		config['output'] + '/refine/haplotype_counts/{chr}/{region}/flank{flank}.count'
+		temp(config['output'] + '/refine/haplotype_counts/{chr}/{region}/flank{flank}.count')
 	threads: 1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
@@ -95,7 +84,7 @@ rule count_haplotypes_per_flank:
 	shell:
 		'''
 		if [ -s {input} ]; then
-			cut -f1 {input} | sort -u | wc -l > {output}
+			zcat {input} | cut -f1 | sort -u | wc -l > {output}
 		else
 			echo "0" > {output}
 		fi
@@ -104,13 +93,14 @@ rule count_haplotypes_per_flank:
 rule find_optimal_flank:
 	'''
 	https://github.com/davidebolo1993/cosigt
+	- Just output the optimal bed file for that region
 	'''
 	input:
 		counts=expand(config['output'] + '/refine/haplotype_counts/{{chr}}/{{region}}/flank{flank}.count', flank=range(0, 60000, 10000)),
 		beds=expand(config['output'] + '/refine/regions_expanded/{{chr}}/{{region}}/flank{flank}.bed', flank=range(0, 60000, 10000))
 	output:
-		optimal_bed=config['output'] + '/refine/{chr}/{region}/roi_refined.bed',
-		summary=config['output'] + '/refine/{chr}/{region}/refinement_summary.txt'
+		optimal_bed=temp(config['output'] + '/refine/{chr}/{region}/{region}.refined.bed'),
+		summary=config['output'] + '/refine/{chr}/{region}/{region}.summary.txt'
 	threads: 1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
@@ -144,3 +134,56 @@ rule find_optimal_flank:
 			f.write(f"Flank size breakdown:\n")
 			for flank in sorted(flank_counts.keys()):
 				f.write(f"  Flank {flank}: {flank_counts[flank]} haplotypes\n")
+
+
+
+def get_all_optimal_beds(wildcards):
+    '''
+	https://github.com/davidebolo1993/cosigt
+    - Generate all optimal bed files from find_optimal_flank rule
+    '''
+    all_files = []
+    with open(config['all_regions']) as f:
+        for line in f:
+            fields = line.rstrip().split('\t')
+            chr_name = fields[0]
+            start = fields[1]
+            end = fields[2]
+            region = '_'.join([chr_name, start, end])
+            all_files.append(f"{config['output']}/refine/{chr_name}/{region}/{region}.refined.bed")
+    return all_files
+
+
+rule make_bed_refined:
+	'''
+	https://github.com/davidebolo1993/cosigt
+	- Intersect the chosen regions with the original regions
+	- This is mainly used to get back the annotations if they were provided initially
+	- Ouput the final bed
+	'''
+	input:
+		get_all_optimal_beds
+	output:
+		config['output'] + '/refine/regions_refined.bed'
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+	container:
+		'docker://davidebolo1993/bedtools:2.31.0'
+	benchmark:
+		'benchmarks/make_bed_refined.benchmark.txt'
+	conda:
+		'../envs/bedtools.yaml'
+	params:
+		regions=config['all_regions']
+	shell:
+		'''
+		bedtools intersect \
+			-a <(cat {input} | bedtools sort -i -)  \
+			-b <(bedtools sort -i {params.regions}) \
+			-wao | \
+			cut -f 1,2,3,7 > {output}
+		'''
+	

@@ -40,7 +40,7 @@ def make_default_config(tmp) -> dict:
     #but based on the longest jobs observed
     config['pggb']=dict()
     config['pggb']['threads'] = 24
-    config['pggb']['mem_mb'] = 10000
+    config['pggb']['mem_mb'] = 20000
     config['pggb']['time'] =  40
     config['pggb']['tmpdir'] = tmp
     config['pggb']['params'] =  '-c 2'
@@ -48,10 +48,10 @@ def make_default_config(tmp) -> dict:
     #this depends a lot on the number of contigs
     #generated through impg, but kind-of-ok also
     #considering retries
-    #5 cores, 10 Gb, 20 min max
+    #5 cores, 40 Gb, 20 min max
     config['wfmash']=dict()
     config['wfmash']['threads'] = 5
-    config['wfmash']['mem_mb'] = 10000
+    config['wfmash']['mem_mb'] = 20000
     config['wfmash']['time'] =  20
     config['wfmash']['tmpdir'] = tmp
     config['wfmash']['params'] =  '-s 10k -p 95'

@@ -1,13 +1,16 @@
 rule make_tpr_table:
 	'''
 	https://github.com/davidebolo1993/cosigt
+	- Compute the tpr
+	- +1 TP if both the predicted haplotypes falls in the ground-truth haplotype clusters
+	- +1 FN if at least one of the predicted haplotypes does not follow TP logic
 	'''
 	input:
-		samples=lambda wildcards: expand(config['output'] + '/cosigt/{sample}/{chr}/{region}/sorted_combos.tsv', sample=config['samples'], chr='{chr}', region='{region}'),
-		tsv=config['output'] + '/odgi/dissimilarity/{chr}/{region}.tsv',
-		json=config['output'] + '/cluster/{chr}/{region}.clusters.json'
+		samples=lambda wildcards: expand(config['output'] + '/cosigt/{sample}/{chr}/{region}/sorted_combos.tsv.gz', sample=config['samples'], chr='{chr}', region='{region}'),
+		tsv=rules.odgi_dissimilarity.output,
+		json=rules.make_clusters.output
 	output:
-		config['output'] + '/benchmark/{chr}/{region}/tpr.tsv'
+		temp(config['output'] + '/benchmark/{chr}/{region}/tpr.tsv')
 	threads:
 		1
 	resources:
@@ -18,7 +21,7 @@ rule make_tpr_table:
 	conda:
 		'../envs/r.yaml'
 	params:
-		tsv=config['output'] + '/cluster/{chr}/{region}.clusters.hapdist.tsv'
+		tsv=config['output'] + '/cluster/{chr}/{region}/{region}.clusters.hapdist.tsv'
 	shell:
 		'''
 		Rscript \
@@ -33,13 +36,13 @@ rule make_tpr_table:
 rule odgi_flip_pggb_graph:
 	'''
 	https://github.com/pangenome/odgi
+	- Orient the haplotypes with respect to the target
 	'''
 	input:
 		og=rules.pggb_construct.output,
 		bed=rules.make_reference_bed.output
-		#bed=lambda wildcards: glob('resources/regions/{chr}/{region}.bed'.format(chr=wildcards.chr, region=wildcards.region))
 	output:
-		config['output'] + '/benchmark/{chr}/{region}/flip.og'
+		temp(config['output'] + '/benchmark/{chr}/{region}/{region}.flipped.og')
 	threads:
 		1
 	resources:
@@ -56,17 +59,18 @@ rule odgi_flip_pggb_graph:
 		odgi flip \
 			-i {input.og} \
 			-o {output} \
-			--ref-flips <(awk -v var={params.pansn} '{{print var$1":"$2"-"$3}}' {input.bed})
+			--ref-flips <(zcat {input.bed} | awk -v var={params.pansn} '{{print var$1":"$2"-"$3}}')
 		'''	
 
 rule odgi_og_to_fasta:
 	'''
 	https://github.com/pangenome/odgi
+	- Extract the fasta of the haplotypes
 	'''
 	input:
 		rules.odgi_flip_pggb_graph.output
 	output:
-		config['output'] + '/benchmark/{chr}/{region}/flip.fasta'
+		temp(config['output'] + '/benchmark/{chr}/{region}/{region}.flipped.fasta')
 	threads:
 		1
 	resources:
@@ -86,6 +90,7 @@ rule odgi_og_to_fasta:
 checkpoint prepare_combinations_for_qv:
 	'''
 	https://github.com/samtools/samtools
+	- Prepare all possible combinations for QV calculation
 	'''
 	input:
 		tsv=rules.make_tpr_table.output,
@@ -104,11 +109,13 @@ checkpoint prepare_combinations_for_qv:
 	shell:
 		'''
 		bash workflow/scripts/prepare_qv.sh {input.tsv} {input.fasta} {output}
+		rm {input.fasta}*
 		'''
 
 def get_samples(wildcards):
 	'''
 	https://github.com/davidebolo1993/cosigt
+	- Needed to fetch the names
 	'''
 	import os
 	chr=wildcards.chr
@@ -121,6 +128,7 @@ rule calculate_qv:
 	'''
 	https://github.com/Martinsos/edlib
 	https://github.com/davidebolo1993/cosigt
+	- Actually, calculate the qv
 	'''
 	input:
 		config['output'] + '/benchmark/{chr}/{region}/qv_prep/{sample}/ids.tsv'
@@ -143,6 +151,8 @@ rule calculate_qv:
 rule combine_qv:
 	'''
 	https://github.com/davidebolo1993/cosigt
+	- Put all qv results together
+	- Manual cleanup
 	'''
 	input:
 		lambda wildcards: expand(config['output'] + '/benchmark/{chr}/{region}/qv_prep/{sample}/qv.tsv', chr='{chr}', region='{region}', sample=get_samples(wildcards))
@@ -153,20 +163,25 @@ rule combine_qv:
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+	params:
+		qvdir=config['output'] + '/benchmark/{chr}/{region}/qv_prep'
 	shell:
 		'''
 		cat {input} > {output}
+		rm -rf {params.qvdir}
 		'''
 
 rule combine_tpr_qv:
 	'''
 	https://github.com/davidebolo1993/cosigt
+	- Combine tpr and qv for futher plotting
+	- Manual cleanup
 	'''
 	input:
 		tpr=rules.make_tpr_table.output,
 		qv=rules.combine_qv.output
 	output:
-		config['output'] + '/benchmark/{chr}/{region}/tpr_qv.tsv'
+		config['output'] + '/benchmark/{chr}/{region}/{region}.tpr_qv.tsv'
 	threads:
 		1
 	resources:
@@ -184,11 +199,13 @@ rule combine_tpr_qv:
 		{input.qv} \
 		{wildcards.region} \
 		{output}
+		rm {input.qv}
 		'''
 
 def get_all_tpr_qv_files(wildcards):
 	'''
-	all the files from the prev analysis
+	https://github.com/davidebolo1993/cosigt
+	Get all the files from the previuos analysis
 	'''
 	all_files = []
 	with open(config['all_regions']) as f:
@@ -198,12 +215,13 @@ def get_all_tpr_qv_files(wildcards):
 			start= fields[1]
 			end= fields[2]
 			region='_'.join([chr, start, end])
-			all_files.append(f"{config['output']}/benchmark/{chr}/{region}/tpr_qv.tsv")
+			all_files.append(f"{config['output']}/benchmark/{chr}/{region}/{region}.tpr_qv.tsv")
 	return all_files
 
 rule plot_tpr:
 	'''
 	https://github.com/davidebolo1993/cosigt
+	- Make final plot
 	'''
 	input:
 		get_all_tpr_qv_files

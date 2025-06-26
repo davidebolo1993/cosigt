@@ -3,9 +3,9 @@ import os
 
 def parse_fai_and_set_flags(fai_input):
 	'''
-	Dynamically set flags to pggb
+	https://github.com/davidebolo1993/cosigt
+	- Dinamically set flags for pggb
 	'''
-
 	#this stuff should be namedlist, but need to check
 	if hasattr(fai_input, 'fai'):
 		fai_path = fai_input.fai
@@ -33,7 +33,7 @@ def parse_fai_and_set_flags(fai_input):
 		flags.append(f'-s {s_val}')
 
 	# Set -x
-	if num_seq > 100 and average_len > 1_000_000:
+	if num_seq > 50:
 		flags.append('-x auto')
 
 	return " ".join(flags)
@@ -42,12 +42,13 @@ def parse_fai_and_set_flags(fai_input):
 rule pggb_construct:
 	'''
 	https://github.com/pangenome/pggb
+	- Build pangenome graph using pggb
 	'''
 	input:
-		fasta=rules.bedtools_getfasta.output,
-		fai=rules.samtools_faidx_index.output
+		fasta=rules.bedtools_getfasta.output.fasta,
+		fai=rules.bedtools_getfasta.output.fai
 	output:
-		config['output'] + '/pggb/{chr}/{region}.og'
+		config['output'] + '/pggb/{chr}/{region}/{region}.og'
 	threads:
 		config['pggb']['threads']
 	resources:
@@ -62,7 +63,7 @@ rule pggb_construct:
 	params:
 		prefix=config['output'] + '/pggb/{chr}/{region}',
 		flags=lambda wildcards, input: config['pggb']['params'] + ' ' + parse_fai_and_set_flags(input.fai),
-		tmpdir = config['pggb']['tmpdir'] + '/{chr}/{region}',
+		tmpdir = config['pggb']['tmpdir'] + '/{chr}/{region}/{region}',
 		pansn=config['pansn_prefix']
 	shell:
 		'''
