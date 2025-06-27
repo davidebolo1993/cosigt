@@ -172,7 +172,7 @@ func WriteResults(m *sync.Map, keys []string, clstr map[string]string, outDir, i
     }
     defer sortedCombosFile.Close()
 
-    genotypeFile, err := os.Create(filepath.Join(outDir, fmt.Sprintf("%s.genotype.tsv", prefix)))
+    genotypeFile, err := os.Create(filepath.Join(outDir, fmt.Sprintf("%s.cosigt_genotype.tsv", prefix)))
     if err != nil {
         return fmt.Errorf("error creating %s.genotype.tsv: %w", prefix, err)
     }

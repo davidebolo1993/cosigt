@@ -7,7 +7,7 @@ rule cosigt_genotype:
 		graph_cov_map=rules.odgi_paths.output,
 		sample_cov_map=rules.gafpack_coverage.output,
 		json=rules.make_clusters.output,
-		mask=rules.filter_nodes.output
+		mask=rules.filter_nodes.output.mask
 	output:
 		geno=config['output'] + '/cosigt/{sample}/{chr}/{region}/{region}.cosigt_genotype.tsv',
 		combos=config['output'] + '/cosigt/{sample}/{chr}/{region}/{region}.sorted_combos.tsv.gz'
