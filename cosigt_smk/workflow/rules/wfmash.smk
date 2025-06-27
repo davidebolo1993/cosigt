@@ -89,8 +89,6 @@ rule samtools_faidx_batches:
 		'docker://davidebolo1993/samtools:1.22'
 	conda:
 		'../envs/samtools.yaml'
-	params:
-		ids_folder=config['output'] + '/wfmash/{chr}/batches/ids'
 	benchmark:
 		'benchmarks/{chr}.{batch}.samtools_faidx_batches.benchmark.txt'
 	shell:
@@ -104,7 +102,6 @@ rule samtools_faidx_batches:
 			samtools faidx $fasta $f | bgzip -c >> {output.fasta}
 		done < {input.ids}
 		samtools faidx {output.fasta}
-		rm -rf {params.ids_folder}
 		'''
 
 rule wfmash_align_batches:
@@ -183,10 +180,13 @@ checkpoint merge_paf_per_region:
 		'../envs/wfmash.yaml'
 	benchmark:
 		'benchmarks/{chr}.merge_paf_per_region.txt'
+	params:
+		batches_tmp=config['output'] + '/wfmash/{chr}/batches/ids'
 	shell:
 		'''
 		cat {input} > {output.paf}
 		bgzip -r {output.paf}
+		rm -rf {params.batches_tmp}
 		'''
 
 def get_merged_paf(wildcards):

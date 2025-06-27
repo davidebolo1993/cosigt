@@ -118,12 +118,9 @@ rule pangene_graph:
 		'../envs/pangene.yaml'
 	benchmark:
 		'benchmarks/{chr}.{region}.pangene_graph.benchmark.txt'
-	params:
-		paf_folder=config['output'] + '/pangene/assemblies/{chr}/{region}/single_assemblies'
 	shell:
 		'''
 		pangene {input} --bed | sh workflow/scripts/convert_bed.sh - | gzip > {output}
-		rm -rf {params.paf_folder}
 		'''
 
 rule pangene_viz:
@@ -148,7 +145,10 @@ rule pangene_viz:
 		'../envs/r.yaml'
 	benchmark:
 		'benchmarks/{chr}.{region}.pangene_viz.benchmark.txt'
+	params:
+		paf_folder=config['output'] + '/pangene/assemblies/{chr}/{region}/single_assemblies'
 	shell:
 		'''
 		Rscript workflow/scripts/plotgggenes.r {input.bed} {input.json} {input.fai} {output}
+		rm -rf {params.paf_folder}
 		'''

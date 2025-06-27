@@ -135,8 +135,6 @@ rule find_optimal_flank:
 			for flank in sorted(flank_counts.keys()):
 				f.write(f"  Flank {flank}: {flank_counts[flank]} haplotypes\n")
 
-
-
 def get_all_optimal_beds(wildcards):
     '''
 	https://github.com/davidebolo1993/cosigt
