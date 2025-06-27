@@ -6,7 +6,7 @@ rule make_tpr_table:
 	- +1 FN if at least one of the predicted haplotypes does not follow TP logic
 	'''
 	input:
-		samples=lambda wildcards: expand(config['output'] + '/cosigt/{sample}/{chr}/{region}/sorted_combos.tsv.gz', sample=config['samples'], chr='{chr}', region='{region}'),
+		samples=lambda wildcards: expand(config['output'] + '/cosigt/{sample}/{chr}/{region}/{region}.sorted_combos.tsv.gz', sample=config['samples'], chr='{chr}', region='{region}'),
 		tsv=rules.odgi_dissimilarity.output,
 		json=rules.make_clusters.output
 	output:
