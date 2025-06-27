@@ -111,7 +111,7 @@ rule odgi_dissimilarity:
 	'''
 	input:
 		og=rules.pggb_construct.output,
-		mask=rules.filter_nodes.output
+		mask=rules.filter_nodes.output.mask
 	output:
 		config['output'] + '/odgi/dissimilarity/{chr}/{region}/{region}.tsv.gz'
 	threads:
