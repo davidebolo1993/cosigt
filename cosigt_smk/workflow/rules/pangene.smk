@@ -106,7 +106,7 @@ rule pangene_graph:
 	input:
 		lambda wildcards: expand(config['output'] + '/pangene/assemblies/{chr}/{region}/single_assemblies/{asm}_oriented.paf.gz', chr=wildcards.chr, region=wildcards.region, asm=get_subpafs(wildcards))
 	output:
-		config['output'] + '/pangene/assemblies/{chr}/{region}/pangene.plot.bed.gz'
+		config['output'] + '/pangene/assemblies/{chr}/{region}/{region}.plot.bed.gz'
 	threads:
 		1
 	resources:
