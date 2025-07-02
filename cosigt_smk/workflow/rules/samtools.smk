@@ -1,4 +1,4 @@
-rule samtools_fasta_mapped:
+nanrule samtools_fasta_mapped:
 	'''
 	https://github.com/samtools/samtools
 	- Extract reads aligned to the reference
@@ -8,7 +8,7 @@ rule samtools_fasta_mapped:
 	'''
 	input:
 		sample=lambda wildcards: glob('resources/alignments/{sample}.*am'.format(sample=wildcards.sample)),
-		bed=rules.make_reference_bed.output,
+		bed=rules.make_alignment_bed.output,
 		fasta=config['reference']
 	output:
 		temp(config['output'] + '/samtools/fasta/{sample}/{chr}/{region}/{region}.mapped.fasta.gz')

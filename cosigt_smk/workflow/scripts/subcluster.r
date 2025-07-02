@@ -56,9 +56,12 @@ cluster_recursive <- function(names_vec, norm_dist_mat, regular_mat, level, pref
     if (level < max_level && length(members) > 2) {
       raw_submatrix <- regular_mat[members, members]
       local_max <- max(raw_submatrix[is.finite(raw_submatrix)])
+      if (local_max == 0 || is.infinite(local_max)) {
+        next
+      }
       local_norm <- raw_submatrix / local_max
       sub_dist <- as.dist(local_norm)      
-      sub_eps <- find_optimal_eps(sub_dist, region_similarity, similarity_threshold)
+      sub_eps <- 0.2
       results <- cluster_recursive(members, sub_dist, raw_submatrix, level + 1, group_name, max_level, results, sub_eps)
     }
   }
@@ -68,7 +71,6 @@ cluster_recursive <- function(names_vec, norm_dist_mat, regular_mat, level, pref
 # Top-level clustering
 distanceMatrix <- as.dist(normRegularMatrix)
 eps <- find_optimal_eps(distanceMatrix, region_similarity, similarity_threshold)
-
 final_res <- cluster_recursive(labels(distanceMatrix), distanceMatrix, regularMatrix, level=1, prefix="", max_level=levels, results=list(), eps=eps)
 
 # Write JSON

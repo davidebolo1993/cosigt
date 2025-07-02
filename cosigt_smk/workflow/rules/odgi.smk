@@ -163,7 +163,8 @@ rule make_clusters:
 			{input.matrix} \
 			{output} \
 			automatic \
-			$(cut -f 3 {input.shared} | tail -1)
+			$(cut -f 3 {input.shared} | tail -1) \
+			1
 		'''
 
 rule viz_odgi:

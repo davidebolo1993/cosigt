@@ -36,7 +36,6 @@ for region in config['regions']:
 		cosigt_benchmark.add(config['output'] + '/pangene/viz/' + chrom + '/' + region + '/' + region + '.genes.png')
 	cosigt_benchmark.add(config['output'] + '/benchmark/tpr.edr.png')
 
-
 #USED TO REFINE INPUT REGIONS
 rule refine:
 	input:

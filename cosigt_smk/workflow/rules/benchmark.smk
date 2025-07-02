@@ -163,12 +163,9 @@ rule combine_qv:
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
-	params:
-		qvdir=config['output'] + '/benchmark/{chr}/{region}/qv_prep'
 	shell:
 		'''
 		cat {input} > {output}
-		rm -rf {params.qvdir}
 		'''
 
 rule combine_tpr_qv:
@@ -191,6 +188,8 @@ rule combine_tpr_qv:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
 		'../envs/r.yaml'
+	params:
+		qv_dir=config['output'] + '/benchmark/{chr}/{region}/qv_prep'
 	shell:
 		'''
 		Rscript \
@@ -200,6 +199,7 @@ rule combine_tpr_qv:
 		{wildcards.region} \
 		{output}
 		rm {input.qv}
+		rm -rf {params.qv_dir}
 		'''
 
 def get_all_tpr_qv_files(wildcards):

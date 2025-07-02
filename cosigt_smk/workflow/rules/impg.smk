@@ -29,13 +29,17 @@ rule impg_project_batches:
 		blacklist=config['blacklist'],
 		flagger_blacklist=config['flagger_blacklist'],
 		pansn=config['pansn_prefix'],
-		region='{region}'
+		region='{region}',
+		chr='{chr}',
+		tmp_bed=config['output'] + '/impg/{chr}/{region}/{region}.tmp.bed'
 	shell:
 		'''
+		grep {params.chr} {input.bed} > {params.tmp_bed}
 		impg \
 			query \
 			-p {input.paf} \
-			-b <(awk -v var={params.pansn} '{{print var$1,$2,$3}}' OFS="\\t" {input.bed}) | gzip > {output.unfiltered}
+			-b <(awk -v var={params.pansn} '{{print var$1,$2,$3}}' OFS="\\t" {params.tmp_bed}) | gzip > {output.unfiltered}
+		rm {params.tmp_bed}
 		(zgrep -v \
 			-E \
 			-f {params.blacklist} {output.unfiltered} | bedtools \

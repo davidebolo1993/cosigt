@@ -208,17 +208,21 @@ def read_bed(bed_file, asm_dict) -> dict():
             chrom=bed_entry[0]
             start=bed_entry[1]
             end=bed_entry[2]
-            if len(bed_entry) == 4:
+            if len(bed_entry) >= 4:
                 annot=bed_entry[3]
             else:
                 annot="unknown"
+            if len(bed_entry) == 5:
+                alt=bed_entry[4]
+            else:
+               alt=None  
             if chrom not in asm_dict:
                 print(f'Provided chromosome: {chrom} in bed file {bed_file} is missing in the assemblies')
                 sys.exit(1)
             if chrom not in bed_dict:
-                bed_dict[chrom] = [(chrom,start,end,annot)]
+                bed_dict[chrom] = [(chrom,start,end,annot,alt)]
             else:
-                bed_dict[chrom].append((chrom,start,end,annot))
+                bed_dict[chrom].append((chrom,start,end,annot,alt))
     print(f'Loaded bed file {bed_file}!')    
     return bed_dict
     
@@ -355,6 +359,22 @@ def write_alignments(aln_dict, config_yaml, RESOURCES) -> dict:
     print(f'Added alignments to {aln_dir}!')
     return config_yaml
 
+
+def reference_contigs(config_yaml) -> dict:
+    '''
+    Given the reference index, return a dict
+    with contig, start end
+    '''
+
+    ctg_dict=dict()
+    ref_idx=config_yaml['reference'] + '.fai'
+    with open(ref_idx, 'r') as refidx:
+        for line in refidx:
+            fields=line.rstrip().split('\t')
+            chrom,start,end=fields[0],'0',fields[1]
+            ctg_dict[chrom] = (chrom,start,end)
+    return ctg_dict
+
 def write_regions(bed_dict, config_yaml, RESOURCES) -> dict:
     '''
     Write regions to resources/regions
@@ -364,16 +384,28 @@ def write_regions(bed_dict, config_yaml, RESOURCES) -> dict:
     os.makedirs(reg_dir, exist_ok=True)
     config_yaml['regions'] = set()
     config_yaml['all_regions'] = os.path.abspath(os.path.join(reg_dir, 'all_regions.tsv'))
+    contigs=reference_contigs(config_yaml)
     with open(config_yaml['all_regions'], 'w') as b_a_out:
         for k,v in bed_dict.items():
             bed_dir=os.path.join(reg_dir, k)
             os.makedirs(bed_dir, exist_ok=True)
             for subr in v:
-                region_out='_'.join(subr[:-1])
-                b_a_out.write('\t'.join(subr) + '\n')
+                region_out='_'.join(subr[:-2])
+                b_a_out.write('\t'.join(subr[:-1]) + '\n')
                 bed_out=os.path.join(bed_dir, region_out + '.bed')
                 with open(bed_out, 'w') as b_out:
-                    b_out.write('\t'.join(subr[:-1]) + '\n')
+                    b_out.write('\t'.join(subr[:-2]) + '\n')
+                    if subr[-1] is not None:    
+                        alts=subr[-1].split(',')
+                        if len(alts) == 1:
+                            #search for pattern
+                            alt=alts[0]
+                            matches=[x for x in contigs.keys() if x.startswith(alt)]
+                            for match in matches:
+                                b_out.write('\t'.join(contigs[match]) + '\n')
+                        else:
+                            for alt in alts:
+                                b_out.write('\t'.join(contigs[alt]) + '\n')
                 config_yaml['regions'].add(region_out)
     print(f'Added regions to {reg_dir}!')
     return config_yaml
@@ -557,7 +589,7 @@ def setup_arg_parser():
     required.add_argument('-a', '--assemblies', help='assemblies individuals to -r will be genotyped against. This is a tab-separated file mapping chromosomes in -b to a FASTA with contigs for that chromosome. FASTA can be bgzip-compressed and must be indexed', metavar='FASTA', required=True)
     required.add_argument('-g', '--genome', help='reference genome. This is the FASTA regions to -b refers to. FASTA can be bgzip-compressed and must be indexed', metavar='FASTA', required=True)
     required.add_argument('-r', '--reads', help='individuals to genotype. This is a folder with individual reads aligned to a reference genome (same to -g) in BAM/CRAM format. Alignment files must be indexed (BAI,CSI/CRAI) and will be searched recursively', metavar='FOLDER', required=True)
-    required.add_argument('-b', '--bed', help='regions to genotype. This is a standard BED file', metavar='BED', required=True)
+    required.add_argument('-b', '--bed', help='regions to genotype. A standard 3-column BED file, but can have a 4th column to label the region and a 5th column listing comma-separated alternative contigs for that region', metavar='BED', required=True)
     required.add_argument('-o', '--output', help='output folder. This is where results from cosigt pipeline will be stored', metavar='FOLDER', required=True)
     optional = parser.add_argument_group('Optional arguments')
     optional.add_argument('--map', help='tab-separated file mapping each alignment file (1st column) to an id (2nd column). Guess the name removing file extension otherwise [None]', metavar='', required=False, default=None)
@@ -630,10 +662,10 @@ def main():
     config=write_assemblies(asm_dict, bed_dict, config, RESOURCES)
     #alignments
     config=write_alignments(aln_dict, config, RESOURCES)
+    #reference
+    config=write_reference(genome_dict, config, RESOURCES)    
     #regions
     config=write_regions(bed_dict, config, RESOURCES)
-    #reference
-    config=write_reference(genome_dict, config, RESOURCES)
     #annotations
     config=write_gtf(gtf_dict, config, RESOURCES)
     config=write_proteins(proteins_dict, config, RESOURCES)

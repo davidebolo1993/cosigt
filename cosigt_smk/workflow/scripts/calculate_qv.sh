@@ -11,8 +11,12 @@ fi
 cat "$indir/ids.tsv" | while read line; do
     fa1=$(echo "$line" | cut -d$'\t' -f 1)
     fa2=$(echo "$line" | cut -d$'\t' -f 2)
-    QV=$(compute_qv "$indir/$fa1" "$indir/$fa2")
-    echo -e "$fa1\t$fa2\t$QV" >> "$indir/qv.tmp.tsv"
+    if [ $fa1 = "missing.fasta" ]; then
+        echo -e "missing\tmissing\t0" >> "$indir/qv.tmp.tsv"
+    else
+        QV=$(compute_qv "$indir/$fa1" "$indir/$fa2")
+        echo -e "$fa1\t$fa2\t$QV" >> "$indir/qv.tmp.tsv"
+    fi
 done
 
 #first combination
