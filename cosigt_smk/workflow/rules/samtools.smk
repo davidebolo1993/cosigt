@@ -1,4 +1,4 @@
-nanrule samtools_fasta_mapped:
+rule samtools_fasta_mapped:
 	'''
 	https://github.com/samtools/samtools
 	- Extract reads aligned to the reference
