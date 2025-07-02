@@ -14,7 +14,6 @@ tail -n +2 $input_table | while read line; do
     h2p=$(echo "$line" | cut -d$'\t' -f 3)
     h1t=$(echo "$line" | cut -d$'\t' -f 4)
     h2t=$(echo "$line" | cut -d$'\t' -f 5)
-    echo $h1t
     mkdir -p $outdir/$sample
     if [ $h1t = "missing" ] || [ $h2t = "missing" ]; then
         echo -e "missing.fasta\tmissing.fasta" >> "$outdir/$sample/ids.tsv"
