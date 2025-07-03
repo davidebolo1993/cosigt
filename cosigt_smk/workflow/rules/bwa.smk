@@ -67,6 +67,7 @@ rule bwa_samse_samtools_sort:
 	input:
 		sai=rules.bwa_aln.output,
 		ref_fasta=rules.bedtools_getfasta.output.fasta,
+		ref_fai=rules.bwa_index.output,
 		sample_fasta=rules.samtools_fasta_mapped.output
 	output:
 		config['output'] + '/bwa/{sample}/{chr}/{region}/{region}.realigned.cram'
