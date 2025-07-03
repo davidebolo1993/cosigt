@@ -56,9 +56,8 @@ REF_PAF=$(ls *paf.gz | grep "$REF_PATH")
 # reference profile
 get_orientation_profile "$REF_PAF" > reference.profile
 
-# process other PAFs
+# process other PAFs 
 for paf_file in *.paf.gz; do
-    [[ "$paf_file" == "$REF_PAF" ]] && continue
     base_name="${paf_file%.paf.gz}"
     get_orientation_profile "$paf_file" > current.profile
 
