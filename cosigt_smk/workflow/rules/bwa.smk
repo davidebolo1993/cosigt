@@ -52,7 +52,7 @@ rule bwa_aln:
 		-0 \
 		-l 1024 \
 		-n 0.01 \
-		-o 2
+		-o 2 \
 		{input.ref_fasta} \
 		{input.sample_fasta} > {output}
 		'''
