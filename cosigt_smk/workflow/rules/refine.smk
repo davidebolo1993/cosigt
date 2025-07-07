@@ -19,6 +19,12 @@ rule generate_expanded_regions:
 			with open(f'{outdir}/flank{flank}.bed', 'w') as f:
 				f.write(f'{base_chr}\t{new_start}\t{new_end}\n')
 
+def adjust_region_with_flank(region, flank):
+	chrom, start, end = region.split('_')
+	start = max(0, int(start) - flank)
+	end = int(end) + flank
+	return f"{chrom}_{start}_{end}"
+
 rule impg_project_batches_expanded:
 	'''
 	https://github.com/pangenome/impg
@@ -46,7 +52,7 @@ rule impg_project_batches_expanded:
 		blacklist=config['blacklist'],
 		flagger_blacklist=config['flagger_blacklist'],
 		pansn=config['pansn_prefix'],
-		region='{region}'
+		region=lambda wildcards: adjust_region_with_flank(wildcards.region, int(wildcards.flank))
 	shell:
 		'''
 		impg \
@@ -136,21 +142,20 @@ rule find_optimal_flank:
 				f.write(f"  Flank {flank}: {flank_counts[flank]} haplotypes\n")
 
 def get_all_optimal_beds(wildcards):
-    '''
+	'''
 	https://github.com/davidebolo1993/cosigt
-    - Generate all optimal bed files from find_optimal_flank rule
-    '''
-    all_files = []
-    with open(config['all_regions']) as f:
-        for line in f:
-            fields = line.rstrip().split('\t')
-            chr_name = fields[0]
-            start = fields[1]
-            end = fields[2]
-            region = '_'.join([chr_name, start, end])
-            all_files.append(f"{config['output']}/refine/{chr_name}/{region}/{region}.refined.bed")
-    return all_files
-
+	- Generate all optimal bed files from find_optimal_flank rule
+	'''
+	all_files = []
+	with open(config['all_regions']) as f:
+		for line in f:
+			fields = line.rstrip().split('\t')
+			chr_name = fields[0]
+			start = fields[1]
+			end = fields[2]
+			region = '_'.join([chr_name, start, end])
+			all_files.append(f"{config['output']}/refine/{chr_name}/{region}/{region}.refined.bed")
+	return all_files
 
 rule make_bed_refined:
 	'''
@@ -183,9 +188,9 @@ rule make_bed_refined:
 			-b <(bedtools sort -i {params.regions}) \
 			-wao | \
 			awk '{{
-    			mid_a = int(($2 + $3)/2);
-    			mid_b = int(($5 + $6)/2);
-    			if (mid_a == mid_b) print $1,$2,$3,$7
+				mid_a = int(($2 + $3)/2);
+				mid_b = int(($5 + $6)/2);
+				if (mid_a == mid_b) print $1,$2,$3,$7
 			}}' OFS='\\t' > {output}
 		'''
 	
