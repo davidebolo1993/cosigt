@@ -184,7 +184,7 @@ rule make_bed_refined:
 	shell:
 		'''
 		bedtools intersect \
-			-a <(bedtools sort -i - {input})  \
+			-a <(cat {input} | bedtools sort -i -)  \
 			-b <(bedtools sort -i {params.regions}) \
 			-wao | \
 			awk '{{
