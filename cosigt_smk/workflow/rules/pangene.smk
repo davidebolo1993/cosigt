@@ -65,7 +65,7 @@ checkpoint pangene_prepare:
 	- Flip paf files if they do not match the reference cds orientation
 	'''
 	input:
-		asm=rules.bedtools_getfasta.output.fasta,
+		asm=rules.copy_fasta_over.output.fasta,
 		proteins=rules.pangene_getaa.output
 	output:
 		temp(directory(config['output'] + '/pangene/assemblies/{chr}/{region}/single_assemblies'))
@@ -130,7 +130,7 @@ rule pangene_viz:
 	'''
 	input:
 		bed=rules.pangene_graph.output,
-		fai=rules.bedtools_getfasta.output.fai,
+		fai=rules.copy_fasta_over.output.fai,
 		json=rules.make_clusters.output
 	output:
 		config['output'] + '/pangene/viz/{chr}/{region}/{region}.genes.png'

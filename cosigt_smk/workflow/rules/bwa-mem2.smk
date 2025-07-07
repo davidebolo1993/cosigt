@@ -1,12 +1,56 @@
+def find_fasta_files(wildcards):
+	import glob
+	fasta_extensions = ['fa', 'fasta', 'fasta.gz', 'fa.gz']
+	base_path = f'resources/alleles/{wildcards.chr}/{wildcards.region}/{wildcards.region}'
+	for ext in fasta_extensions:
+		pattern = f'{base_path}.{ext}'
+		found_files = glob.glob(pattern)
+		if found_files:
+			return found_files[0]
+
+rule copy_fasta_over:
+	'''
+	https://github.com/davidebolo1993/cosigt
+	- This is necessary to copy the alleles to a standard location
+	- Check their extensions
+	- If alleles are .gz, assume they are bgzip-compressed - since this is checked by organize.py
+	- And potentially compress
+	'''
+	input:
+		find_fasta_files
+	output:
+		fasta=config['output'] + '/alleles/{chr}/{region}/{region}.fasta.gz',
+		fai=config['output'] + '/alleles/{chr}/{region}/{region}.fasta.gz.fai',
+		gzi=config['output'] + '/alleles/{chr}/{region}/{region}.fasta.gz.gzi'
+	threads:
+		1
+	container:
+		'docker://davidebolo1993/samtools:1.22'
+	conda:
+		'../envs/samtools.yaml'	
+	benchmark:
+		'benchmarks/{chr}.{region}.copy_fasta_over.benchmark.txt'
+	params:
+		outdir=config['output'] + '/alleles/{chr}/{region}/'
+	shell:
+		'''
+		if [[ {input} =~ \.gz$ ]]; then
+			cp {input} {output.fasta}
+		else
+			bgzip -c {input} > {output.fasta}
+		fi
+		samtools faidx {output.fasta}
+		'''
+
 rule bwamem2_index:
 	'''
 	https://github.com/bwa-mem2/bwa-mem2
 	- Build index for the contigs
 	'''
 	input:
-		rules.bedtools_getfasta.output.fasta
+		rules.copy_fasta_over.output.fasta
 	output:
-		temp(multiext(config['output'] + '/bedtools/getfasta/{chr}/{region}/{region}.fasta.gz', '.bwt.2bit.64', '.pac', '.ann', '.amb', '.0123'))	
+		temp(multiext(config['output'] + '/alleles/{chr}/{region}/{region}.fasta.gz', '.bwt.2bit.64', '.pac', '.ann', '.amb', '.0123'))
 	threads:
 		1
 	resources:
@@ -18,11 +62,13 @@ rule bwamem2_index:
 		'../envs/bwa-mem2.yaml'
 	benchmark:
 		'benchmarks/{chr}.{region}.bwamem2_index.benchmark.txt'
+	params:
+		outdir=config['output']+ '/alleles/{chr}/{region}'
 	shell:
 		'''
 		bwa-mem2 index {input}
 		'''
-
+	
 rule bwamem2_mem_samtools_sort:
 	'''
 	https://github.com/bwa-mem2/bwa-mem2
@@ -32,7 +78,7 @@ rule bwamem2_mem_samtools_sort:
 	- Convert to .cram and index at the same time
 	'''
 	input:
-		ref_fasta=rules.bedtools_getfasta.output.fasta,
+		ref_fasta=rules.copy_fasta_over.output.fasta,
 		ref_fai=rules.bwamem2_index.output,
 		sample_fasta=rules.samtools_fasta_mapped.output
 	output:
@@ -72,8 +118,8 @@ rule wally_viz_alignments:
 	- Visualise reads-to-contig alignment for each contig
 	'''
 	input:
-		fasta=rules.bedtools_getfasta.output.fasta,
-		fai=rules.bedtools_getfasta.output.fai,
+		fasta=rules.copy_fasta_over.output.fasta,
+		fai=rules.copy_fasta_over.output.fai,
 		sample=rules.bwamem2_mem_samtools_sort.output
 	output:
 		config['output'] + '/wally/{sample}/{chr}/{region}/wally.done'
@@ -107,4 +153,4 @@ rule wally_viz_alignments:
 			{input.sample}
 		rm plot.bed
 		touch {output}
-		'''	
+		'''

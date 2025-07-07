@@ -45,8 +45,8 @@ rule pggb_construct:
 	- Build pangenome graph using pggb
 	'''
 	input:
-		fasta=rules.bedtools_getfasta.output.fasta,
-		fai=rules.bedtools_getfasta.output.fai
+		fasta=rules.copy_fasta_over.output.fasta,
+		fai=rules.copy_fasta_over.output.fai
 	output:
 		config['output'] + '/pggb/{chr}/{region}/{region}.og'
 	threads:

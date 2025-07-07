@@ -1,24 +1,21 @@
 from glob import glob
 configfile: 'config/config.yaml'
 
-include: 'rules/wfmash.smk'
-include: 'rules/impg.smk'
 include: 'rules/bedtools.smk'
 include: 'rules/samtools.smk'
+include: 'rules/bwa-mem2.smk'
 include: 'rules/pggb.smk'
 include: 'rules/odgi.smk'
 include: 'rules/pangene.smk'
-include: 'rules/bwa-mem2.smk'
 include: 'rules/gfainject.smk'
 include: 'rules/gafpack.smk'
 include: 'rules/cosigt.smk'
 include: 'rules/benchmark.smk'
-include: 'rules/refine.smk'
 
 cosigt_input=set()
 cosigt_benchmark=set()
 cosigt_viz=set()
-refine_input=set()
+#refine_input=set()
 
 for region in config['regions']:
 	chrom=region.split('_')[0]
@@ -30,16 +27,16 @@ for region in config['regions']:
 		cosigt_benchmark.add(config['output'] + '/cosigt/' + sample + '/' + chrom + '/' + region + '/viz/' + region + '.ava.png')
 	cosigt_input.add(config['output'] + '/odgi/viz/' + chrom + '/' + region + '/' + region + '.viz.png')
 	cosigt_benchmark.add(config['output'] + '/odgi/viz/' + chrom + '/' + region + '/' + region + '.viz.png')
-	refine_input.add(config['output'] + '/refine/regions_refined.bed')
+	#refine_input.add(config['output'] + '/refine/regions_refined.bed')
 	if config['gtf'] != 'NA' and config['proteins'] != 'NA':
 		cosigt_input.add(config['output'] + '/pangene/viz/' + chrom + '/' + region + '/' + region + '.genes.png')
 		cosigt_benchmark.add(config['output'] + '/pangene/viz/' + chrom + '/' + region + '/' + region + '.genes.png')
 	cosigt_benchmark.add(config['output'] + '/benchmark/tpr.edr.png')
 
-#USED TO REFINE INPUT REGIONS
-rule refine:
-	input:
-		list(refine_input)
+#USED TO REFINE INPUT REGIONS - N.A. IN THE CUSTOM_ALLLELES BRANCH
+#rule refine:
+	#input:
+		#list(refine_input)
 
 #COSIGT COMMAND
 rule cosigt:

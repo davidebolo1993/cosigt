@@ -70,64 +70,70 @@ def make_default_config(tmp) -> dict:
     print(f'Config template prepared!')
     return config
 
-def validate_assembly(asm_path) -> bool:
+def validate_alleles(all_path) -> bool:
     '''
-    Validate assembly file
+    Validate file with alleles
     '''
-    if not os.path.exists(asm_path):
-        print(f'Assembly file: {asm_path} does not exist!')
+    if not os.path.exists(all_path):
+        print(f'Alleles file: {all_path} does not exist!')
         return False
-    if not os.access(asm_path, os.R_OK):
-        print(f'Assembly file: {asm_path} is not readable!')
+    if not os.access(all_path, os.R_OK):
+        print(f'Alleles file: {all_path} is not readable!')
         return False
-    if not asm_path.endswith('.fasta') and not asm_path.endswith('.fa') and not asm_path.endswith('.fasta.gz') and not asm_path.endswith('.fa.gz'):
-        print(f'Assembly file: {asm_path} is not in the expected format (.fa/.fasta/.fa.gz/.fasta.gz)!')
+    if not all_path.endswith('.fasta') and not all_path.endswith('.fa') and not all_path.endswith('.fasta.gz') and not all_path.endswith('.fa.gz'):
+        print(f'Alleles file: {all_path} is not in the expected format (.fa/.fasta/.fa.gz/.fasta.gz)!')
         return False
-    if not os.path.exists(asm_path + '.fai'):
-        print(f'Assembly file: {asm_path} is not indexed - expected .fai; samtools faidx {asm_path} and retry!')
+    if not os.path.exists(all_path + '.fai'):
+        print(f'Alleles file: {all_path} is not indexed - expected .fai; samtools faidx {all_path} and retry!')
         return False
-    if asm_path.endswith('.fasta.gz') or asm_path.endswith('.fa.gz'):
-        if not os.path.exists(asm_path + '.gzi'):
-            print(f'Assembly file: {asm_path} is not indexed - expected .gzi; samtools faidx {asm_path} and retry!')
+    if all_path.endswith('.fasta.gz') or all_path.endswith('.fa.gz'):
+        if not os.path.exists(all_path + '.gzi'):
+            print(f'Alleles file: {all_path} is not indexed - expected .gzi; samtools faidx {all_path} and retry!')
             return False
-    #read contigs and check they follow the PanSN specification
-    with open(asm_path + '.fai', 'r') as idx_in:
+    #read alleles and check they follow the PanSN specification
+    #check there is no duplicate entry
+    ctg_set=set()
+    with open(all_path + '.fai', 'r') as idx_in:
         for line in idx_in:
             ctg_id=line.split('\t')[0]
             if len(ctg_id.split('#')) != 3:
-                print(f'Contig: {ctg_id} in assembly file: {asm_path} does not follow PanSN-spec!')
+                print(f'Contig: {ctg_id} in alleles file: {all_path} does not follow PanSN-spec!')
                 return False
+            if ctg_id in ctg_set:
+                return False
+            else:
+                ctg_set.add(ctg_id)
     return True
     
-def read_assemblies_file(assemblies_file) -> dict():
+def read_alleles_file(alleles_file) -> dict():
     '''
-    Read and validate the assemblies specified in the tsv.
-    Return a dict mapping each chromosome to its assembly
+    Read and validate the alleles specified in the tsv.
+    Return a dict mapping each region to its allele set
     '''
-    assemblies_out=dict()
-    if not os.path.exists(assemblies_file):
-        print(f'Table with assemblies: {assemblies_file} does not exist!')
+    alleles_out=dict()
+    if not os.path.exists(alleles_file):
+        print(f'Table with alleles: {alleles_file} does not exist!')
         sys.exit(1)
-    if not os.access(assemblies_file, os.R_OK):
-        print(f'Table with assemblies: {assemblies_file} is not readable!')
+    if not os.access(alleles_file, os.R_OK):
+        print(f'Table with alleles: {alleles_file} is not readable!')
         sys.exit(1)
-    with open(assemblies_file) as asm_in:
-        for line in asm_in:
+    with open(alleles_file) as all_in:
+        for line in all_in:
             entries=line.rstrip().split('\t')
             if len(entries) != 2:
-                print(f'Table with assemblies: {assemblies_file} does not match the expected input format!')
+                print(f'Table with alleles: {allele_file} does not match the expected input format!')
                 sys.exit(1)
-            chrom=entries[0]
-            asm=entries[1]
-            if chrom in assemblies_out:
-                print(f'Table with assemblies: {assemblies_file} contains duplicate chromosome entries!')
+            region=entries[0]
+            allele=entries[1]
+            if region in alleles_out:
+                print(f'Table with alleles: {alleles_file} contains duplicate region entries!')
                 sys.exit(1)
-            if validate_assembly(asm):
-                assemblies_out[chrom] = os.path.abspath(asm)
+            if validate_alleles(allele):
+                alleles_out[region] = os.path.abspath(allele)
             else:
                 sys.exit(1)
-    print(f'Loaded table with assemblies {assemblies_file}!')
-    return assemblies_out
+    print(f'Loaded table with alleles {alleles_file}!')
+    return alleles_out
 
 def read_alignment_map(alignment_map) -> dict():
     '''
@@ -189,7 +195,7 @@ def read_alignments(aln_folder, alignment_map) -> dict():
     print(f'Loaded alignments in {aln_folder}!')
     return aln_dict
 
-def read_bed(bed_file, asm_dict) -> dict():
+def read_bed(bed_file, alleles_dict) -> dict():
     '''
     Read bed file and organize regions
     '''
@@ -215,14 +221,15 @@ def read_bed(bed_file, asm_dict) -> dict():
             if len(bed_entry) == 5:
                 alt=bed_entry[4]
             else:
-               alt=None  
-            if chrom not in asm_dict:
-                print(f'Provided chromosome: {chrom} in bed file {bed_file} is missing in the assemblies')
+               alt=None
+            region='_'.join([chrom,start,end])
+            if region not in alleles_dict:
+                print(f'Provided region: {region} in bed file {bed_file} is missing in the alleles')
                 sys.exit(1)
-            if chrom not in bed_dict:
-                bed_dict[chrom] = [(chrom,start,end,annot,alt)]
+            if region not in bed_dict:
+                bed_dict[region] = [(chrom,start,end,annot,alt)]
             else:
-                bed_dict[chrom].append((chrom,start,end,annot,alt))
+                bed_dict[region].append((chrom,start,end,annot,alt))
     print(f'Loaded bed file {bed_file}!')    
     return bed_dict
     
@@ -313,28 +320,27 @@ def validate_output(output_folder, config_yaml) -> dict():
     print(f'Checked output folder {out_folder}!')
     return config_yaml
 
-def write_assemblies(asm_dict, bed_dict, config_yaml, RESOURCES) -> dict:
+def write_alleles(alleles_dict, bed_dict, config_yaml, RESOURCES) -> dict:
     '''
-    Write assemblies to resources/assemblies
-    Add chromosomes to analyse to config - not all provided if those are not necessary
+    Write alleles to resources/alleles
+    Add regions to analyse to config - not all provided if those are not necessary
     '''
-    asm_dir=os.path.join(RESOURCES, 'assemblies')
-    os.makedirs(asm_dir, exist_ok=True)
-    config_yaml['chromosomes'] = set()
-
-    for k,v in asm_dict.items():
+    all_dir=os.path.join(RESOURCES, 'alleles')
+    os.makedirs(all_dir, exist_ok=True)
+    for k,v in alleles_dict.items():
         if k in bed_dict:
-            asm_folder=os.path.join(asm_dir, k)
-            os.makedirs(asm_folder, exist_ok=True)
-            asm_name=os.path.basename(v)
-            os.symlink(v, os.path.join(asm_folder,asm_name))
-            os.symlink(v + '.fai', os.path.join(asm_folder,asm_name + '.fai'))
-            if asm_name.endswith('.gz'):
-                os.symlink(v + '.gzi', os.path.join(asm_folder,asm_name + '.gzi'))
-            config_yaml['chromosomes'].add(k)
+            chrom=k.split('_')[0]
+            chrom_folder=os.path.join(all_dir, chrom)
+            all_folder=os.path.join(chrom_folder, k)
+            os.makedirs(all_folder, exist_ok=True)
+            all_name=os.path.basename(v)
+            os.symlink(v, os.path.join(all_folder,all_name))
+            os.symlink(v + '.fai', os.path.join(all_folder,all_name + '.fai'))
+            if all_name.endswith('.gz'):
+                os.symlink(v + '.gzi', os.path.join(all_folder,all_name + '.gzi'))
             config_yaml['SINGULARITY_BIND'].add(os.path.dirname(v))
 
-    print(f'Added assemblies to {asm_dir}!')
+    print(f'Added alleles to {all_dir}!')
     return config_yaml
 
 def write_alignments(aln_dict, config_yaml, RESOURCES) -> dict:
@@ -358,7 +364,6 @@ def write_alignments(aln_dict, config_yaml, RESOURCES) -> dict:
         config_yaml['SINGULARITY_BIND'].add(os.path.dirname(v))
     print(f'Added alignments to {aln_dir}!')
     return config_yaml
-
 
 def reference_contigs(config_yaml) -> dict:
     '''
@@ -387,7 +392,7 @@ def write_regions(bed_dict, config_yaml, RESOURCES) -> dict:
     contigs=reference_contigs(config_yaml)
     with open(config_yaml['all_regions'], 'w') as b_a_out:
         for k,v in bed_dict.items():
-            bed_dir=os.path.join(reg_dir, k)
+            bed_dir=os.path.join(reg_dir, k.split('_')[0])
             os.makedirs(bed_dir, exist_ok=True)
             for subr in v:
                 region_out='_'.join(subr[:-2])
@@ -586,7 +591,7 @@ def setup_arg_parser():
     )
     # Required arguments
     required = parser.add_argument_group('Required I/O arguments')
-    required.add_argument('-a', '--assemblies', help='assemblies individuals to -r will be genotyped against. This is a tab-separated file mapping chromosomes in -b to a FASTA with contigs for that chromosome. FASTA can be bgzip-compressed and must be indexed', metavar='FASTA', required=True)
+    required.add_argument('-a', '--alleles', help='Alleles file for each region. This is a tab-separated file mapping regions in -b to a FASTA with alleles for that region. FASTA can be bgzip-compressed and must be indexed', metavar='FASTA', required=True)
     required.add_argument('-g', '--genome', help='reference genome. This is the FASTA regions to -b refers to. FASTA can be bgzip-compressed and must be indexed', metavar='FASTA', required=True)
     required.add_argument('-r', '--reads', help='individuals to genotype. This is a folder with individual reads aligned to a reference genome (same to -g) in BAM/CRAM format. Alignment files must be indexed (BAI,CSI/CRAI) and will be searched recursively', metavar='FOLDER', required=True)
     required.add_argument('-b', '--bed', help='regions to genotype. A standard 3-column BED file, but can have a 4th column to label the region and a 5th column listing comma-separated alternative contigs for that region', metavar='BED', required=True)
@@ -637,7 +642,7 @@ def main():
     config['SINGULARITY_BIND'].add(os.path.abspath(args.tmp))
     config['pansn_prefix'] = args.pansn
     #assemblies
-    asm_dict=read_assemblies_file(os.path.abspath(args.assemblies))
+    allele_dict=read_alleles_file(os.path.abspath(args.alleles))
     #print(asm_dict)
     #alignment map
     alignment_map=read_alignment_map(args.map)
@@ -646,7 +651,7 @@ def main():
     aln_dict=read_alignments(os.path.abspath(args.reads), alignment_map)
     #print(aln_dict)
     #bed file
-    bed_dict=read_bed(os.path.abspath(args.bed),asm_dict)
+    bed_dict=read_bed(os.path.abspath(args.bed),allele_dict)
     #print(bed_dict)
     genome_dict=read_genome(os.path.abspath(args.genome))
     #print(genome_dict)
@@ -659,7 +664,7 @@ def main():
 
     #WRITE    
     #assemblies
-    config=write_assemblies(asm_dict, bed_dict, config, RESOURCES)
+    config=write_alleles(allele_dict, bed_dict, config, RESOURCES)
     #alignments
     config=write_alignments(aln_dict, config, RESOURCES)
     #reference
@@ -677,8 +682,6 @@ def main():
     #common paths to BIND for singularity
     paths=find_optimal_bindings(list(config['SINGULARITY_BIND']))
     del config['SINGULARITY_BIND']
-    #write config
-    config['chromosomes'] = list(config['chromosomes'])
     config['samples'] = list(config['samples'])
     config['regions'] = list(config['regions'])
     write_config(config, os.path.join(CONFIG, 'config.yaml'))

@@ -24,11 +24,11 @@ for (i in c(1:length(seqnames))) {
         pltlist[[simplify]]<-plotMiro(paf.table = sub.sub.paf, binsize = 1000)
 }
 for (l in c(1:length(pltlist))) {
-        pdf(file.path(dirname(output_png),paste0(names(pltlist)[l], "_to_", ref_path, ".png")), width=20, height=5)
+        png(file.path(dirname(output_png),paste0(names(pltlist)[l], "_to_", ref_path, ".png")), width=20, height=5)
         print(pltlist[[l]])
         dev.off()
 }
 #plot all vs all
-pdf(output_png, width=20, height=10)
+png(output_png, width=20, height=10)
 plotAVA(paf.table = paf.table, binsize=1000)
 dev.off()

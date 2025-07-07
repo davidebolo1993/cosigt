@@ -43,8 +43,8 @@ rule samtools_faidx_besthaps_fasta:
 	'''
 	input:
 		geno=rules.cosigt_genotype.output.geno,
-		fasta=rules.bedtools_getfasta.output.fasta,
-		fai=rules.bedtools_getfasta.output.fai
+		fasta=rules.copy_fasta_over.output.fasta,
+		fai=rules.copy_fasta_over.output.fai
 	output:
 		temp(config['output'] + '/cosigt/{sample}/{chr}/{region}/viz/{region}.haplotypes.fasta'),
 	threads:

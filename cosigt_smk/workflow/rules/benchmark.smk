@@ -103,7 +103,7 @@ checkpoint prepare_combinations_for_qv:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://davidebolo1993/samtools:1.21'
+		'docker://davidebolo1993/samtools:1.22'
 	conda:
 		'../envs/samtools.yaml'
 	shell:
