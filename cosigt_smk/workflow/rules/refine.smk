@@ -179,9 +179,13 @@ rule make_bed_refined:
 	shell:
 		'''
 		bedtools intersect \
-			-a <(cat {input} | bedtools sort -i -)  \
+			-a <(bedtools sort -i - {input})  \
 			-b <(bedtools sort -i {params.regions}) \
 			-wao | \
-			cut -f 1,2,3,7 > {output}
+			awk '{{
+    			mid_a = int(($2 + $3)/2);
+    			mid_b = int(($5 + $6)/2);
+    			if (mid_a == mid_b) print $1,$2,$3,$7
+			}}' OFS='\\t' > {output}
 		'''
 	
