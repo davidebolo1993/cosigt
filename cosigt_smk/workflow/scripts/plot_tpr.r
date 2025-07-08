@@ -31,7 +31,7 @@ data_long <- tpr_df %>%
   pivot_longer(cols = c(edr.1, edr.2, qv.1, qv.2), names_to = "metric", values_to = "metric.values")
 
 data_long$pos<-data_long$region
-if (any(annot_tsv$V4 != "unkown")) {
+if (any(annot_tsv$V4 != "unknown")) {
   #match annotation in that case
   data_long$region <- annot_tsv$V4[match(data_long$pos, annot_tsv$id)]
 }
@@ -292,7 +292,13 @@ for (i in 1:num_rows_tpr) {
 tpr_combined_plot <- plot_grid(plotlist = tpr_bar_plots, ncol = 1, align = 'v', axis = 'lr')
 
 #plot dimensions
-tpr_plot_width <- max(15, min(30, bars_per_row * 0.25))
+
+if (num_regions_tpr <= 5) {
+  tpr_plot_width <- 5
+} else {
+  tpr_plot_width <- max(15, min(30, bars_per_row * 0.25))
+}
+
 tpr_plot_height <- 5 * num_rows_tpr
 
 ggsave(paste0(output_plot_prefix, ".tpr_bar.png"), plot = tpr_combined_plot,width = tpr_plot_width, height = tpr_plot_height, limitsize = FALSE)
@@ -428,7 +434,11 @@ for (i in 1:num_rows_qv) {
 }
 
 #calculate dimensions
-qv_plot_width <- max(15, min(30, qv_bars_per_row * 0.25))
+if (num_regions_qv <= 5) {
+  qv_plot_width <- 5
+} else {
+  qv_plot_width <- max(15, min(30, qv_bars_per_row * 0.25))
+}
 qv_plot_height <- 5 * num_rows_qv
 
 #combine
@@ -487,7 +497,7 @@ for (i in 1:num_rows_cor) {
     geom_col() +
     geom_hline(yintercept = 0, linetype = "dashed") +
     scale_fill_gradient2(
-      low = "#F44336", mid = "white", high = "#4CAF50", midpoint = 0
+      low = "#F44336", mid = "#FFEB3B", high = "#4CAF50", midpoint = 0
     ) +
     labs(
       x = if (i == num_rows_cor) "region" else "",
@@ -504,7 +514,12 @@ for (i in 1:num_rows_cor) {
   cor_bar_plots[[i]] <- p
 }
 
-cor_plot_width <- max(15, min(30, cor_bars_per_row * 0.25))
+if (num_regions_cor <= 5) {
+  cor_plot_width <- 5
+} else {
+  cor_plot_width <- max(15, min(30, cor_bars_per_row * 0.25))
+}
+
 cor_plot_height <- 8 * num_rows_cor
 
 cor_combined_plot <- plot_grid(plotlist = cor_bar_plots, ncol = 1, align = 'v', axis = 'lr')
