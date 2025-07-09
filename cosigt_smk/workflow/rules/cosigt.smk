@@ -124,9 +124,13 @@ rule plot_ava:
 		pansn=config['pansn_prefix'] + '{chr}'
 	shell:
 		'''
-		Rscript \
-			workflow/scripts/plotava.r \
-			{input} \
-			{output} \
-			{params.pansn}
+		if [ -s {input} ]; then
+			Rscript \
+				workflow/scripts/plotava.r \
+				{input} \
+				{output} \
+				{params.pansn}
+		else
+			touch {output}
+		fi
 		'''
