@@ -43,8 +43,8 @@ rule samtools_faidx_besthaps_fasta:
 	'''
 	input:
 		geno=rules.cosigt_genotype.output.geno,
-		fasta=rules.copy_fasta_over.output.fasta,
-		fai=rules.copy_fasta_over.output.fai
+		fasta=rules.bedtools_getfasta.output.fasta,
+		fai=rules.bedtools_getfasta.output.fai
 	output:
 		temp(config['output'] + '/cosigt/{sample}/{chr}/{region}/viz/{region}.haplotypes.fasta'),
 	threads:
@@ -124,9 +124,13 @@ rule plot_ava:
 		pansn=config['pansn_prefix'] + '{chr}'
 	shell:
 		'''
-		Rscript \
-			workflow/scripts/plotava.r \
-			{input} \
-			{output} \
-			{params.pansn}
+		if [ -s {input} ]; then
+			Rscript \
+				workflow/scripts/plotava.r \
+				{input} \
+				{output} \
+				{params.pansn}
+		else
+			touch {output}
+		fi
 		'''
