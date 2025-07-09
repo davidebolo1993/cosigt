@@ -23,12 +23,12 @@ def make_default_config(tmp) -> dict:
     config['bwa']['threads'] = 5
     config['bwa']['mem_mb'] = 5000
     config['bwa']['time'] =  2
-    #minimap2
+    #minimap2 for plot_ava
     #5 cores, 5 Gb, 2 min max
-    config['minimap2']=dict()
-    config['minimap2']['threads'] = 5
-    config['minimap2']['mem_mb'] = 5000
-    config['minimap2']['time'] =  2
+    config['minimap2_small']=dict()
+    config['minimap2_small']['threads'] = 5
+    config['minimap2_small']['mem_mb'] = 5000
+    config['minimap2_small']['time'] =  2
     #samtools - this is is only for samtools fasta
     #2 cores, 2 Gb, 2 min max
     config['samtools']=dict()
@@ -44,17 +44,15 @@ def make_default_config(tmp) -> dict:
     config['pggb']['time'] =  40
     config['pggb']['tmpdir'] = tmp
     config['pggb']['params'] =  '-c 2'
-    #wfmash
+    #minimap2 for batch alignment
     #this depends a lot on the number of contigs
     #generated through impg, but kind-of-ok also
     #considering retries
     #5 cores, 40 Gb, 20 min max
-    config['wfmash']=dict()
-    config['wfmash']['threads'] = 5
-    config['wfmash']['mem_mb'] = 20000
-    config['wfmash']['time'] =  20
-    config['wfmash']['tmpdir'] = tmp
-    config['wfmash']['params'] =  '-s 10k -p 95'
+    config['minimap2_large']=dict()
+    config['minimap2_large']['threads'] = 5
+    config['minimap2_large']['mem_mb'] = 20000
+    config['minimap2_large']['time'] =  20
     #default - small
     config['default_small']=dict()
     config['default_small']['mem_mb'] = 100
