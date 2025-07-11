@@ -31,7 +31,6 @@ def parse_fai_and_set_flags(fai_input):
 	if min_len <= 1000:
 		a=min_len/1000
 		s_val=((a*10)//1)/10*1000
-		s_val*=1000
 		flags.append(f'-s {s_val}')
 	elif min_len <= 5000:
 		s_val = min(1000, math.floor(min_len / 1000) * 1000)
