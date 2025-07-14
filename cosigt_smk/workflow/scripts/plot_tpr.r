@@ -11,19 +11,55 @@ setDTthreads(1)
 
 args <- commandArgs(trailingOnly = TRUE)
 
-tpr_qv_list<-list()
-
 output_plot_prefix<-args[1]
+
 annot_bed<-args[2]
 annot_tsv<-fread(annot_bed)
 annot_tsv <- annot_tsv %>%
   mutate(id = paste0(as.character(V1), "_", as.character(V2), "_", as.character(V3)))
 
 tpr_files<-args[3:length(args)]
+tpr_qv_list<-list()
+expected_cols <- c("sample.id", "region", "n.clust", "edr.1", "edr.2", "qv.1", "qv.2", "tpr")
 for (i in 1:length(tpr_files)) {
-    tpr_qv_list[[i]]<-fread(tpr_files[i], header=T) #this is already cleaned
+    # Skip if the file is empty
+    if (file.info(tpr_files[i])$size == 0) {
+        warning(paste("Skipping empty file:", tpr_files[i]))
+        next
+    }
+    
+    # Try to read the file
+    tryCatch({
+        temp_df <- fread(tpr_files[i], header=T)
+        
+        # Skip if the dataframe has 0 rows
+        if (nrow(temp_df) == 0) {
+            warning(paste("Skipping file with 0 rows:", tpr_files[i]))
+            next
+        }
+        
+        # Check for required columns and add them if missing
+        for (col in expected_cols) {
+            if (!(col %in% names(temp_df))) {
+                temp_df[[col]] <- NA_real_  # Use appropriate NA type
+                warning(paste("Added missing column", col, "in file", tpr_files[i]))
+            }
+        }
+        
+        # Select only needed columns
+        tpr_qv_list[[length(tpr_qv_list) + 1]] <- temp_df[, ..expected_cols, with=FALSE]
+        
+    }, error = function(e) {
+        warning(paste("Error processing file", tpr_files[i], ":", e$message))
+    })
 }
-tpr_df<-do.call(rbind,tpr_qv_list)
+
+# Only proceed if we have valid data
+if (length(tpr_qv_list) > 0) {
+    tpr_df <- do.call(rbind, tpr_qv_list)
+} else {
+    stop("No valid data found in any of the input files.")
+}
 
 #info of interest and convert to long format for ggplot2
 data_long <- tpr_df %>%
