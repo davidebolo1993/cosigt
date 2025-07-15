@@ -34,6 +34,6 @@ rule samtools_fasta_mapped:
 			{input.sample} | \
 			samtools sort -n | \
 			samtools fasta \
-			-@ {threads} \
+			-@ {threads} -F 0x0 \
 			- | gzip > {output}
 		'''
