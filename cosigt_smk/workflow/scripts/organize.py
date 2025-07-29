@@ -395,15 +395,11 @@ def write_regions(bed_dict, config_yaml, RESOURCES) -> dict:
                     b_out.write('\t'.join(subr[:-2]) + '\n')
                     if subr[-1] is not None:    
                         alts=subr[-1].split(',')
-                        if len(alts) == 1:
-                            #search for pattern
-                            alt=alts[0]
-                            matches=[x for x in contigs.keys() if x.startswith(alt)]
-                            for match in matches:
-                                b_out.write('\t'.join(contigs[match]) + '\n')
-                        else:
-                            for alt in alts:
-                                b_out.write('\t'.join(contigs[alt]) + '\n')
+                        for alt in alts:
+                            last=alt.rfind(':')
+                            chr_alt,rest_alt=alt[:last], alt[last+1:]
+                            start_alt,end_alt=rest_alt.split('-')
+                            b_out.write('\t'.join([chr_alt,start_alt,end_alt]) + '\n')
                 config_yaml['regions'].add(region_out)
     print(f'Added regions to {reg_dir}!')
     return config_yaml

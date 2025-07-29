@@ -34,7 +34,7 @@ rule impg_project_batches:
 		tmp_bed=config['output'] + '/impg/{chr}/{region}/{region}.tmp.bed'
 	shell:
 		'''
-		grep {params.chr} {input.bed} > {params.tmp_bed}
+		grep -w {params.chr} {input.bed} > {params.tmp_bed}
 		impg \
 			query \
 			-p {input.paf} \
