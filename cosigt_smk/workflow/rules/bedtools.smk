@@ -18,7 +18,7 @@ rule make_reference_bed:
 		chrom='{chr}'
 	shell:
 		'''
-		grep {params.chrom} {input} | gzip > {output}
+		grep -w {params.chrom} {input} | gzip > {output}
 		'''
 
 rule make_alignment_bed:
