@@ -392,7 +392,7 @@ def write_regions(bed_dict, config_yaml, RESOURCES) -> dict:
     contigs=reference_contigs(config_yaml)
     with open(config_yaml['all_regions'], 'w') as b_a_out:
         for k,v in bed_dict.items():
-            bed_dir=os.path.join(reg_dir, k)
+            bed_dir=os.path.join(reg_dir, k.split('_')[0])
             os.makedirs(bed_dir, exist_ok=True)
             for subr in v:
                 region_out='_'.join(subr[:-2])
