@@ -1,0 +1,19 @@
+# General Snakemake config
+jobs: 200
+latency-wait: 30
+rerun-triggers:
+  - mtime
+rerun-incomplete: true
+use-singularity: true
+printshellcmds: true
+restart-times: 5
+
+# Executor plugin config
+executor:
+  name: slurm
+  slurm:
+    partition: cpuq
+    #qos: qos
+    #account: account
+    #...
+    logdir: logs/slurm
