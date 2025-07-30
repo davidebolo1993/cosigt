@@ -33,7 +33,7 @@ rule samtools_fasta_mapped:
 			-b \
 			{input.sample} | \
 			samtools sort -n | \
-			samtools fasta \
-			-@ {threads} -F 0x0 \
+			samtools fasta -F 0x0 \
+			-@ {threads} \
 			- | gzip > {output}
 		'''

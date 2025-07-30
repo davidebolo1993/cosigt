@@ -1,7 +1,7 @@
 # Cosigt
 
 <p align="center">
-<img src="./cosigt.png" width="350"/>
+<img src="./cosigt.mod.png" width="350"/>
 </p>
 
 

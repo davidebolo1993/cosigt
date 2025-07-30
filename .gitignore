@@ -12,10 +12,6 @@ cosigt_smk/benchmarks/*
 cosigt_smk/.*sh
 cosigt_smk/.cache
 
-#but keep example profile
-!cosigt_smk/config/slurm/
-!cosigt_smk/config/slurm/**
-
 #preserve .gitignore
 !.gitignore
 !*/.gitignore
