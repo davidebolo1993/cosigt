@@ -8,12 +8,11 @@ use-singularity: true
 printshellcmds: true
 restart-times: 5
 
-# Executor plugin config
-executor:
-  name: slurm
-  slurm:
-    partition: cpuq
-    #qos: qos
-    #account: account
-    #...
-    logdir: logs/slurm
+# Executor configuration for Snakemake 9+
+executor: slurm
+
+# Default resources
+default-resources:
+  - slurm_partition=cpuq
+  #- slurm_account=...
+  #see options at https://snakemake.github.io/snakemake-plugin-catalog/plugins/executor/slurm.html
