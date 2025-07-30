@@ -96,20 +96,20 @@ checkpoint prepare_combinations_for_qv:
 		tsv=rules.make_tpr_table.output,
 		fasta=rules.odgi_og_to_fasta.output
 	output:
-		directory(config['output'] + '/benchmark/{chr}/{region}/qv_prep')
+		temp(directory(config['output'] + '/benchmark/{chr}/{region}/qv_prep'))
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://davidebolo1993/samtools:1.21'
+		'docker://davidebolo1993/samtools:1.22'
 	conda:
 		'../envs/samtools.yaml'
 	shell:
 		'''
 		bash workflow/scripts/prepare_qv.sh {input.tsv} {input.fasta} {output}
-		rm {input.fasta}*
+		#rm {input.fasta}*
 		'''
 
 def get_samples(wildcards):
@@ -133,7 +133,7 @@ rule calculate_qv:
 	input:
 		config['output'] + '/benchmark/{chr}/{region}/qv_prep/{sample}/ids.tsv'
 	output:
-		config['output'] + '/benchmark/{chr}/{region}/qv_prep/{sample}/qv.tsv'
+		temp(config['output'] + '/benchmark/{chr}/{region}/qv_prep/{sample}/qv.tsv')
 	threads:
 		1
 	resources:
@@ -157,7 +157,7 @@ rule combine_qv:
 	input:
 		lambda wildcards: expand(config['output'] + '/benchmark/{chr}/{region}/qv_prep/{sample}/qv.tsv', chr='{chr}', region='{region}', sample=get_samples(wildcards))
 	output:
-		config['output'] + '/benchmark/{chr}/{region}/bestqv.tsv'
+		temp(config['output'] + '/benchmark/{chr}/{region}/bestqv.tsv')
 	threads:
 		1
 	resources:
@@ -198,8 +198,8 @@ rule combine_tpr_qv:
 		{input.qv} \
 		{wildcards.region} \
 		{output}
-		rm {input.qv}
-		rm -rf {params.qv_dir}
+		#rm {input.qv}
+		#rm -rf {params.qv_dir}
 		'''
 
 def get_all_tpr_qv_files(wildcards):
@@ -250,3 +250,4 @@ rule plot_tpr:
 		{params.annot_bed} \
 		{input}
 		'''
+	
