@@ -1,18 +1,18 @@
-!.gitignore
-!*/.gitignore
-
-#go files
+#go files and executables
 go.sum
 go.mod
 cosigt
 
 #cosigt smk files
 cosigt_smk/resources/*
-!cosigt_smk/resources/.gitignore
 cosigt_smk/logs/*
 cosigt_smk/.snakemake/*
 cosigt_smk/config/*
-!cosigt_smk/config/.gitignore
 cosigt_smk/benchmarks/*
 cosigt_smk/.*sh
 cosigt_smk/.cache
+
+#preserve .gitignore
+!.gitignore
+!*/.gitignore
+!**/.gitignore

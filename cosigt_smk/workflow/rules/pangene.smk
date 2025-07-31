@@ -12,7 +12,7 @@ rule subset_gtf:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
+		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
 		'docker://davidebolo1993/bedtools:2.31.0'
@@ -41,7 +41,7 @@ rule pangene_getaa:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
+		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
 	container:
 		'docker://davidebolo1993/pangene:1.1'
@@ -146,9 +146,10 @@ rule pangene_viz:
 	benchmark:
 		'benchmarks/{chr}.{region}.pangene_viz.benchmark.txt'
 	params:
-		paf_folder=config['output'] + '/pangene/assemblies/{chr}/{region}/single_assemblies'
+		paf_folder=config['output'] + '/pangene/assemblies/{chr}/{region}/single_assemblies',
+		tsv=config['output'] + '/cluster/{chr}/{region}/{region}.clusters.medoids.tsv'
 	shell:
 		'''
-		Rscript workflow/scripts/plotgggenes.r {input.bed} {input.json} {input.fai} {output}
+		Rscript workflow/scripts/plotgggenes.r {input.bed} {input.json} {input.fai} {output} {params.tsv}
 		rm -rf {params.paf_folder}
 		'''

@@ -1,7 +1,7 @@
 from glob import glob
 configfile: 'config/config.yaml'
 
-include: 'rules/wfmash.smk'
+include: 'rules/minimap2.smk'
 include: 'rules/impg.smk'
 include: 'rules/bedtools.smk'
 include: 'rules/samtools.smk'

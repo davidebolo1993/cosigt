@@ -359,6 +359,8 @@ qv_summary_sorted <- qv_summary %>%
   mutate(region = factor(region, levels = region_order)) %>%
   arrange(region)
 
+fwrite(qv_summary_sorted,file=paste0(output_plot_prefix, ".qv_bar.tsv"),sep="\t", quote=F, col.names=T, row.names=F)
+
 num_regions_qv <- length(unique(qv_summary_sorted$region))
 num_rows_qv <- ceiling(num_regions_qv / max_bars_per_row)
 qv_bars_per_row <- ceiling(num_regions_qv / num_rows_qv)
@@ -448,7 +450,6 @@ ggsave(paste0(output_plot_prefix, ".qv_bar.png"), plot = qv_combined_plot, width
 #done
 
 #plot correlating edr values and qv values - re-adapting the same strategy we had before
-
 qv_edr_wide <- data_long %>%
   filter(metric %in% c("qv.1", "qv.2", "edr.1", "edr.2")) %>%
   mutate(

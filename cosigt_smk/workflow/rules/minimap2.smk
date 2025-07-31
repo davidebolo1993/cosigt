@@ -9,8 +9,8 @@ rule pansnspec_target:
 	input:
 		config['reference']
 	output:
-		fasta=config['output'] + '/wfmash/{chr}/{chr}.fasta.gz',
-		fai=config['output'] + '/wfmash/{chr}/{chr}.fasta.gz.fai'
+		fasta=config['output'] + '/minimap2/{chr}/{chr}.fasta.gz',
+		fai=config['output'] + '/minimap2/{chr}/{chr}.fasta.gz.fai'
 	threads:
 		1
 	resources:
@@ -43,7 +43,7 @@ checkpoint generate_batches:
 	input:
 		lambda wildcards: glob('resources/assemblies/{chr}/*fai'.format(chr=wildcards.chr)),
 	output:
-		directory(config['output'] + '/wfmash/{chr}/batches/ids')
+		directory(config['output'] + '/minimap2/{chr}/batches/ids')
 	threads:
 		1
 	resources:
@@ -53,7 +53,7 @@ checkpoint generate_batches:
 		'benchmarks/{chr}.generate_batches.benchmark.txt'
 	shell:
 		'''
-		bash workflow/scripts/make_wfmash_batches.sh {input} {output}
+		bash workflow/scripts/make_minimap2_batches.sh {input} {output}
 		'''
 
 def get_batches(wildcards):
@@ -75,16 +75,16 @@ rule samtools_faidx_batches:
 	'''
 	input:
 		fai=lambda wildcards: glob('resources/assemblies/{chr}/*fai'.format(chr=wildcards.chr)),
-		ids=config['output'] + '/wfmash/{chr}/batches/ids/{batch}.txt'
+		ids=config['output'] + '/minimap2/{chr}/batches/ids/{batch}.txt'
 	output:
-		fasta=temp(config['output'] + '/wfmash/{chr}/batches/fasta/{batch}.fasta.gz'),
-		fai=temp(config['output'] + '/wfmash/{chr}/batches/fasta/{batch}.fasta.gz.fai'),
-		gzi=temp(config['output'] + '/wfmash/{chr}/batches/fasta/{batch}.fasta.gz.gzi')
+		fasta=temp(config['output'] + '/minimap2/{chr}/batches/fasta/{batch}.fasta.gz'),
+		fai=temp(config['output'] + '/minimap2/{chr}/batches/fasta/{batch}.fasta.gz.fai'),
+		gzi=temp(config['output'] + '/minimap2/{chr}/batches/fasta/{batch}.fasta.gz.gzi')
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * 2 * config['default_high']['time']
+		time=lambda wildcards, attempt: attempt * config['default_high']['time']
 	container:
 		'docker://davidebolo1993/samtools:1.22'
 	conda:
@@ -104,9 +104,9 @@ rule samtools_faidx_batches:
 		samtools faidx {output.fasta}
 		'''
 
-rule wfmash_align_batches:
+rule minimap2_align_batches:
 	'''
-	https://github.com/waveygang/wfmash
+	https://github.com/lh3/minimap2
 	- Align individual queries (assemblies) to the target (reference chromosome)
 	- Compress
 	'''
@@ -117,32 +117,27 @@ rule wfmash_align_batches:
 		queries_fai=rules.samtools_faidx_batches.output.fai,
 		queries_gzi=rules.samtools_faidx_batches.output.gzi
 	output:
-		temp(config['output'] + '/wfmash/{chr}/batches/paf/{batch}.paf.gz')
+		temp(config['output'] + '/minimap2/{chr}/batches/paf/{batch}.paf.gz')
 	threads:
-		config['wfmash']['threads']
+		config['minimap2_large']['threads']
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['wfmash']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['wfmash']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['minimap2_large']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['minimap2_large']['time']
 	container:
-		'docker://davidebolo1993/wfmash:0.14.0'
+		'docker://davidebolo1993/minimap2:2.28'
 	conda:
-		'../envs/wfmash.yaml'
+		'../envs/minimap2.yaml'
 	benchmark:
-		'benchmarks/{chr}.{batch}.wfmash_align_batches.benchmark.txt'
-	params:
-		flags=config['wfmash']['params'],
-		tmpdir=config['wfmash']['tmpdir'] + '/{chr}/{batch}'
+		'benchmarks/{chr}.{batch}.minimap2_align_batches.benchmark.txt'
 	shell:
 		'''
-		mkdir -p {params.tmpdir}
-		wfmash \
-			{input.target_fasta} \
-			{input.queries_fasta} \
-			-X \
+		minimap2 \
+			-x asm20 \
+			--eqx \
+			-c \
 			-t {threads} \
-			-B {params.tmpdir} \
-			{params.flags}  | bgzip -c > {output}
-		rm -rf {params.tmpdir}
+			{input.target_fasta} \
+			{input.queries_fasta} | bgzip -c > {output}
 		'''
 
 def get_paf_files(wildcards):
@@ -152,7 +147,7 @@ def get_paf_files(wildcards):
 	'''
 	batches = get_batches(wildcards)
 	return expand(
-		config['output'] + '/wfmash/{chr}/batches/paf/{batch}.paf.gz',
+		config['output'] + '/minimap2/{chr}/batches/paf/{batch}.paf.gz',
 		chr=wildcards.chr,
 		batch=batches
 	)
@@ -167,21 +162,21 @@ checkpoint merge_paf_per_region:
 	input:
 		get_paf_files
 	output:
-		paf=config['output'] + '/wfmash/{chr}/{chr}.paf.gz',
-		gzi=config['output'] + '/wfmash/{chr}/{chr}.paf.gz.gzi'
+		paf=config['output'] + '/minimap2/{chr}/{chr}.paf.gz',
+		gzi=config['output'] + '/minimap2/{chr}/{chr}.paf.gz.gzi'
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
 	container:
-		'docker://davidebolo1993/wfmash:0.14.0'
+		'docker://davidebolo1993/minimap2:2.28'
 	conda:
-		'../envs/wfmash.yaml'
+		'../envs/minimap2.yaml'
 	benchmark:
 		'benchmarks/{chr}.merge_paf_per_region.txt'
 	params:
-		batches_tmp=config['output'] + '/wfmash/{chr}/batches/ids'
+		batches_tmp=config['output'] + '/minimap2/{chr}/batches/ids'
 	shell:
 		'''
 		cat {input} > {output.paf}
