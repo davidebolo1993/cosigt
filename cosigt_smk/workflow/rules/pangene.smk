@@ -146,9 +146,10 @@ rule pangene_viz:
 	benchmark:
 		'benchmarks/{chr}.{region}.pangene_viz.benchmark.txt'
 	params:
-		paf_folder=config['output'] + '/pangene/assemblies/{chr}/{region}/single_assemblies'
+		paf_folder=config['output'] + '/pangene/assemblies/{chr}/{region}/single_assemblies',
+		tsv=config['output'] + '/cluster/{chr}/{region}/{region}.clusters.medoids.tsv'
 	shell:
 		'''
-		Rscript workflow/scripts/plotgggenes.r {input.bed} {input.json} {input.fai} {output}
+		Rscript workflow/scripts/plotgggenes.r {input.bed} {input.json} {input.fai} {output} {params.tsv}
 		rm -rf {params.paf_folder}
 		'''

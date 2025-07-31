@@ -190,6 +190,8 @@ rule viz_odgi:
 		'../envs/r.yaml'
 	benchmark:
 		'benchmarks/{chr}.{region}.viz_odgi.benchmark.txt'
+	params:
+		tsv=config['output'] + '/cluster/{chr}/{region}/{region}.clusters.medoids.tsv'
 	shell:
 		'''
 		Rscript \
@@ -197,5 +199,6 @@ rule viz_odgi:
 			{input.graph_cov} \
 			{input.nodes_length} \
 			{input.json} \
-			{output}
+			{output} \
+			{params.tsv}
 		'''

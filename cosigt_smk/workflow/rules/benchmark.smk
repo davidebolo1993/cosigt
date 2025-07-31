@@ -10,12 +10,12 @@ rule make_tpr_table:
 		tsv=rules.odgi_dissimilarity.output,
 		json=rules.make_clusters.output
 	output:
-		temp(config['output'] + '/benchmark/{chr}/{region}/tpr.tsv')
+		config['output'] + '/benchmark/{chr}/{region}/tpr.tsv'
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default_high']['time']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
@@ -42,7 +42,7 @@ rule odgi_flip_pggb_graph:
 		og=rules.pggb_construct.output,
 		bed=rules.make_reference_bed.output
 	output:
-		temp(config['output'] + '/benchmark/{chr}/{region}/{region}.flipped.og')
+		config['output'] + '/benchmark/{chr}/{region}/{region}.flipped.og'
 	threads:
 		1
 	resources:
@@ -70,7 +70,7 @@ rule odgi_og_to_fasta:
 	input:
 		rules.odgi_flip_pggb_graph.output
 	output:
-		temp(config['output'] + '/benchmark/{chr}/{region}/{region}.flipped.fasta')
+		config['output'] + '/benchmark/{chr}/{region}/{region}.flipped.fasta'
 	threads:
 		1
 	resources:
@@ -84,7 +84,7 @@ rule odgi_og_to_fasta:
 		'''
 		odgi paths \
 			-i {input} \
-			-f | sed 's/_inv$//g'> {output}
+			-f | sed 's/_inv$//g' > {output}
 		'''
 
 checkpoint prepare_combinations_for_qv:
@@ -96,7 +96,7 @@ checkpoint prepare_combinations_for_qv:
 		tsv=rules.make_tpr_table.output,
 		fasta=rules.odgi_og_to_fasta.output
 	output:
-		temp(directory(config['output'] + '/benchmark/{chr}/{region}/qv_prep'))
+		directory(config['output'] + '/benchmark/{chr}/{region}/qv_prep')
 	threads:
 		1
 	resources:
@@ -109,7 +109,6 @@ checkpoint prepare_combinations_for_qv:
 	shell:
 		'''
 		bash workflow/scripts/prepare_qv.sh {input.tsv} {input.fasta} {output}
-		#rm {input.fasta}*
 		'''
 
 def get_samples(wildcards):
@@ -133,7 +132,7 @@ rule calculate_qv:
 	input:
 		config['output'] + '/benchmark/{chr}/{region}/qv_prep/{sample}/ids.tsv'
 	output:
-		temp(config['output'] + '/benchmark/{chr}/{region}/qv_prep/{sample}/qv.tsv')
+		config['output'] + '/benchmark/{chr}/{region}/qv_prep/{sample}/qv.tsv'
 	threads:
 		1
 	resources:
@@ -157,7 +156,7 @@ rule combine_qv:
 	input:
 		lambda wildcards: expand(config['output'] + '/benchmark/{chr}/{region}/qv_prep/{sample}/qv.tsv', chr='{chr}', region='{region}', sample=get_samples(wildcards))
 	output:
-		temp(config['output'] + '/benchmark/{chr}/{region}/bestqv.tsv')
+		config['output'] + '/benchmark/{chr}/{region}/bestqv.tsv'
 	threads:
 		1
 	resources:
@@ -188,8 +187,6 @@ rule combine_tpr_qv:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
 		'../envs/r.yaml'
-	params:
-		qv_dir=config['output'] + '/benchmark/{chr}/{region}/qv_prep'
 	shell:
 		'''
 		Rscript \
@@ -198,8 +195,6 @@ rule combine_tpr_qv:
 		{input.qv} \
 		{wildcards.region} \
 		{output}
-		#rm {input.qv}
-		#rm -rf {params.qv_dir}
 		'''
 
 def get_all_tpr_qv_files(wildcards):
