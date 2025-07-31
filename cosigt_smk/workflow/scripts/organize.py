@@ -11,33 +11,28 @@ def make_default_config(tmp) -> dict:
     Make default config
     '''
     config=dict()
-    #bwa-mem2
-    #5 cores, 5 Gb, 2 min max
+    #RESOURCES FOR THE MAIN BRANCH
+    #THESE ARE DEFAULT RESOURCES USERS MAY WANT TO ADJUST IN THE CONFIG
+    #config/config.yaml
+    #bwamem2_index and bwamem2_mem_samtools_sort
     config['bwa-mem2']=dict()
     config['bwa-mem2']['threads'] = 5
     config['bwa-mem2']['mem_mb'] = 5000
     config['bwa-mem2']['time'] = 2
-    #bwa-mem
-    #5 cores, 5 Gb, 2 min max
-    config['bwa']=dict()
-    config['bwa']['threads'] = 5
-    config['bwa']['mem_mb'] = 5000
-    config['bwa']['time'] =  2
-    #minimap2 for plot_ava
-    #5 cores, 5 Gb, 2 min max
+    #minimap2 for minimap2_ava
     config['minimap2_small']=dict()
     config['minimap2_small']['threads'] = 5
     config['minimap2_small']['mem_mb'] = 5000
     config['minimap2_small']['time'] =  2
-    #samtools - this is is only for samtools fasta
-    #2 cores, 2 Gb, 2 min max
+    #samtools for samtools_fasta
     config['samtools']=dict()
     config['samtools']['threads'] = 2
     config['samtools']['mem_mb'] = 2000
     config['samtools']['time'] = 2
     #pggb
     #this really needs to be adjusted based on region length and parameters
-    #but based on the longest jobs observed
+    #but based on some benchmarking we did
+    #on >300 loci in a single run
     config['pggb']=dict()
     config['pggb']['threads'] = 24
     config['pggb']['mem_mb'] = 20000
@@ -46,25 +41,25 @@ def make_default_config(tmp) -> dict:
     config['pggb']['params'] =  '-c 2'
     #minimap2 for batch alignment
     #this depends a lot on the number of contigs
-    #generated through impg, but kind-of-ok also
-    #considering retries
-    #5 cores, 40 Gb, 20 min max
+    #5 cores, 40 Gb, 40 min max - there are cases where we hit 80G(?) but overall
+    #this should complete in minutes and do not exceed 10-20G
     config['minimap2_large']=dict()
     config['minimap2_large']['threads'] = 5
-    config['minimap2_large']['mem_mb'] = 20000
-    config['minimap2_large']['time'] =  20
+    config['minimap2_large']['mem_mb'] = 40000
+    config['minimap2_large']['time'] =  40
+    #many tiny rules use these resources instead
     #default - small
     config['default_small']=dict()
-    config['default_small']['mem_mb'] = 100
-    config['default_small']['time'] =  1
+    config['default_small']['mem_mb'] = 200
+    config['default_small']['time'] =  2
     #default - mid
     config['default_mid']=dict()
-    config['default_mid']['mem_mb'] = 500
-    config['default_mid']['time'] =  2
+    config['default_mid']['mem_mb'] = 2000
+    config['default_mid']['time'] =  5
     #default - high
     config['default_high']=dict()
-    config['default_high']['mem_mb'] = 2000
-    config['default_high']['time'] =  4
+    config['default_high']['mem_mb'] = 10000
+    config['default_high']['time'] =  10
     print(f'Config template prepared!')
     return config
 

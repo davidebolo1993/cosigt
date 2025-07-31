@@ -12,7 +12,7 @@ rule gfainject_inject:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
 	container:
 		'docker://davidebolo1993/gfainject:0.2.1'
 	conda:

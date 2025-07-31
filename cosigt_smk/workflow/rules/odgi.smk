@@ -11,9 +11,9 @@ rule odgi_view:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
 	container:
-		'docker://pangenome/odgi:1745375412'
+		'docker://pangenome/odgi:1753347183'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -38,9 +38,9 @@ rule odgi_paths:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
 	container:
-		'docker://pangenome/odgi:1745375412'
+		'docker://pangenome/odgi:1753347183'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -117,10 +117,10 @@ rule odgi_dissimilarity:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
+		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://pangenome/odgi:1745375412'
+		'docker://pangenome/odgi:1753347183'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -147,8 +147,8 @@ rule make_clusters:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:

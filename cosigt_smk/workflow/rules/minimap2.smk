@@ -84,7 +84,7 @@ rule samtools_faidx_batches:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * 2 * config['default_high']['time']
+		time=lambda wildcards, attempt: attempt * config['default_high']['time']
 	container:
 		'docker://davidebolo1993/samtools:1.22'
 	conda:

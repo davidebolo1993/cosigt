@@ -12,7 +12,7 @@ rule subset_gtf:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
+		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
 		'docker://davidebolo1993/bedtools:2.31.0'
@@ -41,7 +41,7 @@ rule pangene_getaa:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
+		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
 	container:
 		'docker://davidebolo1993/pangene:1.1'
