@@ -170,9 +170,9 @@ checkpoint merge_paf_per_region:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
 	container:
-		'docker://davidebolo1993/wfmash:0.14.0'
+		'docker://davidebolo1993/minimap2:2.28'
 	conda:
-		'../envs/wfmash.yaml'
+		'../envs/minimap2.yaml'
 	benchmark:
 		'benchmarks/{chr}.merge_paf_per_region.txt'
 	params:
