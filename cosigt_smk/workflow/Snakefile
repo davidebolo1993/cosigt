@@ -17,7 +17,6 @@ include: 'rules/refine.smk'
 
 cosigt_input=set()
 cosigt_benchmark=set()
-cosigt_viz=set()
 refine_input=set()
 
 for region in config['regions']:
