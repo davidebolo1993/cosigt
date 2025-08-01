@@ -13,22 +13,28 @@ paf.table <- readPaf(paf.file = input_paf, include.paf.tags = TRUE, restrict.paf
 #subset to single seq vs target and plot
 sub.paf<-subset(paf.table, (grepl(ref_path, t.name) & !grepl(ref_path,q.name)))
 seqnames<-unique(sub.paf$q.name)
-pltlist<-list()
-for (i in c(1:length(seqnames))) {
-        simplify<-paste(unlist(strsplit(seqnames[i], "#"))[c(1,2)],collapse="#")
-        sub.sub.paf<-subset(sub.paf, (q.name == seqnames[i]))
-        if (sum(sub.sub.paf$strand == "-") > sum(sub.sub.paf$strand == "+")) {
-                sub.sub.paf<-flipPaf(paf.table = sub.sub.paf, flip.seqnames=seqnames[i])
-                paf.table<-flipPaf(paf.table = paf.table, flip.seqnames=seqnames[i])
+if (length(seqnames) > 0) {
+        pltlist<-list()
+        for (i in c(1:length(seqnames))) {
+                simplify<-paste(unlist(strsplit(seqnames[i], "#"))[c(1,2)],collapse="#")
+                sub.sub.paf<-subset(sub.paf, (q.name == seqnames[i]))
+                if (sum(sub.sub.paf$strand == "-") > sum(sub.sub.paf$strand == "+")) {
+                        sub.sub.paf<-flipPaf(paf.table = sub.sub.paf, flip.seqnames=seqnames[i])
+                        paf.table<-flipPaf(paf.table = paf.table, flip.seqnames=seqnames[i])
+                }
+                pltlist[[simplify]]<-plotMiro(paf.table = sub.sub.paf, binsize = 1000)
         }
-        pltlist[[simplify]]<-plotMiro(paf.table = sub.sub.paf, binsize = 1000)
-}
-for (l in c(1:length(pltlist))) {
-        png(file.path(dirname(output_png),paste0(names(pltlist)[l], "_to_", ref_path, ".png")), width=20, height=5, units="in", res=300)
-        print(pltlist[[l]])
+        for (l in c(1:length(pltlist))) {
+                png(file.path(dirname(output_png),paste0(names(pltlist)[l], "_to_", ref_path, ".png")), width=20, height=5, units="in", res=300)
+                print(pltlist[[l]])
+                dev.off()
+        }
+        #plot all vs all
+        pltlist[["all"]]<-plotAVA(paf.table = paf.table, binsize=1000)
+        png(output_png, width=20, height=10, units="in", res=300)
+        print(pltlist[["all"]])
         dev.off()
+} else {
+        #touch empty file so that we don't get into troubles with the pipeline
+        file.create(output_png)
 }
-#plot all vs all
-png(output_png, width=20, height=10, units="in", res=300)
-plotAVA(paf.table = paf.table, binsize=1000)
-dev.off()

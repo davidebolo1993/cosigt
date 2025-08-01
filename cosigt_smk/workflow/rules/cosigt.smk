@@ -79,8 +79,8 @@ rule minimap2_ava:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['minimap2']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['minimap2']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['minimap2_small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['minimap2_small']['time']
 	container:
 		'docker://davidebolo1993/minimap2:2.28'
 	conda:
