@@ -49,7 +49,7 @@ rule odgi_flip_pggb_graph:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://pangenome/odgi:1745375412'
+		'docker://pangenome/odgi:1753347183'
 	conda:
 		'../envs/odgi.yaml'
 	params:
