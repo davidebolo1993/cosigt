@@ -13,7 +13,7 @@ rule odgi_view:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://pangenome/odgi:1745375412'
+		'docker://pangenome/odgi:1753347183'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -40,7 +40,7 @@ rule odgi_paths:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://pangenome/odgi:1745375412'
+		'docker://pangenome/odgi:1753347183'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -115,12 +115,12 @@ rule odgi_dissimilarity:
 	output:
 		config['output'] + '/odgi/dissimilarity/{chr}/{region}/{region}.tsv.gz'
 	threads:
-		1
+		5
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://pangenome/odgi:1745375412'
+		'docker://pangenome/odgi:1753347183'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
@@ -131,7 +131,8 @@ rule odgi_dissimilarity:
 		-i {input.og} \
 		-m {input.mask} \
 		--all \
-		--distances | gzip > {output}
+		--distances \
+		-t {threads} | gzip > {output}
 		'''
 
 rule make_clusters:
@@ -145,7 +146,7 @@ rule make_clusters:
 	output:
 		config['output'] + '/cluster/{chr}/{region}/{region}.clusters.json'
 	threads:
-		1
+		4
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
@@ -182,7 +183,7 @@ rule viz_odgi:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
+		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
@@ -190,6 +191,8 @@ rule viz_odgi:
 		'../envs/r.yaml'
 	benchmark:
 		'benchmarks/{chr}.{region}.viz_odgi.benchmark.txt'
+	params:
+		tsv=config['output'] + '/cluster/{chr}/{region}/{region}.clusters.medoids.tsv'
 	shell:
 		'''
 		Rscript \
@@ -197,5 +200,6 @@ rule viz_odgi:
 			{input.graph_cov} \
 			{input.nodes_length} \
 			{input.json} \
-			{output}
+			{output} \
+			{params.tsv}
 		'''

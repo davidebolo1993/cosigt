@@ -6,7 +6,7 @@ rule make_reference_bed:
 	input:
 		lambda wildcards: glob('resources/regions/{chr}/{region}.bed'.format(chr=wildcards.chr, region=wildcards.region))
 	output:
-		config['output'] + '/samtools/reference_bed/{chr}/{region}/{region}.bed.gz'
+		config['output'] + '/bedtools/reference_bed/{chr}/{region}/{region}.bed.gz'
 	threads:
 		1
 	resources:
@@ -31,7 +31,7 @@ rule make_alignment_bed:
 		ref_bed=rules.make_reference_bed.output,
 		ori_bed=lambda wildcards: glob('resources/regions/{chr}/{region}.bed'.format(chr=wildcards.chr, region=wildcards.region))
 	output:
-		config['output'] + '/samtools/alignment_bed/{chr}/{region}/{region}.bed.gz'
+		config['output'] + '/bedtools/alignment_bed/{chr}/{region}/{region}.bed.gz'
 	threads:
 		1
 	resources:

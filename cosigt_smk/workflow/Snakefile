@@ -14,8 +14,6 @@ include: 'rules/benchmark.smk'
 
 cosigt_input=set()
 cosigt_benchmark=set()
-cosigt_viz=set()
-#refine_input=set()
 
 for region in config['regions']:
 	chrom=region.split('_')[0]
@@ -32,11 +30,6 @@ for region in config['regions']:
 		cosigt_input.add(config['output'] + '/pangene/viz/' + chrom + '/' + region + '/' + region + '.genes.png')
 		cosigt_benchmark.add(config['output'] + '/pangene/viz/' + chrom + '/' + region + '/' + region + '.genes.png')
 	cosigt_benchmark.add(config['output'] + '/benchmark/tpr.edr.png')
-
-#USED TO REFINE INPUT REGIONS - N.A. IN THE CUSTOM_ALLLELES BRANCH
-#rule refine:
-	#input:
-		#list(refine_input)
 
 #COSIGT COMMAND
 rule cosigt:

@@ -12,10 +12,10 @@ rule cosigt_genotype:
 		geno=config['output'] + '/cosigt/{sample}/{chr}/{region}/{region}.cosigt_genotype.tsv',
 		combos=config['output'] + '/cosigt/{sample}/{chr}/{region}/{region}.sorted_combos.tsv.gz'
 	threads:
-		1
+		10
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default_high']['time']
 	container:
 		'docker://davidebolo1993/cosigt:0.1.5'
 	conda:
@@ -112,8 +112,8 @@ rule plot_ava:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_high']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:

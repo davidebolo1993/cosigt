@@ -5,16 +5,17 @@ library(rjson)
 library(dbscan)
 library(cluster)
 
-setDTthreads(1)
+#setDTthreads(1)
 
 args <- commandArgs(trailingOnly = TRUE)
+
 input_file <- args[1]
 output_file <- args[2]
 similarity_threshold <- args[3]
 region_similarity <- round(as.numeric(args[4]), 2)
 levels <- as.integer(args[5])
 
-df <- fread(input_file, header=TRUE)
+df <- fread(input_file, header=TRUE, tmpdir=dirname(output_file))
 
 # Distance matrix
 regularMatrix <- acast(df, group.a ~ group.b, value.var = "estimated.difference.rate")
@@ -47,6 +48,7 @@ find_optimal_eps <- function(distanceMatrix, region_similarity, similarity_thres
 # is guided mainly by a single haplotype differing a lot
 # from the others
 cluster_recursive <- function(names_vec, norm_dist_mat, regular_mat, level, prefix, max_level, results, eps) {
+  clustering1 <- dbscan(norm_dist_mat, eps=eps, minPts=1)
   clustering <- dbscan(norm_dist_mat, eps=eps, minPts=1)$cluster
   names(clustering) <- names_vec
   for (cl in sort(unique(clustering))) {
@@ -73,8 +75,13 @@ cluster_recursive <- function(names_vec, norm_dist_mat, regular_mat, level, pref
 # Top-level clustering
 distanceMatrix <- as.dist(normRegularMatrix)
 eps <- find_optimal_eps(distanceMatrix, region_similarity, similarity_threshold)
-final_res <- cluster_recursive(labels(distanceMatrix), distanceMatrix, regularMatrix, level=1, prefix="", max_level=levels, results=list(), eps=eps)
+final_res <- cluster_recursive(names_vec=labels(distanceMatrix), 
+                               norm_dist_mat=distanceMatrix, 
+                               regular_mat = regularMatrix, level=1, prefix="", max_level=levels, results=list(), eps=eps)
 
+names_vec=labels(distanceMatrix)
+norm_dist_mat=distanceMatrix
+regular_mat = regularMatrix
 # Write JSON
 jout <- toJSON(final_res)
 write(jout, output_file)
@@ -137,3 +144,27 @@ fwrite(data.frame(h.group=row.names(cluster_dist_norm), cluster_dist_norm), dist
 
 distance_output <- gsub(".json", ".hapdist.tsv", output_file)
 fwrite(data.frame(h.group=row.names(cluster_dist), cluster_dist), distance_output, row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#this block has been added by chiara.paleni
+#and is used to identify a representative haplotype
+#for each cluster
+
+# there are k clusters
+center_hap<-matrix(0,nrow=k,ncol=2)
+for (i in 1:k) {
+  #pick haplotypes of cluster i
+      g1 <- group_names[i]
+      members_i <- names(final_res[final_res == g1])
+      if (length(members_i) > 0) {
+        # get normalized edr matrix only for cluster i
+        dnorm <- normRegularMatrix[members_i, members_i, drop = FALSE]
+        # calculate average distance (?) between each haplotype and all the others
+        # rowMeans and colMeans would be equivalent here
+        mean_norm <- rowMeans(dnorm)
+        # pick haplotype with lowest average dist.
+        center_hap[i,]<-c(g1,names(mean_norm[which.min(mean_norm)]))
+    }
+}
+# OUTPUT FILE
+medoids<-gsub(".json",".medoids.tsv",output_file)
+fwrite(center_hap,medoids,row.names = F,col.names = F,sep="\t")
