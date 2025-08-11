@@ -15,10 +15,9 @@ def make_default_config(tmp) -> dict:
     #THESE ARE DEFAULT RESOURCES USERS MAY WANT TO ADJUST IN THE CONFIG
     #config/config.yaml
     #bwamem2_index and bwamem2_mem_samtools_sort
-    config['bwa-mem2']=dict()
-    config['bwa-mem2']['threads'] = 5
-    config['bwa-mem2']['mem_mb'] = 5000
-    config['bwa-mem2']['time'] = 2
+    config['ropebwt3']=dict()
+    config['ropebwt3']['mem_mb'] = 5000
+    config['ropebwt3']['time'] = 2
     #minimap2 for minimap2_ava
     config['minimap2_small']=dict()
     config['minimap2_small']['threads'] = 5
