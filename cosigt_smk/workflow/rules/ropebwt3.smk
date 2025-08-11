@@ -7,9 +7,9 @@ rule ropebwt3_index:
 		fasta=rules.bedtools_getfasta.output.fasta,
 		fai=rules.bedtools_getfasta.output.fai
 	output:
-		fmd=config['output'] + '/bedtools/getfasta/{chr}/{region}/{region}.fasta.gz.fmd',
-		ssa=config['output'] + '/bedtools/getfasta/{chr}/{region}/{region}.fasta.gz.fmd.ssa',
-		len=config['output'] + '/bedtools/getfasta/{chr}/{region}/{region}.fasta.gz.fmd.len.gz'
+		fmd=temp(config['output'] + '/bedtools/getfasta/{chr}/{region}/{region}.fasta.gz.fmd'),
+		ssa=temp(config['output'] + '/bedtools/getfasta/{chr}/{region}/{region}.fasta.gz.fmd.ssa'),
+		len=temp(config['output'] + '/bedtools/getfasta/{chr}/{region}/{region}.fasta.gz.fmd.len.gz')
 	threads:
 		1
 	resources:
@@ -37,6 +37,7 @@ rule ropebwt3_mem:
 	input:
 		ref_fai=rules.bedtools_getfasta.output.fai,
 		ref_fmd=rules.ropebwt3_index.output.fmd,
+		ref_len=rules.ropebwt3_index.output.len,
 		sample_fasta=rules.samtools_fasta_mapped.output
 	output:
 		config['output'] + '/ropebwt3/{sample}/{chr}/{region}/{region}.realigned.paf'
