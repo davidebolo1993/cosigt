@@ -2,5 +2,4 @@ channels:
  - conda-forge
  - bioconda
 dependencies:
- - bwa-mem2=2.2.1
- - samtools=1.22
+ - ropebwt3=3.9

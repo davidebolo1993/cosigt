@@ -8,7 +8,7 @@ include: 'rules/samtools.smk'
 include: 'rules/pggb.smk'
 include: 'rules/odgi.smk'
 include: 'rules/pangene.smk'
-include: 'rules/bwa-mem2.smk'
+include: 'rules/ropebwt3.smk'
 include: 'rules/gfainject.smk'
 include: 'rules/gafpack.smk'
 include: 'rules/cosigt.smk'
@@ -23,8 +23,6 @@ for region in config['regions']:
 	chrom=region.split('_')[0]
 	for sample in config['samples']:
 		cosigt_input.add(config['output'] + '/cosigt/' + sample + '/' + chrom + '/' + region + '/' + region + '.cosigt_genotype.tsv')
-		cosigt_input.add(config['output'] + '/wally/' + sample + '/' + chrom + '/' + region + '/wally.done')
-		cosigt_benchmark.add(config['output'] + '/wally/' + sample + '/' + chrom + '/' + region + '/wally.done')
 		cosigt_input.add(config['output'] + '/cosigt/' + sample + '/' + chrom + '/' + region + '/viz/' + region + '.ava.png')
 		cosigt_benchmark.add(config['output'] + '/cosigt/' + sample + '/' + chrom + '/' + region + '/viz/' + region + '.ava.png')
 	cosigt_input.add(config['output'] + '/odgi/viz/' + chrom + '/' + region + '/' + region + '.viz.png')

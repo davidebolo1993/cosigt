@@ -5,7 +5,7 @@ rule gfainject_inject:
 	'''
 	input:
 		gfa=rules.odgi_view.output,
-		cram=rules.bwamem2_mem_samtools_sort.output
+		paf=rules.ropebwt3_mem.output
 	output:
 		config['output'] + '/gfainject/{sample}/{chr}/{region}/{region}.gaf.gz'
 	threads:
@@ -24,6 +24,5 @@ rule gfainject_inject:
 		samtools view {input.cram} |
 		gfainject \
 		--gfa {input.gfa} \
-		--sam - \
-		--alt-hits 10000 | gzip > {output}
+		--paf {input.paf} | gzip > {output}
 		'''
