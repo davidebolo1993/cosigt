@@ -35,8 +35,7 @@ rule ropebwt3_mem:
 	- Convert to .paf
 	'''
 	input:
-		ref_fasta=rules.bedtools_getfasta.output.fasta,
-		ref_fai=rules.bedtools_getfasta.output.fai,
+		ref_fai=rules.bedtools_getfasta.output.fai
 		ref_fmd=rules.ropebwt3_index.output.fmd,
 		sample_fasta=rules.samtools_fasta_mapped.output
 	output:
@@ -56,7 +55,7 @@ rule ropebwt3_mem:
 		'''
 		ropebwt3 mem \
 			-l 17 \
-			{input.fmd} \
+			{input.ref_fmd} \
 			{input.sample_fasta} \
-			-p 1 | sh workflow/scripts/convert_mem_to_paf.sh <(cut -f 1,2 {input.fai}) > {output}
+			-p 1 | sh workflow/scripts/convert_mem_to_paf.sh <(cut -f 1,2 {input.ref_fai}) > {output}
 		'''
