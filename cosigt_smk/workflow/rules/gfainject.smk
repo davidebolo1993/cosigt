@@ -21,7 +21,6 @@ rule gfainject_inject:
 		'benchmarks/{sample}.{chr}.{region}.gfainject_inject.benchmark.txt'
 	shell:
 		'''
-		samtools view {input.cram} |
 		gfainject \
 		--gfa {input.gfa} \
 		--paf {input.paf} | gzip > {output}
