@@ -35,7 +35,7 @@ rule ropebwt3_mem:
 	- Convert to .paf
 	'''
 	input:
-		ref_fai=rules.bedtools_getfasta.output.fai
+		ref_fai=rules.bedtools_getfasta.output.fai,
 		ref_fmd=rules.ropebwt3_index.output.fmd,
 		sample_fasta=rules.samtools_fasta_mapped.output
 	output:
