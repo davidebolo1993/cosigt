@@ -3,13 +3,10 @@
 target_info_file="$1"
 
 awk '
-# This block runs first, processing the target_info_file
 FNR==NR {
     target_info[$1] = $2;
     next;
 }
-
-# This block runs for every line from stdin
 {
     query_name = $1;
     query_start = $2;
