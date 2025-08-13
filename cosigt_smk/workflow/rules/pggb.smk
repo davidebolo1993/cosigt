@@ -72,6 +72,9 @@ rule pggb_construct:
 		pansn=config['pansn_prefix']
 	shell:
 		'''
+		if [ -d {params.prefix} ]; then
+			rm -rf {params.prefix}
+		fi
 		mkdir -p {params.tmpdir}
 		pggb \
 			-i {input.fasta} \
