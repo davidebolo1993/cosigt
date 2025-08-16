@@ -49,7 +49,7 @@ rule ropebwt3_mem:
 	container:
 		'docker://davidebolo1993/ropebwt3:3.9'
 	conda:
-		'../envs/bwa-mem2.yaml'
+		'../envs/ropebwt3.yaml'
 	benchmark:
 		'benchmarks/{sample}.{chr}.{region}.ropebwt3_mem.benchmark.txt'
 	shell:
