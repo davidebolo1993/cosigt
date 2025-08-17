@@ -24,7 +24,7 @@ rule ropebwt3_index:
 	shell:
 		'''
 		ropebwt3 build {input.fasta} -t 1 -d -o {output.fmd}
-		ropebwt3 ssa {output.fmd} -o {output.ssa} -s 8 
+		ropebwt3 ssa -o {output.ssa} -s 8 {output.fmd} 
 		cut -f 1,2 {input.fai} | gzip > {output.len}
 		'''
 
@@ -37,6 +37,7 @@ rule ropebwt3_mem:
 	input:
 		ref_fai=rules.bedtools_getfasta.output.fai,
 		ref_fmd=rules.ropebwt3_index.output.fmd,
+		ref_ssa=rules.ropebwt3_index.output.ssa,
 		ref_len=rules.ropebwt3_index.output.len,
 		sample_fasta=rules.samtools_fasta_mapped.output
 	output:
