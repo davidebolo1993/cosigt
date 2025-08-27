@@ -1,22 +1,23 @@
 rule cosigt_genotype:
 	'''
 	https://github.com/davidebolo1993/cosigt
+	- This is the actual genotyping step
 	'''
 	input:
-		graph_cov_map=rules.odgi_paths_matrix.output,
+		graph_cov_map=rules.odgi_paths.output,
 		sample_cov_map=rules.gafpack_coverage.output,
 		json=rules.make_clusters.output,
-		mask=rules.filter_nodes.output
+		mask=rules.filter_nodes.output.mask
 	output:
-		geno=config['output'] + '/cosigt/{sample}/{chr}/{region}/cosigt_genotype.tsv',
-		combos=config['output'] + '/cosigt/{sample}/{chr}/{region}/sorted_combos.tsv'
+		geno=config['output'] + '/cosigt/{sample}/{chr}/{region}/{region}.cosigt_genotype.tsv',
+		combos=config['output'] + '/cosigt/{sample}/{chr}/{region}/{region}.sorted_combos.tsv.gz'
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://davidebolo1993/cosigt:0.1.4'
+		'docker://davidebolo1993/cosigt:0.1.5'
 	conda:
 		'../envs/cosigt.yaml'
 	params:
@@ -27,88 +28,32 @@ rule cosigt_genotype:
 	shell:
 		'''
 		cosigt \
-		-p {input.graph_cov_map} \
-		-g {input.sample_cov_map} \
-		-c {input.json} \
-		-o {params.prefix} \
-		-i {params.sample_id} \
-		-m {input.mask}
-		'''
-
-rule cosigt_genotype_submasks:
-	'''
-	https://github.com/davidebolo1993/cosigt
-	'''
-	input:
-		graph_cov_map=rules.odgi_paths_matrix.output,
-		sample_cov_map=rules.gafpack_coverage.output,
-		json=rules.make_clusters.output,
-		mask=config['output'] + '/odgi/paths/matrix/{chr}/{region}_submasks/{num}.tsv'
-	output:
-		geno=config['output'] + '/cosigt/{sample}/{chr}/{region}/masks/{num}/cosigt_genotype.tsv',
-		combos=config['output'] + '/cosigt/{sample}/{chr}/{region}/masks/{num}/sorted_combos.tsv'
-	threads:
-		1
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
-	container:
-		'docker://davidebolo1993/cosigt:0.1.4'
-	conda:
-		'../envs/cosigt.yaml'
-	params:
-		prefix=config['output'] + '/cosigt/{sample}/{chr}/{region}/masks/{num}',
-		sample_id='{sample}'
-	benchmark:
-		'benchmarks/{sample}.{chr}.{region}.{num}.cosigt_genotype_subregions.benchmark.txt'
-	shell:
-		'''
-		cosigt \
-		-p {input.graph_cov_map} \
-		-g {input.sample_cov_map} \
-		-c {input.json} \
-		-o {params.prefix} \
-		-i {params.sample_id} \
-		-m {input.mask}
-		'''
-
-rule collect_submasks_genotypes:
-	'''
-	https://github.com/davidebolo1993/cosigt
-	'''
-	input:
-		lambda wildcards: expand(config['output'] + '/cosigt/{sample}/{chr}/{region}/masks/{num}/cosigt_genotype.tsv', chr=wildcards.chr, region=wildcards.region, sample=wildcards.sample, num=get_submasks(wildcards))
-	output:
-		config['output'] + '/cosigt/{sample}/{chr}/{region}/submasks.done'
-	threads:
-		1
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
-	benchmark:
-		'benchmarks/{sample}.{chr}.{region}.collect_submasks_genotypes.benchmark.txt'
-	shell:
-		'''
-		touch {output}
+			-p {input.graph_cov_map} \
+			-g {input.sample_cov_map} \
+			-c {input.json} \
+			-o {params.prefix} \
+			-i {params.sample_id} \
+			-m {input.mask}
 		'''
 	
 rule samtools_faidx_besthaps_fasta:
 	'''
 	https://github.com/samtools/samtools
+	- Get the predicted contigs out
 	'''
 	input:
 		geno=rules.cosigt_genotype.output.geno,
-		fasta=rules.bedtools_getfasta.output,
-		fai=rules.samtools_faidx_index.output
+		fasta=rules.bedtools_getfasta.output.fasta,
+		fai=rules.bedtools_getfasta.output.fai
 	output:
-		config['output'] + '/cosigt/{sample}/{chr}/{region}/viz_files/haplotypes.fasta',
+		temp(config['output'] + '/cosigt/{sample}/{chr}/{region}/viz/{region}.haplotypes.fasta'),
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://davidebolo1993/samtools:1.21'
+		'docker://davidebolo1993/samtools:1.22'
 	conda:
 		'../envs/samtools.yaml'
 	params:
@@ -125,16 +70,17 @@ rule samtools_faidx_besthaps_fasta:
 rule minimap2_ava:
 	'''
 	https://github.com/lh3/minimap2
+	- Realign predicted haplotypes, all-vs-all alignment
 	'''
 	input:
 		rules.samtools_faidx_besthaps_fasta.output
 	output:
-		config['output'] + '/cosigt/{sample}/{chr}/{region}/viz_files/haplotypes.paf',
+		temp(config['output'] + '/cosigt/{sample}/{chr}/{region}/viz/{region}.haplotypes.paf'),
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['minimap2']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['minimap2']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['minimap2_small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['minimap2_small']['time']
 	container:
 		'docker://davidebolo1993/minimap2:2.28'
 	conda:
@@ -157,11 +103,12 @@ rule minimap2_ava:
 rule plot_ava:
 	'''
 	https://github.com/daewoooo/SVbyEye
+	- Plot the relationship between alignments
 	'''
 	input:
 		rules.minimap2_ava.output
 	output:
-		config['output'] + '/cosigt/{sample}/{chr}/{region}/ava.png',
+		config['output'] + '/cosigt/{sample}/{chr}/{region}/viz/{region}.ava.png',
 	threads:
 		1
 	resources:
@@ -177,9 +124,13 @@ rule plot_ava:
 		pansn=config['pansn_prefix'] + '{chr}'
 	shell:
 		'''
-		Rscript \
-			workflow/scripts/plotava.r \
-			{input} \
-			{output} \
-			{params.pansn}
+		if [ -s {input} ]; then
+			Rscript \
+				workflow/scripts/plotava.r \
+				{input} \
+				{output} \
+				{params.pansn}
+		else
+			touch {output}
+		fi
 		'''

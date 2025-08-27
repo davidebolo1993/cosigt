@@ -1,19 +1,20 @@
 rule gafpack_coverage:
 	'''
 	https://github.com/pangenome/gafpack
+	- Calculate the read coverage for each node in the graph
 	'''
 	input:
 		gfa=rules.odgi_view.output,
 		gaf=rules.gfainject_inject.output
 	output:
-		config['output'] + '/gafpack/{sample}/{chr}/{region}.gafpack.gz'
+		config['output'] + '/gafpack/{sample}/{chr}/{region}/{region}.gafpack.gz'
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
 	container:
-		'docker://davidebolo1993/gafpack:0.1.2'
+		'docker://davidebolo1993/gafpack:0.1.3'
 	conda:
 		'../envs/gafpack.yaml'
 	benchmark:

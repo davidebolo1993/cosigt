@@ -2,7 +2,10 @@ import math
 import os
 
 def parse_fai_and_set_flags(fai_input):
-
+	'''
+	https://github.com/davidebolo1993/cosigt
+	- Dinamically set flags for pggb
+	'''
 	#this stuff should be namedlist, but need to check
 	if hasattr(fai_input, 'fai'):
 		fai_path = fai_input.fai
@@ -25,26 +28,32 @@ def parse_fai_and_set_flags(fai_input):
 	flags = []
 
 	# Set -s
-	if min_len <= 5000:
+	if min_len <= 1000:
+		a=min_len/1000
+		s_val=((a*10)//1)/10*1000
+		flags.append(f'-s {s_val}')
+	elif min_len <= 5000:
 		s_val = min(1000, math.floor(min_len / 1000) * 1000)
 		flags.append(f'-s {s_val}')
 
 	# Set -x
-	if num_seq > 100 and average_len > 1_000_000:
+	if num_seq > 50:
 		flags.append('-x auto')
 
 	return " ".join(flags)
 
 
+
 rule pggb_construct:
 	'''
 	https://github.com/pangenome/pggb
+	- Build pangenome graph using pggb
 	'''
 	input:
-		fasta=rules.bedtools_getfasta.output,
-		fai=rules.samtools_faidx_index.output
+		fasta=rules.bedtools_getfasta.output.fasta,
+		fai=rules.bedtools_getfasta.output.fai
 	output:
-		config['output'] + '/pggb/{chr}/{region}.og'
+		config['output'] + '/pggb/{chr}/{region}/{region}.og'
 	threads:
 		config['pggb']['threads']
 	resources:
@@ -59,10 +68,13 @@ rule pggb_construct:
 	params:
 		prefix=config['output'] + '/pggb/{chr}/{region}',
 		flags=lambda wildcards, input: config['pggb']['params'] + ' ' + parse_fai_and_set_flags(input.fai),
-		tmpdir = config['pggb']['tmpdir'] + '/{chr}/{region}',
+		tmpdir = config['pggb']['tmpdir'] + '/{chr}/{region}/{region}',
 		pansn=config['pansn_prefix']
 	shell:
 		'''
+		if [ -d {params.prefix} ]; then
+			rm -rf {params.prefix}
+		fi
 		mkdir -p {params.tmpdir}
 		pggb \
 			-i {input.fasta} \

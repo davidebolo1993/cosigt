@@ -2,4 +2,4 @@ channels:
  - conda-forge
  - bioconda
 dependencies:
- - odgi=0.9.2
+ - odgi=0.9.3

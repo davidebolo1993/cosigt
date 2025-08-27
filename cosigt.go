@@ -163,19 +163,25 @@ func WriteResults(m *sync.Map, keys []string, clstr map[string]string, outDir, i
         return fmt.Errorf("error creating output directory: %w", err)
     }
 
-    sortedCombosFile, err := os.Create(filepath.Join(outDir, "sorted_combos.tsv"))
+    prefix := filepath.Base(outDir)
+
+    sortedCombosPath := filepath.Join(outDir, fmt.Sprintf("%s.sorted_combos.tsv.gz", prefix))
+    sortedCombosFile, err := os.Create(sortedCombosPath)
     if err != nil {
-        return fmt.Errorf("error creating sorted_combos.tsv: %w", err)
+        return fmt.Errorf("error creating %s: %w", sortedCombosPath, err)
     }
     defer sortedCombosFile.Close()
 
-    genotypeFile, err := os.Create(filepath.Join(outDir, "cosigt_genotype.tsv"))
+    genotypeFile, err := os.Create(filepath.Join(outDir, fmt.Sprintf("%s.cosigt_genotype.tsv", prefix)))
     if err != nil {
-        return fmt.Errorf("error creating cosigt_genotype.tsv: %w", err)
+        return fmt.Errorf("error creating %s.genotype.tsv: %w", prefix, err)
     }
     defer genotypeFile.Close()
+    
+    gzw := gzip.NewWriter(sortedCombosFile)
+    defer gzw.Close()
+    sortedCombosWriter := csv.NewWriter(gzw)
 
-    sortedCombosWriter := csv.NewWriter(sortedCombosFile)
     sortedCombosWriter.Comma = '\t'
     defer sortedCombosWriter.Flush()
 

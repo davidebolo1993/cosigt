@@ -1,34 +1,59 @@
 #!/usr/bin/Rscript
-#IS THIS SOMEHOW USEFUL?
 
 args <- commandArgs(trailingOnly = TRUE)
 library(SVbyEye)
 
-input_paf<-args[1]
-output_png<-args[2]
-ref_path<-args[3]
+# move saving to function - this should help understanind why sometimes we miss a plot even if no error in smk?
+save_plot_as_png <- function(plot_obj, file_path, width = 20, height = 5, res = 300) {
+  tryCatch({
+    png(file_path, width = width, height = height, units = "in", res = res)
+    print(plot_obj)
+  }, error = function(e) {
+    message("An error occurred while creating the plot: ", e$message)
+  }, finally = {
+    # ensure the device is closed
+    if (dev.cur() != 1) {
+      dev.off()
+    }
+  })
+}
 
-#read
+# args in
+input_paf <- args[1]
+output_png <- args[2]
+ref_path <- args[3]
+
+# read paf
 paf.table <- readPaf(paf.file = input_paf, include.paf.tags = TRUE, restrict.paf.tags = "cg")
-#subset to single seq vs target and plot
-sub.paf<-subset(paf.table, (grepl(ref_path, t.name) & !grepl(ref_path,q.name)))
-seqnames<-unique(sub.paf$q.name)
-pltlist<-list()
-for (i in c(1:length(seqnames))) {
-        simplify<-paste(unlist(strsplit(seqnames[i], "#"))[c(1,2)],collapse="#")
-        sub.sub.paf<-subset(sub.paf, (q.name == seqnames[i]))
-        if (sum(sub.sub.paf$strand == "-") > sum(sub.sub.paf$strand == "+")) {
-                sub.sub.paf<-flipPaf(paf.table = sub.sub.paf, flip.seqnames=seqnames[i])
-                paf.table<-flipPaf(paf.table = paf.table, flip.seqnames=seqnames[i])
-        }
-        pltlist[[simplify]]<-plotMiro(paf.table = sub.sub.paf, binsize = 1000)
+
+# single sequence vs target
+sub.paf <- subset(paf.table, (grepl(ref_path, t.name) & !grepl(ref_path, q.name)))
+seqnames <- unique(sub.paf$q.name)
+
+if (length(seqnames) > 0) {
+  
+  #individual plots
+  for (seqname in seqnames) {
+    simplify_name <- paste(unlist(strsplit(seqname, "#"))[c(1, 2)], collapse = "#")
+    sub.sub.paf <- subset(sub.paf, q.name == seqname)
+
+    if (sum(sub.sub.paf$strand == "-") > sum(sub.sub.paf$strand == "+")) {
+      sub.sub.paf <- flipPaf(paf.table = sub.sub.paf, flip.seqnames = seqname)
+      paf.table <- flipPaf(paf.table = paf.table, flip.seqnames = seqname)
+    }
+
+    miro_plot <- plotMiro(paf.table = sub.sub.paf, binsize = 1000)
+    output_file <- file.path(dirname(output_png), paste0(simplify_name, "_to_", ref_path, ".png"))
+    save_plot_as_png(miro_plot, output_file)
+  }
+
+  # all-vs-all
+  ava_plot <- plotAVA(paf.table = paf.table, binsize = 1000)
+  save_plot_as_png(ava_plot, output_png, height = 10)
+
+} else {
+  
+  #create empty in case
+  file.create(output_png)
+  message("No sequences found to plot. Created an empty file.")
 }
-for (l in c(1:length(pltlist))) {
-        pdf(file.path(dirname(output_png),paste0(names(pltlist)[l], "_to_", ref_path, ".pdf")), width=20, height=5)
-        print(pltlist[[l]])
-        dev.off()
-}
-#plot all vs all
-pdf(output_png, width=20, height=10)
-plotAVA(paf.table = paf.table, binsize=1000)
-dev.off()

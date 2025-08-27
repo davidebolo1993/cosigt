@@ -11,62 +11,55 @@ def make_default_config(tmp) -> dict:
     Make default config
     '''
     config=dict()
-    #bwa-mem2
-    #5 cores, 5 Gb, 2 min max
+    #RESOURCES FOR THE MAIN BRANCH
+    #THESE ARE DEFAULT RESOURCES USERS MAY WANT TO ADJUST IN THE CONFIG
+    #config/config.yaml
+    #bwamem2_index and bwamem2_mem_samtools_sort
     config['bwa-mem2']=dict()
     config['bwa-mem2']['threads'] = 5
     config['bwa-mem2']['mem_mb'] = 5000
     config['bwa-mem2']['time'] = 2
-    #bwa-mem
-    #5 cores, 5 Gb, 2 min max
-    config['bwa']=dict()
-    config['bwa']['threads'] = 5
-    config['bwa']['mem_mb'] = 5000
-    config['bwa']['time'] =  2
-    #minimap2
-    #5 cores, 5 Gb, 2 min max
-    config['minimap2']=dict()
-    config['minimap2']['threads'] = 5
-    config['minimap2']['mem_mb'] = 5000
-    config['minimap2']['time'] =  2
-    #samtools - this is is only for samtools fasta
-    #2 cores, 2 Gb, 2 min max
+    #minimap2 for minimap2_ava
+    config['minimap2_small']=dict()
+    config['minimap2_small']['threads'] = 5
+    config['minimap2_small']['mem_mb'] = 5000
+    config['minimap2_small']['time'] =  2
+    #samtools for samtools_fasta
     config['samtools']=dict()
     config['samtools']['threads'] = 2
     config['samtools']['mem_mb'] = 2000
     config['samtools']['time'] = 2
     #pggb
     #this really needs to be adjusted based on region length and parameters
-    #but based on the longest jobs observed
+    #but based on some benchmarking we did
+    #on >300 loci in a single run
     config['pggb']=dict()
     config['pggb']['threads'] = 24
-    config['pggb']['mem_mb'] = 10000
+    config['pggb']['mem_mb'] = 20000
     config['pggb']['time'] =  40
     config['pggb']['tmpdir'] = tmp
     config['pggb']['params'] =  '-c 2'
-    #wfmash
+    #minimap2 for batch alignment
     #this depends a lot on the number of contigs
-    #generated through impg, but kind-of-ok also
-    #considering retries
-    #5 cores, 10 Gb, 20 min max
-    config['wfmash']=dict()
-    config['wfmash']['threads'] = 5
-    config['wfmash']['mem_mb'] = 10000
-    config['wfmash']['time'] =  20
-    config['wfmash']['tmpdir'] = tmp
-    config['wfmash']['params'] =  '-s 10k -p 95'
+    #5 cores, 40 Gb, 40 min max - there are cases where we hit 80G(?) but overall
+    #this should complete in minutes and do not exceed 10-20G
+    config['minimap2_large']=dict()
+    config['minimap2_large']['threads'] = 5
+    config['minimap2_large']['mem_mb'] = 40000
+    config['minimap2_large']['time'] =  40
+    #many tiny rules use these resources instead
     #default - small
     config['default_small']=dict()
-    config['default_small']['mem_mb'] = 100
-    config['default_small']['time'] =  1
+    config['default_small']['mem_mb'] = 200
+    config['default_small']['time'] =  2
     #default - mid
     config['default_mid']=dict()
-    config['default_mid']['mem_mb'] = 500
-    config['default_mid']['time'] =  2
+    config['default_mid']['mem_mb'] = 2000
+    config['default_mid']['time'] =  5
     #default - high
     config['default_high']=dict()
-    config['default_high']['mem_mb'] = 2000
-    config['default_high']['time'] =  4
+    config['default_high']['mem_mb'] = 10000
+    config['default_high']['time'] =  10
     print(f'Config template prepared!')
     return config
 
@@ -208,17 +201,21 @@ def read_bed(bed_file, asm_dict) -> dict():
             chrom=bed_entry[0]
             start=bed_entry[1]
             end=bed_entry[2]
-            if len(bed_entry) == 4:
+            if len(bed_entry) >= 4:
                 annot=bed_entry[3]
             else:
                 annot="unknown"
+            if len(bed_entry) == 5:
+                alt=bed_entry[4]
+            else:
+               alt=None  
             if chrom not in asm_dict:
                 print(f'Provided chromosome: {chrom} in bed file {bed_file} is missing in the assemblies')
                 sys.exit(1)
             if chrom not in bed_dict:
-                bed_dict[chrom] = [(chrom,start,end,annot)]
+                bed_dict[chrom] = [(chrom,start,end,annot,alt)]
             else:
-                bed_dict[chrom].append((chrom,start,end,annot))
+                bed_dict[chrom].append((chrom,start,end,annot,alt))
     print(f'Loaded bed file {bed_file}!')    
     return bed_dict
     
@@ -355,6 +352,22 @@ def write_alignments(aln_dict, config_yaml, RESOURCES) -> dict:
     print(f'Added alignments to {aln_dir}!')
     return config_yaml
 
+
+def reference_contigs(config_yaml) -> dict:
+    '''
+    Given the reference index, return a dict
+    with contig, start end
+    '''
+
+    ctg_dict=dict()
+    ref_idx=config_yaml['reference'] + '.fai'
+    with open(ref_idx, 'r') as refidx:
+        for line in refidx:
+            fields=line.rstrip().split('\t')
+            chrom,start,end=fields[0],'0',fields[1]
+            ctg_dict[chrom] = (chrom,start,end)
+    return ctg_dict
+
 def write_regions(bed_dict, config_yaml, RESOURCES) -> dict:
     '''
     Write regions to resources/regions
@@ -364,16 +377,24 @@ def write_regions(bed_dict, config_yaml, RESOURCES) -> dict:
     os.makedirs(reg_dir, exist_ok=True)
     config_yaml['regions'] = set()
     config_yaml['all_regions'] = os.path.abspath(os.path.join(reg_dir, 'all_regions.tsv'))
+    contigs=reference_contigs(config_yaml)
     with open(config_yaml['all_regions'], 'w') as b_a_out:
         for k,v in bed_dict.items():
             bed_dir=os.path.join(reg_dir, k)
             os.makedirs(bed_dir, exist_ok=True)
             for subr in v:
-                region_out='_'.join(subr[:-1])
-                b_a_out.write('\t'.join(subr) + '\n')
+                region_out='_'.join(subr[:-2])
+                b_a_out.write('\t'.join(subr[:-1]) + '\n')
                 bed_out=os.path.join(bed_dir, region_out + '.bed')
                 with open(bed_out, 'w') as b_out:
-                    b_out.write('\t'.join(subr[:-1]) + '\n')
+                    b_out.write('\t'.join(subr[:-2]) + '\n')
+                    if subr[-1] is not None:    
+                        alts=subr[-1].split(',')
+                        for alt in alts:
+                            last=alt.rfind(':')
+                            chr_alt,rest_alt=alt[:last], alt[last+1:]
+                            start_alt,end_alt=rest_alt.split('-')
+                            b_out.write('\t'.join([chr_alt,start_alt,end_alt]) + '\n')
                 config_yaml['regions'].add(region_out)
     print(f'Added regions to {reg_dir}!')
     return config_yaml
@@ -557,7 +578,7 @@ def setup_arg_parser():
     required.add_argument('-a', '--assemblies', help='assemblies individuals to -r will be genotyped against. This is a tab-separated file mapping chromosomes in -b to a FASTA with contigs for that chromosome. FASTA can be bgzip-compressed and must be indexed', metavar='FASTA', required=True)
     required.add_argument('-g', '--genome', help='reference genome. This is the FASTA regions to -b refers to. FASTA can be bgzip-compressed and must be indexed', metavar='FASTA', required=True)
     required.add_argument('-r', '--reads', help='individuals to genotype. This is a folder with individual reads aligned to a reference genome (same to -g) in BAM/CRAM format. Alignment files must be indexed (BAI,CSI/CRAI) and will be searched recursively', metavar='FOLDER', required=True)
-    required.add_argument('-b', '--bed', help='regions to genotype. This is a standard BED file', metavar='BED', required=True)
+    required.add_argument('-b', '--bed', help='regions to genotype. A standard 3-column BED file, but can have a 4th column to label the region and a 5th column listing comma-separated alternative contigs for that region', metavar='BED', required=True)
     required.add_argument('-o', '--output', help='output folder. This is where results from cosigt pipeline will be stored', metavar='FOLDER', required=True)
     optional = parser.add_argument_group('Optional arguments')
     optional.add_argument('--map', help='tab-separated file mapping each alignment file (1st column) to an id (2nd column). Guess the name removing file extension otherwise [None]', metavar='', required=False, default=None)
@@ -630,10 +651,10 @@ def main():
     config=write_assemblies(asm_dict, bed_dict, config, RESOURCES)
     #alignments
     config=write_alignments(aln_dict, config, RESOURCES)
+    #reference
+    config=write_reference(genome_dict, config, RESOURCES)    
     #regions
     config=write_regions(bed_dict, config, RESOURCES)
-    #reference
-    config=write_reference(genome_dict, config, RESOURCES)
     #annotations
     config=write_gtf(gtf_dict, config, RESOURCES)
     config=write_proteins(proteins_dict, config, RESOURCES)

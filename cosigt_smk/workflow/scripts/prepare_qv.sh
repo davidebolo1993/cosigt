@@ -14,10 +14,10 @@ tail -n +2 $input_table | while read line; do
     h2p=$(echo "$line" | cut -d$'\t' -f 3)
     h1t=$(echo "$line" | cut -d$'\t' -f 4)
     h2t=$(echo "$line" | cut -d$'\t' -f 5)
-    if [ $h1t = "missing" ]; then
-        continue #next
+    mkdir -p $outdir/$sample
+    if [ $h1t = "missing" ] || [ $h2t = "missing" ]; then
+        echo -e "missing.fasta\tmissing.fasta" >> "$outdir/$sample/ids.tsv"
     else
-        mkdir -p $outdir/$sample
         fs=$(echo "$h1p" "$h2p" "$h1t" "$h2t" | sort | uniq)
         for f in $fs; do
             #sanitize
@@ -30,10 +30,10 @@ tail -n +2 $input_table | while read line; do
         sf1t=$(echo "$h1t" | sed 's/[^a-zA-Z0-9._-]/_/g')
         sf2t=$(echo "$h2t" | sed 's/[^a-zA-Z0-9._-]/_/g')
 
-	if [ -f "$outdir/$sample/ids.tsv" ]; then
-		rm "$outdir/$sample/ids.tsv"
-	fi
- 
+	    if [ -f "$outdir/$sample/ids.tsv" ]; then
+		    rm "$outdir/$sample/ids.tsv"
+	    fi
+
         echo -e "${sf1p}.fasta\t${sf1t}.fasta" >> "$outdir/$sample/ids.tsv"
         echo -e "${sf2p}.fasta\t${sf2t}.fasta" >> "$outdir/$sample/ids.tsv"
         echo -e "${sf1p}.fasta\t${sf2t}.fasta" >> "$outdir/$sample/ids.tsv"
