@@ -340,11 +340,12 @@ region_samples <- qv_data %>%
   distinct() %>%
   count(region, name = "sample_count")
 
+#do not plot by pct, plot by region name instead - easier to compare
 region_order_df <- qv_summary %>%
   filter(quality == "high: >33") %>%
-  group_by(region) %>%
-  summarize(high_pct = sum(percent)) %>%
-  arrange(desc(high_pct))
+  group_by(region) #%>%
+  #summarize(high_pct = sum(percent)) %>%
+  #arrange(desc(high_pct))
 
 all_regions <- unique(qv_summary$region)
 missing_regions <- setdiff(all_regions, region_order_df$region)
@@ -449,84 +450,4 @@ qv_combined_plot <- plot_grid(plotlist = qv_bar_plots, ncol = 1, align = 'v', ax
 ggsave(paste0(output_plot_prefix, ".qv_bar.png"), plot = qv_combined_plot, width = qv_plot_width, height = qv_plot_height, limitsize = FALSE)
 #done
 
-#plot correlating edr values and qv values - re-adapting the same strategy we had before
-qv_edr_wide <- data_long %>%
-  filter(metric %in% c("qv.1", "qv.2", "edr.1", "edr.2")) %>%
-  mutate(
-    metric_type = case_when(
-      grepl("^qv", metric) ~ "qv",
-      grepl("^edr", metric) ~ "edr"
-    )
-  ) %>%
-  select(region, pos, sample.id, metric_type, metric.values) %>%
-  group_by(region, pos, sample.id, metric_type) %>%
-  summarize(metric.values = mean(metric.values, na.rm = TRUE), .groups = "drop") %>%
-  pivot_wider(names_from = metric_type, values_from = metric.values)
-
-#region correlations
-region_correlations <- qv_edr_wide %>%
-  group_by(region) %>%
-  summarize(
-    correlation = cor(-qv, edr, use = "complete.obs", method = "spearman"),
-    .groups = "drop"
-  )
-
-#actual plot
-cor_bars_per_row <- max_bars_per_row 
-region_order_cor <- region_correlations %>%
-  arrange(desc(correlation)) %>%
-  pull(region)
-
-num_regions_cor <- length(region_order_cor)
-num_rows_cor <- ceiling(num_regions_cor / cor_bars_per_row)
-
-# Generate plots in chunks
-cor_bar_plots <- list()
-
-for (i in 1:num_rows_cor) {
-  start_idx <- (i - 1) * cor_bars_per_row + 1
-  end_idx <- min(i * cor_bars_per_row, num_regions_cor)
-  if (start_idx > num_regions_cor) break
-  
-  regions_in_row <- region_order_cor[start_idx:end_idx]
-  
-  row_data <- region_correlations %>%
-    filter(region %in% regions_in_row) %>%
-    mutate(region = factor(region, levels = regions_in_row)) # preserve order
-
-  p <- ggplot(row_data, aes(x = region, y = correlation, fill = correlation)) +
-    geom_col() +
-    geom_hline(yintercept = 0, linetype = "dashed") +
-    scale_fill_gradient2(
-      low = "#F44336", mid = "#FFEB3B", high = "#4CAF50", midpoint = 0
-    ) +
-    labs(
-      x = if (i == num_rows_cor) "region" else "",
-      y = "spearman coefficient (-QV vs e.d.r)"
-    ) +
-    theme_bw() +
-    theme(
-      axis.title = element_text(size = 20),
-      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-      axis.text = element_text(size = 18),
-      legend.position = "none"  # can turn back on if needed
-    )
-
-  cor_bar_plots[[i]] <- p
-}
-
-if (num_regions_cor <= 5) {
-  cor_plot_width <- 5
-} else {
-  cor_plot_width <- max(15, min(30, cor_bars_per_row * 0.25))
-}
-
-cor_plot_height <- 8 * num_rows_cor
-
-cor_combined_plot <- plot_grid(plotlist = cor_bar_plots, ncol = 1, align = 'v', axis = 'lr')
-
-ggsave(paste0(output_plot_prefix, ".correlation_bar.png"),
-       plot = cor_combined_plot,
-       width = cor_plot_width,
-       height = cor_plot_height,
-       limitsize = FALSE)
+#remove edr-qv correlation plot - not used
