@@ -20,7 +20,7 @@ cosigt_benchmark=set()
 refine_input=set()
 
 for region in config['regions']:
-	chrom=region.split('_')[0]
+	chrom='_'.join(region.split('_')[:-2]) #more robust - coordinates are always the last 2 blocks
 	for sample in config['samples']:
 		cosigt_input.add(config['output'] + '/cosigt/' + sample + '/' + chrom + '/' + region + '/' + region + '.cosigt_genotype.tsv')
 		cosigt_input.add(config['output'] + '/wally/' + sample + '/' + chrom + '/' + region + '/wally.done')
