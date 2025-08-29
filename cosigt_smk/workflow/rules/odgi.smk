@@ -78,30 +78,31 @@ rule get_nodes_length:
 rule filter_nodes:
 	'''
 	https://github.com/davidebolo1993/cosigt 
-	- This keeps all the node at the moment but in principle useful to filter out certain nodes
+	- This builds a mask for nodes, excluding those that are low-complexity
 	'''	
 	input:
-		graph_cov=rules.odgi_paths.output,
-		node_length=rules.get_nodes_length.output
+		rules.odgi_view.output
 	output:
-		mask=config['output'] + '/odgi/paths/{chr}/{region}/{region}.mask.tsv',
-		shared=temp(config['output'] + '/odgi/paths/{chr}/{region}/{region}.shared.tsv')
+		config['output'] + '/odgi/paths/{chr}/{region}/{region}.mask.tsv',
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://davidebolo1993/renv:4.3.3'
+		'docker://davidebolo1993/panplexity:0.0.1'
 	conda:
-		'../envs/r.yaml'
+		'../envs/panplexity.yaml'
 	benchmark:
 		'benchmarks/{chr}.{region}.filter_nodes.benchmark.txt'
 	shell:
 		'''
-		Rscript workflow/scripts/filter.r \
-		{input.graph_cov} \
-		{input.node_length} \
-		no_filter \
-		{output.mask}
+		panplexity \
+			--input-gfa {input} \
+			-t 1 \
+			-k 16 \
+			-w 100 \
+			-d 100 \
+			--complexity linguistic \
+			-m {output}
 		'''	
 
 rule odgi_dissimilarity:
@@ -110,8 +111,7 @@ rule odgi_dissimilarity:
 	- Compute the dissimilarity of each path with respect to each other path
 	'''
 	input:
-		og=rules.pggb_construct.output,
-		mask=rules.filter_nodes.output.mask
+		rules.pggb_construct.output
 	output:
 		config['output'] + '/odgi/dissimilarity/{chr}/{region}/{region}.tsv.gz'
 	threads:
@@ -128,8 +128,7 @@ rule odgi_dissimilarity:
 	shell:
 		'''
 		odgi similarity \
-		-i {input.og} \
-		-m {input.mask} \
+		-i {input} \
 		--all \
 		--distances \
 		-t {threads} | gzip > {output}
@@ -141,15 +140,14 @@ rule make_clusters:
 	- DBSCAN clustering based on dissimilarities between paths
 	'''
 	input:
-		matrix=rules.odgi_dissimilarity.output,
-		shared=rules.filter_nodes.output.shared
+		rules.odgi_dissimilarity.output
 	output:
 		config['output'] + '/cluster/{chr}/{region}/{region}.clusters.json'
 	threads:
-		4
+		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
@@ -164,7 +162,7 @@ rule make_clusters:
 			{input.matrix} \
 			{output} \
 			automatic \
-			$(cut -f 3 {input.shared} | tail -1) \
+			100.0 \ #this is ignored at the moment
 			1
 		'''
 
