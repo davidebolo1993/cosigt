@@ -159,10 +159,10 @@ rule make_clusters:
 	shell:
 		'''
 		Rscript workflow/scripts/cluster.r \
-			{input.matrix} \
+			{input} \
 			{output} \
 			automatic \
-			100.0 \ #this is ignored at the moment
+			100.0 \
 			1
 		'''
 
