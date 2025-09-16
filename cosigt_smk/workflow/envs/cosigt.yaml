@@ -2,4 +2,4 @@ channels:
  - conda-forge
  - bioconda
 dependencies:
-  - cosigt=0.1.5
+  - cosigt=0.1.6
