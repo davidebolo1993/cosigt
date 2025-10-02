@@ -75,7 +75,7 @@ rule get_nodes_length:
 		awk '{{print("node."$2,length($3))}}' OFS="\\t" > {output}
 		'''
 
-rule filter_nodes:
+rule panplexity_filter:
 	'''
 	https://github.com/davidebolo1993/cosigt 
 	- This builds a mask for nodes, excluding those that are low-complexity
@@ -83,7 +83,7 @@ rule filter_nodes:
 	input:
 		rules.odgi_view.output
 	output:
-		config['output'] + '/odgi/paths/{chr}/{region}/{region}.mask.tsv',
+		config['output'] + '/panplexity/{chr}/{region}/{region}.mask.tsv'
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
@@ -92,18 +92,51 @@ rule filter_nodes:
 	conda:
 		'../envs/panplexity.yaml'
 	benchmark:
-		'benchmarks/{chr}.{region}.filter_nodes.benchmark.txt'
+		'benchmarks/{chr}.{region}.panplexity_filter.benchmark.txt'
 	shell:
 		'''
 		panplexity \
 			--input-gfa {input} \
-			-t 1 \
+			-t auto \
 			-k 16 \
 			-w 100 \
 			-d 100 \
 			--complexity linguistic \
 			-m {output}
 		'''	
+
+rule filter_nodes:
+	'''
+	https://github.com/davidebolo1993/cosigt
+	- Additional mask for nodes, mask nodes exhibiting coverage spikes on the paths
+	- Output a combined mask (panplexity + coverage) and some statistics/plots
+	'''
+	input:
+		paths=rules.odgi_paths.output,
+		mask=rules.panplexity_filter.output,
+		lengths=rules.get_nodes_length.output
+	output:
+		config['output'] + '/odgi/paths/{chr}/{region}/{region}.mask.tsv'
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+	container:
+		'docker://davidebolo1993/renv:4.3.3'
+	conda:
+		'../envs/r.yaml'
+	benchmark:
+		'benchmarks/{chr}.{region}.filter_nodes.benchmark.txt'
+	params:
+		prefix=config['output'] + '/odgi/paths/{chr}/{region}/{region}'
+	shell:
+		'''
+		Rscript \
+			workflow/scripts/coverage_outliers.r \
+			{input.paths} \
+			{params.prefix} \
+			{input.lengths} \
+			{input.mask}
+		'''
 
 rule odgi_dissimilarity:
 	'''
