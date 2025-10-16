@@ -39,7 +39,7 @@ find_optimal_eps <- function(distanceMatrix, region_similarity, similarity_thres
     }
     pclust <- cclust
   }
-  return(optimal_eps)
+  return(ifelse(eps < 0.3, optimal_eps, 0.3))
 }
 
 # Recursive clustering - the idea here is to have some
