@@ -8,7 +8,7 @@ function abs(x) { return (x < 0) ? -x : x }
 
 function flush() {
   if (qname != "") {
-    print qname, qstart, qend, tname, tstart, tend, ".", "0", qstrand, tstrand
+    print qname, qstart, qend, tname, tstart, tend, ".", "0", ".", "."
   }
 }
 
@@ -16,7 +16,6 @@ BEGIN { OFS = "\t" }
 
 {
   if ($1 == qname && $4 == tname &&
-      $9 == qstrand && $10 == tstrand &&
       (abs($2 - qend) <= d || abs(qstart - $3) <= d)) {
 
     # Extend query block
@@ -32,7 +31,6 @@ BEGIN { OFS = "\t" }
     # New block
     qname = $1; qstart = $2; qend = $3
     tname = $4; tstart = $5; tend = $6
-    qstrand = $9; tstrand = $10
   }
 }
 
