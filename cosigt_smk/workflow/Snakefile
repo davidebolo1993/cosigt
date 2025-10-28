@@ -12,6 +12,7 @@ include: 'rules/bwa.smk'
 include: 'rules/gfainject.smk'
 include: 'rules/gafpack.smk'
 include: 'rules/cosigt.smk'
+include: 'rules/benchmark.smk'
 include: 'rules/refine.smk'
 
 cosigt_input=set()
