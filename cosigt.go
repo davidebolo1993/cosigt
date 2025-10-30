@@ -24,6 +24,9 @@ import (
 // Vector represents a float64 slice for cleaner type declarations
 type Vector []float64
 
+// Small epsilon value 
+const epsilon = 1e-10
+
 // GetMagnitudeWeighted calculates the weighted Euclidean magnitude of two vectors, with optional mask and weights
 func GetMagnitudeWeighted(A, B Vector, mask []bool, weights []float64) float64 {
     var ALen, BLen float64
@@ -453,13 +456,24 @@ func main() {
         keys = append(keys, key.(string))
         return true
     })
+
     sort.SliceStable(keys, func(i, j int) bool {
         valI, _ := results.Load(keys[i])
         valJ, _ := results.Load(keys[j])
-        return valI.(float64) > valJ.(float64)
+        
+        cosI := valI.(float64)
+        cosJ := valJ.(float64)
+        
+        // Check if effectively equal within tolerance
+        if math.Abs(cosI - cosJ) < epsilon {
+            return keys[i] < keys[j]
+        }
+        
+        return cosI > cosJ
     })
 
     if err := WriteResults(results, keys, clstr, *o, *i, *ploidy); err != nil {
         log.Fatalf("Error writing results: %v", err)
     }
 }
+
