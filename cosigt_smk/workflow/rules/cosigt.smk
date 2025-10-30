@@ -17,7 +17,7 @@ rule cosigt_genotype:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://davidebolo1993/cosigt:0.1.6'
+		'docker://davidebolo1993/cosigt:0.1.7'
 	conda:
 		'../envs/cosigt.yaml'
 	params:
