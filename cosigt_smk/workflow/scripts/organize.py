@@ -34,7 +34,7 @@ def make_default_config(tmp) -> dict:
     config['pggb']['mem_mb'] = 30000
     config['pggb']['time'] =  40
     config['pggb']['tmpdir'] = tmp
-    config['pggb']['params'] =  '-c 2'
+    config['pggb']['params'] =  '-c 2 -k 101'
     #many tiny rules use these resources instead
     #default - small
     config['default_small']=dict()
