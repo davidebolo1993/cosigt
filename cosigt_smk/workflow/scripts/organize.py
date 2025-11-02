@@ -36,7 +36,7 @@ def make_default_config(tmp) -> dict:
     config['pggb']['mem_mb'] = 20000
     config['pggb']['time'] =  40
     config['pggb']['tmpdir'] = tmp
-    config['pggb']['params'] =  '-c 2'
+    config['pggb']['params'] =  '-c 2 -k 101'
     #minimap2 for batch alignment
     config['minimap2_large']=dict()
     config['minimap2_large']['threads'] = 5
