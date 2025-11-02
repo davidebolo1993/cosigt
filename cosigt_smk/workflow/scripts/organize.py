@@ -38,7 +38,7 @@ def make_default_config(tmp) -> dict:
     config['pggb']['mem_mb'] = 20000
     config['pggb']['time'] =  40
     config['pggb']['tmpdir'] = tmp
-    config['pggb']['params'] =  '-c 2'
+    config['pggb']['params'] =  '-c 2 -k 101'
     #minimap2 for batch alignment
     #this depends a lot on the number of contigs
     #5 cores, 40 Gb, 40 min max - there are cases where we hit 80G(?) but overall
