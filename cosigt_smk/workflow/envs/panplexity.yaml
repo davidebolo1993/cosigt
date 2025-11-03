@@ -1,0 +1,5 @@
+channels:
+ - conda-forge
+ - bioconda
+dependencies:
+ - panplexity=0.1.1

@@ -84,11 +84,13 @@ rule panplexity_filter:
 		rules.odgi_view.output
 	output:
 		config['output'] + '/panplexity/{chr}/{region}/{region}.mask.tsv'
+	threads:
+		4
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
-		'docker://davidebolo1993/panplexity:0.0.1'
+		'docker://davidebolo1993/panplexity:0.1.1'
 	conda:
 		'../envs/panplexity.yaml'
 	benchmark:
@@ -102,7 +104,8 @@ rule panplexity_filter:
 			-w 100 \
 			-d 100 \
 			--complexity linguistic \
-			-m {output}
+			-m {output} \
+			--threads 4
 		'''	
 
 rule filter_nodes:

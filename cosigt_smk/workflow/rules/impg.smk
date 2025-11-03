@@ -20,7 +20,7 @@ rule impg_project_batches:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
 	container:
-		'docker://davidebolo1993/impg:0.2.4'
+		'docker://davidebolo1993/impg:0.3.3'
 	conda:
 		'../envs/impg.yaml'
 	benchmark:
