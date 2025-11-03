@@ -12,10 +12,10 @@ rule impg_refine:
 		txt=config['output'] + '/refine/impg/{chr}/{region}/{region}.keep.txt',
 		refined_bed=config['output'] + '/refine/impg/{chr}/{region}/{region}.refined.bed'
 	threads:
-		1
+		8
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
+		time=lambda wildcards, attempt: attempt * config['default_high']['time']
 	container:
 		'docker://davidebolo1993/impg:0.3.3'
 	conda:
@@ -35,7 +35,9 @@ rule impg_refine:
 			-d 200000 \
 			--span-bp 1000 \
 			--pansn-mode haplotype \
+			--extension-step 10000 \
 			--support-output {output.haplotypes_bed} \
+			-t {threads} \
 			> {output.initial_bed}
 		(grep -v \
 			-E \
@@ -52,7 +54,9 @@ rule impg_refine:
 			-d 200000 \
 			--span-bp 1000 \
 			--pansn-mode haplotype \
+			--extension-step 10000 \
 			--subset-sequence-list {output.txt} \
+			-t {threads} \
 			> {output.refined_bed}
 		'''
 
