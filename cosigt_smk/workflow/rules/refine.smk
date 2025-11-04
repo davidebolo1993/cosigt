@@ -65,7 +65,6 @@ rule impg_project_batches_expanded:
 			intersect \
 			-a - \
 			-b {params.flagger_blacklist} \
-			-F 0.1 \
 			-v \
 			-wa | bedtools sort -i - || true) | gzip > {output.noblck}
 		(zcat {output.noblck} | sh workflow/scripts/bedpe_merge.sh - 200000 || true) | gzip > {output.merged}
