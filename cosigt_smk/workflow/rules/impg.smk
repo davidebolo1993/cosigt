@@ -26,7 +26,6 @@ rule impg_project_batches:
 	benchmark:
 		'benchmarks/{chr}.{region}.impg_project_batches.benchmark.txt'
 	params:
-		blacklist=config['blacklist'],
 		flagger_blacklist=config['flagger_blacklist'],
 		pansn=config['pansn_prefix'],
 		region='{region}',
