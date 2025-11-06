@@ -557,7 +557,6 @@ def setup_arg_parser():
     optional.add_argument('--tmp', help='tmp directory. Will be used by tools for which a tmp directory can be specified [/tmp]', metavar='', required=False, default='/tmp')
     optional.add_argument('--pansn', help='PanSN prefix naming for the reference genome [grch38#1#]', metavar='', required=False, default='grch38#1#')
     optional.add_argument('--profile', help='snakemake profile, if available [None]', metavar='', required=False, default=None)
-    optional.add_argument('--blacklist', help='list of contigs to blacklist - these will not be used during genotyping [None]', metavar='', required=False, default=None)
     optional.add_argument('--flagger', help='regions to exclude for each contigs. This is a standard BED file coming from flagger, with contigs names matching those of the assemblies in -a [None]', metavar='', required=False, default=None)
     optional.add_argument('--conda', help='prepare for running using conda instead of singularity [False]', action='store_true')
     optional.add_argument('--threads', help='run snakemake using that many cores - ignored if using a profile [32]', metavar='', required=False, default=32)
