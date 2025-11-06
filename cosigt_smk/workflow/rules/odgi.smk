@@ -83,7 +83,7 @@ rule panplexity_filter:
 	input:
 		rules.odgi_view.output
 	output:
-		config['output'] + '/panplexity/{chr}/{region}/{region}.mask.tsv'
+		temp(config['output'] + '/panplexity/{chr}/{region}/{region}.mask.tsv')
 	threads:
 		4
 	resources:
