@@ -34,7 +34,7 @@ rule bwamem2_mem_samtools_sort:
 	input:
 		ref_fasta=rules.bedtools_getfasta.output.fasta,
 		ref_fai=rules.bwamem2_index.output,
-		sample_fasta=rules.samtools_fasta_mapped.output
+		sample_fasta=rules.combine_mapped_unmapped.output
 	output:
 		config['output'] + '/bwa-mem2/{sample}/{chr}/{region}/{region}.realigned.cram'
 	threads:

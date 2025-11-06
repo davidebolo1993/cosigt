@@ -26,7 +26,6 @@ rule impg_project_batches:
 	benchmark:
 		'benchmarks/{chr}.{region}.impg_project_batches.benchmark.txt'
 	params:
-		blacklist=config['blacklist'],
 		flagger_blacklist=config['flagger_blacklist'],
 		pansn=config['pansn_prefix'],
 		region='{region}',
@@ -40,11 +39,9 @@ rule impg_project_batches:
 			-p {input.paf} \
 			-b <(awk -v var={params.pansn} '{{print var$1,$2,$3}}' OFS="\\t" {params.tmp_bed}) | gzip > {output.unfiltered}
 		rm {params.tmp_bed}
-		(zgrep -v \
-			-E \
-			-f {params.blacklist} {output.unfiltered} | bedtools \
+		(bedtools \
 			intersect \
-			-a - \
+			-a {output.unfiltered} \
 			-b {params.flagger_blacklist} \
 			-v \
 			-wa | bedtools sort -i - || true) | gzip > {output.noblck}

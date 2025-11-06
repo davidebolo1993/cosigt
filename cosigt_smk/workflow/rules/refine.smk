@@ -7,15 +7,13 @@ rule impg_refine:
 		paf=get_merged_paf,
 		bed=lambda wildcards: glob('resources/regions/{chr}/{region}.bed'.format(chr=wildcards.chr, region=wildcards.region))
 	output:
-		initial_bed=config['output'] + '/refine/impg/{chr}/{region}/{region}.initial.bed',
 		haplotypes_bed=config['output'] + '/refine/impg/{chr}/{region}/{region}.haplotypes.bed',
-		txt=config['output'] + '/refine/impg/{chr}/{region}/{region}.keep.txt',
 		refined_bed=config['output'] + '/refine/impg/{chr}/{region}/{region}.refined.bed'
 	threads:
-		8
+		4
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_high']['time']
+		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
 	container:
 		'docker://davidebolo1993/impg:0.3.3'
 	conda:
@@ -23,7 +21,6 @@ rule impg_refine:
 	benchmark:
 		'benchmarks/{chr}.{region}.impg_refine.benchmark.txt'
 	params:
-		blacklist=config['blacklist'],
 		flagger_blacklist=config['flagger_blacklist'],
 		pansn=config['pansn_prefix']
 	shell:
@@ -37,26 +34,8 @@ rule impg_refine:
 			--pansn-mode haplotype \
 			--extension-step 10000 \
 			--support-output {output.haplotypes_bed} \
-			-t {threads} \
-			> {output.initial_bed}
-		(grep -v \
-			-E \
-			-f {params.blacklist} {output.haplotypes_bed} | bedtools \
-			intersect \
-			-a - \
-			-b {params.flagger_blacklist} \
-			-v \
-			-wa | bedtools sort -i - | cut -f 1 || true) > {output.txt}
-		impg \
-			refine \
-			-p {input.paf} \
-			-b <(awk -v var={params.pansn} 'NF>=4{{print var$1,$2,$3,$4}} NF==3{{print var$1,$2,$3}}' OFS="\\t" {input.bed}) \
-			-d 200000 \
-			--span-bp 1000 \
-			--pansn-mode haplotype \
-			--extension-step 10000 \
-			--subset-sequence-list {output.txt} \
-			-t {threads} \
+			--blacklist-bed {params.flagger_blacklist} \
+			-t 4 \
 			> {output.refined_bed}
 		'''
 

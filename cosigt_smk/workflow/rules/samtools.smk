@@ -37,3 +37,43 @@ rule samtools_fasta_mapped:
 			-@ {threads} \
 			- | gzip > {output}
 		'''
+
+
+rule samtools_fasta_unmapped:
+	'''
+	https://github.com/samtools/samtools
+	- Extract unmapped reads from each sample alignment
+	- Generates an interleaved .fasta
+	- Compress
+	'''
+	input:
+		sample=lambda wildcards: glob('resources/alignments/{sample}.*am'.format(sample=wildcards.sample)),
+		fasta=config['reference']
+	output:
+		temp(config['output'] + '/samtools/fasta/{sample}/unmapped.fasta.gz')
+	threads:
+		config['samtools']['threads']
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['samtools']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['samtools']['time']
+	container:
+		'docker://davidebolo1993/samtools:1.22'
+	conda:
+		'../envs/samtools.yaml'	
+	benchmark:
+		'benchmarks/{sample}.samtools_fasta_unmapped.benchmark.txt'
+	shell:
+		'''
+		samtools view \
+			-u \
+			-f 4 \
+			-@ {threads} \
+			-T {input.fasta} \
+			{input.sample} | \
+			samtools sort -@ {threads} \
+			-n | \
+			samtools fasta \
+			-0 /dev/null - \
+			-@ {threads} | \
+			gzip > {output}
+		'''
