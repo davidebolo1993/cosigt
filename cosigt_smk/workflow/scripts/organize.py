@@ -381,7 +381,7 @@ def write_regions(bed_dict, config_yaml, RESOURCES) -> dict:
                 b_a_out.write('\t'.join(subr[:-1]) + '\n')
                 bed_out=os.path.join(bed_dir, region_out + '.bed')
                 with open(bed_out, 'w') as b_out:
-                    b_out.write('\t'.join(subr[:-2]) + '\n')
+                    b_out.write('\t'.join(subr[:-1]) + '\n')
                     if subr[-1] is not None:    
                         alts=subr[-1].split(',')
                         for alt in alts:
@@ -448,31 +448,7 @@ def write_proteins(proteins_dict, config_yaml, RESOURCES) -> dict:
             config_yaml['SINGULARITY_BIND'].add(os.path.dirname(v))
     print(f'Added proteins to {proteins_dir}!')
     return config_yaml
-
-def validate_blacklist(blacklist, config_yaml, RESOURCES):
-    '''
-    Write blacklist
-    Add blacklist to config
-    '''
-    blacklist_dir=os.path.join(RESOURCES, 'blacklist')
-    os.makedirs(blacklist_dir, exist_ok=True)
-    blacklist_out=os.path.join(blacklist_dir, 'blacklist.txt')
-    if blacklist is None:
-        open(blacklist_out, 'w').close()
-    else:
-        if not os.path.exists(blacklist):
-            print(f'Blacklist file: {blacklist} does not exist!')
-            sys.exit(1)
-        if not os.access(blacklist, os.R_OK):
-            print(f'Blacklist file: {blacklist} is not readable!')
-            sys.exit(1)
-        with open(blacklist, 'r') as b_in, open(blacklist_out, 'w') as b_out:
-            for line in b_in:
-                b_out.write(b_in)
-    print(f'Wrote blacklist file {blacklist_out}!')    
-    config_yaml['blacklist'] = os.path.abspath(blacklist_out)
-    return config_yaml    
-
+ 
 def validate_flagger(flagger_blacklist, config_yaml, RESOURCES):
     '''
     Write flagger blacklist
@@ -652,9 +628,7 @@ def main():
     #annotations
     config=write_gtf(gtf_dict, config, RESOURCES)
     config=write_proteins(proteins_dict, config, RESOURCES)
-    #blacklist
-    config=validate_blacklist(args.blacklist, config, RESOURCES)
-    #flagger blaclist
+    #flagger blacklist
     config=validate_flagger(args.flagger, config, RESOURCES)
     
     #common paths to BIND for singularity

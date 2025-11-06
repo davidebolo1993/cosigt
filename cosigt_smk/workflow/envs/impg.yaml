@@ -2,5 +2,5 @@ channels:
  - conda-forge
  - bioconda
 dependencies:
-  - impg=0.2.4
+  - impg=0.3.3
   - bedtools=2.31.0
