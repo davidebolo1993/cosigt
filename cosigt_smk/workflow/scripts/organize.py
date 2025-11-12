@@ -35,6 +35,11 @@ def make_default_config(tmp) -> dict:
     config['pggb']['time'] =  40
     config['pggb']['tmpdir'] = tmp
     config['pggb']['params'] =  '-c 2 -k 101'
+    #meryl for db construction of the reference genome
+    config['meryl']=dict()
+    config['meryl']['threads'] = 10
+    config['meryl']['mem_mb'] = 25000
+    config['meryl']['time'] =  20    
     #many tiny rules use these resources instead
     #default - small
     config['default_small']=dict()
