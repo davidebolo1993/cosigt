@@ -25,7 +25,7 @@ rule make_alignment_bed:
 	'''
 	https://github.com/davidebolo1993/cosigt
 	- Make alignment .bed - that is, .bed for extracting reads from the original .cram files
-	- This can be == to the reference bed if no alt contig where provided, can be different otherwise
+	- This can be == to the reference .bed if no alt contig where provided, different otherwise
 	'''
 	input:
 		ref_bed=rules.make_reference_bed.output,
