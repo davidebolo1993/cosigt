@@ -35,63 +35,16 @@ rule meryl_build_reference_db:
 		&& touch {output}
 		'''
 
-rule meryl_build_alleles_db:
+rule meryl_build_alleles_db_meryl_difference_kfilt_index:
 	'''
 	https://github.com/marbl/meryl
 	- Count all the 31-mers in the alleles
 	- Only retain 31-mers in the alleles that are not in the reference
+	- Build the index of the 31-mers with kfilt
 	'''
 	input:
 		db=rules.meryl_build_reference_db.output,
 		fasta=rules.bedtools_getfasta.output.fasta
-	output:
-		config['output'] + '/meryl/{chr}/{region}/{region}.unique_kmers.txt'
-	threads:
-		1
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
-	container:
-		'docker://davidebolo1993/kfilt:0.1.1'
-	benchmark:
-		'benchmarks/{chr}.{region}.meryl_buil_alleles_db.benchmark.txt'
-	conda:
-		'../envs/kfilt.yaml'
-	params:
-		outdir_alleles=config['output'] + '/meryl/{chr}/{region}/{region}',
-		outdir_diff=config['output'] + '/meryl/{chr}/{region}/{region}_unique',
-		indir=config['output'] + '/meryl/reference'
-	shell:
-		'''
-		if [ -d {params.outdir_alleles} ]; then
-			rm -rf {params.outdir_alleles}
-		fi
-		if [ -d {params.outdir_diff} ]; then
-			rm -rf {params.outdir_diff}
-		fi
-		meryl count \
-			k=31 \
-			threads={threads} \
-			{input} \
-			output \
-			{params.outdir_alleles}
-		meryl difference \
-			{params.outdir_alleles} \
-			{params.indir} \
-			output \
-			{params.outdir_diff}
-		rm -rf {params.outdir_alleles}
-		meryl print {params.outdir_diff} > {output}
-		rm -rf {params.outdir_diff}
-		'''
-
-rule kfilt_build_index:
-	'''
-	https://github.com/davidebolo1993/kfilt
-	- Build an hybrid index of the alleles-specific 31-mers
-	'''
-	input:
-		rules.meryl_build_alleles_db.output
 	output:
 		temp(config['output'] + '/kfilt/{chr}/{region}/{region}.kfilt.idx')
 	threads:
@@ -102,14 +55,41 @@ rule kfilt_build_index:
 	container:
 		'docker://davidebolo1993/kfilt:0.1.1'
 	benchmark:
-		'benchmarks/{chr}.{region}.kfilt_build_index.benchmark.txt'
+		'benchmarks/{chr}.{region}.meryl_build_alleles_db_meryl_difference_kfilt_index.benchmark.txt'
 	conda:
 		'../envs/kfilt.yaml'
+	params:
+		outdir_alleles=config['output'] + '/meryl/{chr}/{region}/{region}',
+		outdir_diff=config['output'] + '/meryl/{chr}/{region}/{region}_unique',
+		out_diff=config['output'] + '/meryl/{chr}/{region}/{region}.unique_kmers.txt',
+		indir=config['output'] + '/meryl/reference'
 	shell:
 		'''
+		if [ -d {params.outdir_alleles} ]; then
+			rm -rf {params.outdir_alleles}
+		fi
+		if [ -d {params.outdir_diff} ]; then
+			rm -rf {params.outdir_diff}
+		fi
+		mkdir -p {params.outdir_alleles}
+		meryl count \
+			k=31 \
+			threads={threads} \
+			{input.fasta} \
+			output \
+			{params.outdir_alleles}
+		mkdir -p {params.outdir_diff}
+		meryl difference \
+			{params.outdir_alleles} \
+			{params.indir} \
+			output \
+			{params.outdir_diff}
+		rm -rf {params.outdir_alleles}
+		meryl print {params.outdir_diff} > {params.out_diff}
+		rm -rf {params.outdir_diff}
 		kfilt \
 			build \
-			-k {input} \
+			-k {params.out_diff} \
 			-K 31 \
 			-o {output}
 		'''
@@ -121,7 +101,7 @@ rule kfilt_filter_unmapped:
 	- Keep only those having at least one 31-mer matching the index
 	'''
 	input:
-		idx=rules.kfilt_build_index.output,
+		idx=rules.meryl_build_alleles_db_meryl_difference_kfilt_index.output,
 		sample=rules.samtools_fasta_unmapped.output
 	output:
 		temp(config['output'] + '/kfilt/{sample}/{chr}/{region}/{region}.unmapped.fasta.gz')
@@ -153,7 +133,7 @@ rule kfilt_filter_unmapped:
 rule combine_mapped_unmapped:
 	'''
 	https://github.com/davidebolo1993/cosigt
-	- Cat unmapped and mapped reads
+	- Concatenate unmapped and mapped reads
 	'''
 	input:
 		fasta_mapped=rules.samtools_fasta_mapped.output,

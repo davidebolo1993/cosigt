@@ -4,7 +4,7 @@ rule cosigt_genotype:
 	- This is the actual genotyping step
 	'''
 	input:
-		graph_cov_map=rules.odgi_paths.output,
+		graph_cov_map=rules.odgi_utils.output.paths,
 		sample_cov_map=rules.gafpack_coverage.output,
 		json=rules.make_clusters.output,
 		mask=rules.filter_nodes.output
