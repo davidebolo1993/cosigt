@@ -399,7 +399,7 @@ def write_regions(bed_dict, config_yaml, RESOURCES) -> dict:
                             last=alt.rfind(':')
                             chr_alt,rest_alt=alt[:last], alt[last+1:]
                             start_alt,end_alt=rest_alt.split('-')
-                            b_out.write('\t'.join([chr_alt,start_alt,end_alt]) + '\n')
+                            b_out.write('\t'.join([chr_alt,start_alt,end_alt,chr_alt]) + '\n')
                 config_yaml['regions'].add(region_out)
     print(f'Added regions to {reg_dir}!')
     return config_yaml
