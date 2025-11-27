@@ -1,78 +1,41 @@
-rule odgi_view:
+rule odgi_utils:
 	'''
 	https://github.com/pangenome/odgi
 	- Convert .og to .gfa - this is mainly necessary downstream
+	- Output node lengths
+	- Compute paths coverage over nodes
 	'''
 	input:
 		rules.pggb_construct.output
 	output:
-		temp(config['output'] + '/odgi/view/{chr}/{region}/{region}.gfa.gz')
+		gfa=temp(config['output'] + '/odgi/view/{chr}/{region}/{region}.gfa.gz'),
+		paths=config['output'] + '/odgi/paths/{chr}/{region}/{region}.tsv.gz',
+		length=temp(config['output'] + '/odgi/view/{chr}/{region}/{region}.node.length.tsv')
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
+		time=lambda wildcards, attempt: attempt * config['default_high']['time']
 	container:
 		'docker://pangenome/odgi:1753347183'
 	conda:
 		'../envs/odgi.yaml'
 	benchmark:
-		'benchmarks/{chr}.{region}.odgi_view.benchmark.txt'
+		'benchmarks/{chr}.{region}.odgi_utils.benchmark.txt'
 	shell:
 		'''
+		#gfa
 		odgi view \
 		-i {input} \
-		-g | gzip > {output}
-		'''
-
-rule odgi_paths:
-	'''
-	https://github.com/pangenome/odgi
-	- Compute paths coverage over each node in the graph
-	'''
-	input:
-		rules.pggb_construct.output
-	output:
-		config['output'] + '/odgi/paths/{chr}/{region}/{region}.tsv.gz'
-	threads:
-		1
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
-	container:
-		'docker://pangenome/odgi:1753347183'
-	conda:
-		'../envs/odgi.yaml'
-	benchmark:
-		'benchmarks/{chr}.{region}.odgi_paths.benchmark.txt'
-	shell:
-		'''
+		-g | gzip > {output.gfa}
+		#length
+		zgrep '^S' {output.gfa} | \
+		awk '{{print("node."$2,length($3))}}' OFS="\\t" > {output.length}
+		#paths
 		odgi paths \
 		-i {input} \
 		-H | \
-		cut -f 1,4- | gzip > {output}
-		'''
-
-rule get_nodes_length:
-	'''
-	https://github.com/pangenome/odgi
-	- Just compute the length of each node
-	'''
-	input:
-		rules.odgi_view.output
-	output:
-		config['output'] + '/odgi/view/{chr}/{region}/{region}.node.length.tsv'
-	threads:
-		1
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
-	benchmark:
-		'benchmarks/{chr}.{region}.get_node_length.benchmark.txt'
-	shell:
-		'''
-		zgrep '^S' {input} | \
-		awk '{{print("node."$2,length($3))}}' OFS="\\t" > {output}
+		cut -f 1,4- | gzip > {output.paths}
 		'''
 
 rule panplexity_filter:
@@ -81,7 +44,7 @@ rule panplexity_filter:
 	- This builds a mask for nodes, excluding those that are low-complexity
 	'''	
 	input:
-		rules.odgi_view.output
+		rules.odgi_utils.output.gfa
 	output:
 		temp(config['output'] + '/panplexity/{chr}/{region}/{region}.mask.tsv')
 	threads:
@@ -115,9 +78,9 @@ rule filter_nodes:
 	- Output a combined mask (panplexity + coverage) and some statistics/plots
 	'''
 	input:
-		paths=rules.odgi_paths.output,
+		paths=rules.odgi_utils.output.paths,
 		mask=rules.panplexity_filter.output,
-		lengths=rules.get_nodes_length.output
+		lengths=rules.odgi_utils.output.length
 	output:
 		config['output'] + '/odgi/paths/{chr}/{region}/{region}.mask.tsv'
 	resources:
@@ -139,7 +102,7 @@ rule filter_nodes:
 			{params.prefix} \
 			{input.lengths} \
 			{input.mask}
-		'''
+		'''		
 
 rule odgi_dissimilarity:
 	'''
@@ -208,9 +171,9 @@ rule viz_odgi:
 	- This serves as a (better) alternative to usual odgi viz
 	'''
 	input:
-		graph_cov=rules.odgi_paths.output,
+		graph_cov=rules.odgi_utils.output.paths,
 		json=rules.make_clusters.output,
-		nodes_length=rules.get_nodes_length.output
+		nodes_length=rules.odgi_utils.output.length
 	output:
 		config['output'] + '/odgi/viz/{chr}/{region}/{region}.viz.png'
 	threads:

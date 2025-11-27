@@ -1,10 +1,10 @@
 rule pansnspec_target:
 	'''
 	https://github.com/samtools/samtools
-	- Extract the reference chromosome from the reference file
-	- Convert chromosome name adding PanSN naming
-	- Compress
-	- Index
+	- Extract the reference chromosome from the reference genome file
+	- Convert chromosome name, adapting to PanSN specification (sample#haplotype#contig)
+	- Compress with bgzip
+	- Build index
 	'''
 	input:
 		config['reference']
@@ -38,7 +38,7 @@ checkpoint generate_batches:
 	'''
 	https://github.com/davidebolo1993/cosigt
 	- Generate batches for parallel alignment
-	- With assemblies following PanSN spec, each individual is aligned independently
+	- With assemblies following PanSN specification, each sample is aligned independently
 	'''
 	input:
 		lambda wildcards: glob('resources/assemblies/{chr}/*fai'.format(chr=wildcards.chr)),
@@ -59,7 +59,7 @@ checkpoint generate_batches:
 def get_batches(wildcards):
 	'''
 	https://github.com/davidebolo1993/cosigt
-	- Recover names to use as widlcards downstream
+	- Trace sample names - those will be used as widlcards downstream
 	'''
 	chr=wildcards.chr
 	checkpoint_output = checkpoints.generate_batches.get(chr=chr).output[0]
@@ -70,8 +70,8 @@ rule samtools_faidx_batches:
 	'''
 	https://github.com/samtools/samtools
 	- Extract individual contigs from the original assemblies
-	- Compress
-	- Index
+	- Compress with bgzip
+	- Build index
 	'''
 	input:
 		fai=lambda wildcards: glob('resources/assemblies/{chr}/*fai'.format(chr=wildcards.chr)),
@@ -108,7 +108,7 @@ rule minimap2_align_batches:
 	'''
 	https://github.com/lh3/minimap2
 	- Align individual queries (assemblies) to the target (reference chromosome)
-	- Compress
+	- Compress with bgzip
 	'''
 	input:
 		target_fasta=rules.pansnspec_target.output.fasta,
@@ -157,7 +157,7 @@ checkpoint merge_paf_per_region:
 	https://github.com/davidebolo1993/cosigt
 	- Concatenate the paf files for each chromosome together
 	- Ensure temp files are cleaned up after merging
-	- Index paf since this is required by impg
+	- Index .paf - since this is required by impg downstream
 	'''
 	input:
 		get_paf_files
@@ -187,7 +187,7 @@ checkpoint merge_paf_per_region:
 def get_merged_paf(wildcards):
 	'''
 	https://github.com/davidebolo1993/cosigt
-	- For some reason (I don't fully understand, honestly) we need to re-evaluate this
+	- For some reason (this I don't fully understand, honestly) we need to re-evaluate this
 	'''
 	checkpoint_output = checkpoints.merge_paf_per_region.get(chr=wildcards.chr).output[0]
 	return checkpoint_output
