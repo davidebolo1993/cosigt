@@ -4,7 +4,7 @@ rule cosigt_genotype:
 	- This is the actual genotyping step
 	'''
 	input:
-		graph_cov_map=rules.odgi_paths.output,
+		graph_cov_map=rules.odgi_utils.output.paths,
 		sample_cov_map=rules.gafpack_coverage.output,
 		json=rules.make_clusters.output,
 		mask=rules.filter_nodes.output
@@ -12,10 +12,10 @@ rule cosigt_genotype:
 		geno=config['output'] + '/cosigt/{sample}/{chr}/{region}/{region}.cosigt_genotype.tsv',
 		combos=config['output'] + '/cosigt/{sample}/{chr}/{region}/{region}.sorted_combos.tsv.gz'
 	threads:
-		10
+		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_high']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default_small']['time']
 	container:
 		'docker://davidebolo1993/cosigt:0.1.7'
 	conda:
