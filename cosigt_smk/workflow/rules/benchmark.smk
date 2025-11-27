@@ -25,24 +25,24 @@ rule make_tpr_table:
 	shell:
 		'''
 		Rscript \
-		workflow/scripts/calc_tpr.r \
-		{input.tsv} \
-		{input.json} \
-		{params.tsv} \
-		{output} \
-		{input.samples}
+			workflow/scripts/calc_tpr.r \
+			{input.tsv} \
+			{input.json} \
+			{params.tsv} \
+			{output} \
+			{input.samples}
 		'''
 
-rule odgi_flip_pggb_graph:
+rule odgi_flip_pggb_graph_to_fasta:
 	'''
 	https://github.com/pangenome/odgi
 	- Orient the haplotypes with respect to the target
+	- Output fasta file
 	'''
 	input:
-		og=rules.pggb_construct.output,
-		bed=rules.make_reference_bed.output
+		rules.pggb_construct.output
 	output:
-		config['output'] + '/benchmark/{chr}/{region}/{region}.flipped.og'
+		config['output'] + '/benchmark/{chr}/{region}/{region}.flipped.fasta'
 	threads:
 		1
 	resources:
@@ -53,50 +53,33 @@ rule odgi_flip_pggb_graph:
 	conda:
 		'../envs/odgi.yaml'
 	params:
-		pansn=config['pansn_prefix']
-	shell:
-		'''
-		odgi flip \
-			-i {input.og} \
-			-o {output} \
-			--ref-flips <(zcat {input.bed} | awk -v var={params.pansn} '{{print var$1":"$2"-"$3}}')
-		'''	
-
-rule odgi_og_to_fasta:
-	'''
-	https://github.com/pangenome/odgi
-	- Extract the fasta of the haplotypes
-	'''
-	input:
-		rules.odgi_flip_pggb_graph.output
-	output:
-		config['output'] + '/benchmark/{chr}/{region}/{region}.flipped.fasta'
-	threads:
-		1
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
-	container:
-		'docker://pangenome/odgi:1745375412'
-	conda:
-		'../envs/odgi.yaml'
+		pansn=config['pansn_prefix'],
+		prefix=config['output'] + '/benchmark/{chr}/{region}'
 	shell:
 		'''
 		odgi paths \
 			-i {input} \
+			-L | grep {params.pansn} > {params.prefix}/ref_path.txt
+		odgi flip \
+			-i {input} \
+			-o - \
+			--ref-flips <(cat {params.prefix}/ref_path.txt) | \
+		odgi paths \
+			-i - \
 			-f | sed 's/_inv$//g' > {output}
-		'''
+		rm {params.prefix}/ref_path.txt
+		'''	
 
-checkpoint prepare_combinations_for_qv:
+rule prepare_combinations_for_qv:
 	'''
 	https://github.com/samtools/samtools
 	- Prepare all possible combinations for QV calculation
 	'''
 	input:
 		tsv=rules.make_tpr_table.output,
-		fasta=rules.odgi_og_to_fasta.output
+		fasta=rules.odgi_flip_pggb_graph_to_fasta.output
 	output:
-		directory(config['output'] + '/benchmark/{chr}/{region}/qv_prep')
+		config['output'] + '/benchmark/{chr}/{region}/qv_prep.done'
 	threads:
 		1
 	resources:
@@ -106,22 +89,19 @@ checkpoint prepare_combinations_for_qv:
 		'docker://davidebolo1993/samtools:1.22'
 	conda:
 		'../envs/samtools.yaml'
+	params:
+		outdir=config['output'] + '/benchmark/{chr}/{region}/qv'
 	shell:
 		'''
-		bash workflow/scripts/prepare_qv.sh {input.tsv} {input.fasta} {output}
+		if [ -f {output} ]; then
+			rm {output}
+		fi
+		if [ -d {params.outdir} ]; then
+			rm -rf {params.outdir}
+		fi
+		bash workflow/scripts/prepare_qv.sh {input.tsv} {input.fasta} {params.outdir} \
+		&& touch {output}
 		'''
-
-def get_samples(wildcards):
-	'''
-	https://github.com/davidebolo1993/cosigt
-	- Needed to fetch the names
-	'''
-	import os
-	chr=wildcards.chr
-	region=wildcards.region
-	checkpoint_output = checkpoints.prepare_combinations_for_qv.get(chr=chr, region=region).output[0]
-	samples = [x[0] for x in os.walk(checkpoint_output)][1:]
-	return [os.path.basename(f)for f in samples]
 
 rule calculate_qv:
 	'''
@@ -130,52 +110,36 @@ rule calculate_qv:
 	- Actually, calculate the qv
 	'''
 	input:
-		config['output'] + '/benchmark/{chr}/{region}/qv_prep/{sample}/ids.tsv'
+		rules.prepare_combinations_for_qv.output
 	output:
-		config['output'] + '/benchmark/{chr}/{region}/qv_prep/{sample}/qv.tsv'
+		config['output'] + '/benchmark/{chr}/{region}/qv_calc.done'
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
+		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
 		time=lambda wildcards, attempt: attempt * config['default_high']['time']
 	container:
 		'docker://davidebolo1993/edlib:1.2.7'
 	params:
-		outdir=config['output'] + '/benchmark/{chr}/{region}/qv_prep/{sample}'
+		indir=config['output'] + '/benchmark/{chr}/{region}/qv'
 	shell:
 		'''
-		bash workflow/scripts/calculate_qv.sh {params.outdir} {output}
-		'''
-
-rule combine_qv:
-	'''
-	https://github.com/davidebolo1993/cosigt
-	- Put all qv results together
-	- Manual cleanup
-	'''
-	input:
-		lambda wildcards: expand(config['output'] + '/benchmark/{chr}/{region}/qv_prep/{sample}/qv.tsv', chr='{chr}', region='{region}', sample=get_samples(wildcards))
-	output:
-		config['output'] + '/benchmark/{chr}/{region}/bestqv.tsv'
-	threads:
-		1
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
-	shell:
-		'''
-		cat {input} > {output}
+		if [ -f {output} ]; then
+			rm {output}
+		fi
+		bash workflow/scripts/calculate_qv.sh {params.indir} \
+		&& touch {output} \
+		&& rm {params.indir}/*/qv.tmp.tsv
 		'''
 
 rule combine_tpr_qv:
 	'''
 	https://github.com/davidebolo1993/cosigt
-	- Combine tpr and qv for futher plotting
-	- Manual cleanup
+	- Combine tpr and all qvs for futher plotting
 	'''
 	input:
 		tpr=rules.make_tpr_table.output,
-		qv=rules.combine_qv.output
+		qv=lambda wildcards: expand(config['output'] + '/benchmark/{chr}/{region}/qv_calc.done', chr='{chr}', region='{region}')
 	output:
 		config['output'] + '/benchmark/{chr}/{region}/{region}.tpr_qv.tsv'
 	threads:
@@ -187,14 +151,18 @@ rule combine_tpr_qv:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
 		'../envs/r.yaml'
+	params:
+		indir=config['output'] + '/benchmark/{chr}/{region}/qv',
+		outqv=config['output'] + '/benchmark/{chr}/{region}/bestqv.tsv'
 	shell:
 		'''
+		cat {params.indir}/*/qv.tsv > {params.outqv}
 		Rscript \
-		workflow/scripts/combine_tpr_qv.r \
-		{input.tpr} \
-		{input.qv} \
-		{wildcards.region} \
-		{output}
+			workflow/scripts/combine_tpr_qv.r \
+			{input.tpr} \
+			{params.outqv} \
+			{wildcards.region} \
+			{output}
 		'''
 
 def get_all_tpr_qv_files(wildcards):

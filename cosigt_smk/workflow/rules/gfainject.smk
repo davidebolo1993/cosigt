@@ -4,7 +4,7 @@ rule gfainject_inject:
 	- Project the reads-to-contigs alignment into the graph
 	'''
 	input:
-		gfa=rules.odgi_view.output,
+		gfa=rules.odgi_utils.output.gfa,
 		cram=rules.bwamem2_mem_samtools_sort.output
 	output:
 		config['output'] + '/gfainject/{sample}/{chr}/{region}/{region}.gaf.gz'

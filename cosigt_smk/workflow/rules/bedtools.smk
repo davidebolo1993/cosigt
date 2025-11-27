@@ -1,7 +1,7 @@
 rule make_reference_bed:
 	'''
 	https://github.com/davidebolo1993/cosigt
-	- Extract reference region based on bedpe output
+	- Extract the reference region from impg .bedpe output
 	'''
 	input:
 		rules.impg_project_batches.output
@@ -33,7 +33,7 @@ rule make_alignment_bed:
 	'''
 	https://github.com/davidebolo1993/cosigt
 	- Make alignment .bed - that is, .bed for extracting reads from the original .cram files
-	- This can be == to the reference bed if no alt contig where provided, can be different otherwise
+	- This can be == to the reference .bed if no alt contig where provided, different otherwise
 	'''
 	input:
 		ref_bed=rules.make_reference_bed.output,
@@ -68,8 +68,9 @@ rule make_alignment_bed:
 rule bedtools_getfasta:
 	'''
 	https://github.com/arq5x/bedtools2
-	- Extract the region of interest from the contigs
+	- Extract the sequence of the alleles from impg .bedpe output
 	- Do the same for the reference
+	- Compress with bgzip
 	- Build index
 	'''
 	input:

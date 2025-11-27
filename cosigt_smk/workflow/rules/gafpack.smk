@@ -4,7 +4,7 @@ rule gafpack_coverage:
 	- Calculate the read coverage for each node in the graph
 	'''
 	input:
-		gfa=rules.odgi_view.output,
+		gfa=rules.odgi_utils.output.gfa,
 		gaf=rules.gfainject_inject.output
 	output:
 		config['output'] + '/gafpack/{sample}/{chr}/{region}/{region}.gafpack.gz'
