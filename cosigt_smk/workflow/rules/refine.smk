@@ -32,7 +32,7 @@ rule impg_refine:
 			-d 200000 \
 			--span-bp 1000 \
 			--pansn-mode haplotype \
-			--extension-step 10000 \
+			--extension-step 1000 \
 			--support-output {output.haplotypes_bed} \
 			--blacklist-bed {params.flagger_blacklist} \
 			-t 4 \
