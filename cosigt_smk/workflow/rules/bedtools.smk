@@ -10,8 +10,8 @@ rule make_reference_bed:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
 	container:
 		'docker://davidebolo1993/bedtools:2.31.0'
 	conda:
@@ -43,8 +43,8 @@ rule make_alignment_bed:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
 	container:
 		'docker://davidebolo1993/bedtools:2.31.0'
 	conda:
@@ -85,8 +85,8 @@ rule bedtools_getfasta:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_high']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['high']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['high']['time']
 	container:
 		'docker://davidebolo1993/bedtools:2.31.0'
 	benchmark:

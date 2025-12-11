@@ -11,8 +11,8 @@ rule gfainject_inject:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['mid']['time']
 	container:
 		'docker://davidebolo1993/gfainject:0.2.1'
 	conda:

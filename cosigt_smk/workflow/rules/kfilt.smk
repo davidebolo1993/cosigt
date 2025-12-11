@@ -26,9 +26,11 @@ rule meryl_build_reference_db:
 		if [ -d {params.outdir} ]; then
 			rm -rf {params.outdir}
 		fi
+		memgb=$(echo {resources.mem_mb} | awk '{{print int(1 + $1/1024 - 0.000001)}}')
 		meryl count \
 			k=31 \
 			threads={threads} \
+			memory=$memgb \
 			{input} \
 			output \
 			{params.outdir} \
@@ -50,8 +52,8 @@ rule meryl_build_alleles_db_meryl_difference_kfilt_index:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
+		mem_mb=lambda wildcards, attempt: attempt *  config['default']['high']['mem_mb'],
+		time=lambda wildcards, attempt: attempt *  config['default']['high']['time']
 	container:
 		'docker://davidebolo1993/kfilt:0.1.1'
 	benchmark:
@@ -71,10 +73,12 @@ rule meryl_build_alleles_db_meryl_difference_kfilt_index:
 		if [ -d {params.outdir_diff} ]; then
 			rm -rf {params.outdir_diff}
 		fi
+		memgb=$(echo {resources.mem_mb} | awk '{{print int(1 + $1/1024 - 0.000001)}}')
 		mkdir -p {params.outdir_alleles}
 		meryl count \
 			k=31 \
 			threads={threads} \
+			memory=$memgb \
 			{input.fasta} \
 			output \
 			{params.outdir_alleles}
@@ -106,10 +110,10 @@ rule kfilt_filter_unmapped:
 	output:
 		temp(config['output'] + '/kfilt/{sample}/{chr}/{region}/{region}.unmapped.fasta.gz')
 	threads:
-		8
+		config['kfilt']['threads']
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['kfilt']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['kfilt']['time']
 	container:
 		'docker://davidebolo1993/kfilt:0.1.1'
 	benchmark:
@@ -143,12 +147,14 @@ rule combine_mapped_unmapped:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
+		mem_mb=lambda wildcards, attempt: attempt *  config['default']['mid']['mem_mb'],
+		time=lambda wildcards, attempt: attempt *  config['default']['mid']['time']
 	benchmark:
 		'benchmarks/{sample}.{chr}.{region}.combine_mapped_unmapped.benchmark.txt'
 	shell:
 		'''
-		cat {input.fasta_mapped} {input.fasta_unmapped} > {output}
+		cat \
+			{input.fasta_mapped} \
+			{input.fasta_unmapped} > {output}
 		'''
 	

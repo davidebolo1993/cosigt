@@ -17,24 +17,27 @@ include: 'rules/benchmark.smk'
 include: 'rules/refine.smk'
 
 cosigt_input=set()
-cosigt_benchmark=set()
 refine_input=set()
+cosigt_benchmark=set()
 
 for region in config['regions']:
 	chrom='_'.join(region.split('_')[:-2]) #more robust - coordinates are always the last 2 blocks
 	for sample in config['samples']:
 		cosigt_input.add(config['output'] + '/cosigt/' + sample + '/' + chrom + '/' + region + '/' + region + '.cosigt_genotype.tsv')
-		cosigt_input.add(config['output'] + '/wally/' + sample + '/' + chrom + '/' + region + '/wally.done')
-		cosigt_benchmark.add(config['output'] + '/wally/' + sample + '/' + chrom + '/' + region + '/wally.done')
-		cosigt_input.add(config['output'] + '/cosigt/' + sample + '/' + chrom + '/' + region + '/viz/' + region + '.ava.png')
-		cosigt_benchmark.add(config['output'] + '/cosigt/' + sample + '/' + chrom + '/' + region + '/viz/' + region + '.ava.png')
-	cosigt_input.add(config['output'] + '/odgi/viz/' + chrom + '/' + region + '/' + region + '.viz.png')
-	cosigt_benchmark.add(config['output'] + '/odgi/viz/' + chrom + '/' + region + '/' + region + '.viz.png')
+		if config['wally_viz']:
+			cosigt_input.add(config['output'] + '/wally/' + sample + '/' + chrom + '/' + region + '/wally.done')
+			cosigt_benchmark.add(config['output'] + '/wally/' + sample + '/' + chrom + '/' + region + '/wally.done')
+		if config['svbyeye_viz']:
+			cosigt_input.add(config['output'] + '/cosigt/' + sample + '/' + chrom + '/' + region + '/viz/' + region + '.ava.png')
+			cosigt_benchmark.add(config['output'] + '/cosigt/' + sample + '/' + chrom + '/' + region + '/viz/' + region + '.ava.png')
+	if config['odgi_viz']:
+		cosigt_input.add(config['output'] + '/odgi/viz/' + chrom + '/' + region + '/' + region + '.viz.png')
+		cosigt_benchmark.add(config['output'] + '/odgi/viz/' + chrom + '/' + region + '/' + region + '.viz.png')
 	refine_input.add(config['output'] + '/refine/regions_refined.bed')
-	if config['gtf'] != 'NA' and config['proteins'] != 'NA':
+	if config['gtf'] != 'NA' and config['proteins'] != 'NA' and config['pangene_viz']:
 		cosigt_input.add(config['output'] + '/pangene/viz/' + chrom + '/' + region + '/' + region + '.genes.png')
 		cosigt_benchmark.add(config['output'] + '/pangene/viz/' + chrom + '/' + region + '/' + region + '.genes.png')
-	cosigt_benchmark.add(config['output'] + '/benchmark/tpr.edr.png')
+	cosigt_benchmark.add(config['output'] + '/benchmark/tpr.qv_bar.png')
 
 #USED TO REFINE INPUT REGIONS
 rule refine:
@@ -46,7 +49,7 @@ rule cosigt:
 	input:
 		list(cosigt_input)
 
-#USED ONLY FOR BENCHAMRKING
+#USED ONLY FOR BENCHAMRKING - DO NOT USE OTHERWISE
 rule benchmark:
 	input:
 		list(cosigt_benchmark)

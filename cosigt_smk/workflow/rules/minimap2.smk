@@ -14,8 +14,8 @@ rule pansnspec_target:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
 	container:
 		'docker://davidebolo1993/samtools:1.22'
 	benchmark:
@@ -47,8 +47,8 @@ checkpoint generate_batches:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
 	benchmark:
 		'benchmarks/{chr}.generate_batches.benchmark.txt'
 	shell:
@@ -83,8 +83,8 @@ rule samtools_faidx_batches:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_high']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['high']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['high']['time']
 	container:
 		'docker://davidebolo1993/samtools:1.22'
 	conda:
@@ -119,10 +119,10 @@ rule minimap2_align_batches:
 	output:
 		temp(config['output'] + '/minimap2/{chr}/batches/paf/{batch}.paf.gz')
 	threads:
-		config['minimap2_large']['threads']
+		config['minimap2']['avo']['threads']
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['minimap2_large']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['minimap2_large']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['minimap2']['avo']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['minimap2']['avo']['time']
 	container:
 		'docker://davidebolo1993/minimap2:2.28'
 	conda:
@@ -167,8 +167,8 @@ checkpoint merge_paf_per_region:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
+		mem_mb=lambda wildcards, attempt: attempt *  config['default']['mid']['mem_mb'],
+		time=lambda wildcards, attempt: attempt *  config['default']['mid']['time']
 	container:
 		'docker://davidebolo1993/minimap2:2.28'
 	conda:

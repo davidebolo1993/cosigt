@@ -10,12 +10,12 @@ rule odgi_utils:
 	output:
 		gfa=temp(config['output'] + '/odgi/view/{chr}/{region}/{region}.gfa.gz'),
 		paths=config['output'] + '/odgi/paths/{chr}/{region}/{region}.tsv.gz',
-		length=temp(config['output'] + '/odgi/view/{chr}/{region}/{region}.node.length.tsv')
+		length=config['output'] + '/odgi/view/{chr}/{region}/{region}.node.length.tsv'
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_high']['time']
+		mem_mb=lambda wildcards, attempt: attempt *  config['default']['mid']['mem_mb'],
+		time=lambda wildcards, attempt: attempt *  config['default']['high']['time']
 	container:
 		'docker://pangenome/odgi:1753347183'
 	conda:
@@ -50,8 +50,8 @@ rule panplexity_filter:
 	threads:
 		4
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt *  config['default']['mid']['mem_mb'],
+		time=lambda wildcards, attempt: attempt *  config['default']['mid']['time']
 	container:
 		'docker://davidebolo1993/panplexity:0.1.1'
 	conda:
@@ -84,8 +84,8 @@ rule filter_nodes:
 	output:
 		config['output'] + '/odgi/paths/{chr}/{region}/{region}.mask.tsv'
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt *  config['default']['small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt *  config['default']['small']['time']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
@@ -116,8 +116,8 @@ rule odgi_dissimilarity:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt *  config['default']['small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt *  config['default']['small']['time']
 	container:
 		'docker://pangenome/odgi:1753347183'
 	conda:
@@ -144,16 +144,14 @@ rule make_clusters:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
+		mem_mb=lambda wildcards, attempt: attempt *  config['default']['mid']['mem_mb'],
+		time=lambda wildcards, attempt: attempt *  config['default']['mid']['time']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
 		'../envs/r.yaml'
 	benchmark:
 		'benchmarks/{chr}.{region}.make_clusters.benchmark.txt'
-	params:
-		threshold_file=config['output'] + '/odgi/paths/{chr}/{region}/{region}.shared.tsv'
 	shell:
 		'''
 		Rscript workflow/scripts/cluster.r \
@@ -179,8 +177,8 @@ rule viz_odgi:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
+		mem_mb=lambda wildcards, attempt: attempt *  config['default']['high']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['mid']['time']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
