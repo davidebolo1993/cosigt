@@ -72,10 +72,10 @@ rule bwa_samse_samtools_sort:
 	output:
 		config['output'] + '/bwa/{sample}/{chr}/{region}/{region}.realigned.cram'
 	threads:
-		config['samtools']['threads']
+		config['samtools']['fasta_mapped']['threads']
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['samtools']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['samtools']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['samtools']['fasta_mapped']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['samtools']['fasta_mapped']['time']
 	container:
 		'docker://davidebolo1993/bwa:0.7.18'
 	conda:
