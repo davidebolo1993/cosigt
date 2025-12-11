@@ -14,8 +14,8 @@ rule make_tpr_table:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_high']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['high']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['high']['time']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
@@ -46,8 +46,8 @@ rule odgi_flip_pggb_graph_to_fasta:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['high']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
 	container:
 		'docker://pangenome/odgi:1753347183'
 	conda:
@@ -83,8 +83,8 @@ rule prepare_combinations_for_qv:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
 	container:
 		'docker://davidebolo1993/samtools:1.22'
 	conda:
@@ -116,8 +116,8 @@ rule calculate_qv:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_high']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['high']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['high']['time']
 	container:
 		'docker://davidebolo1993/edlib:1.2.7'
 	params:
@@ -145,8 +145,8 @@ rule combine_tpr_qv:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
@@ -196,8 +196,8 @@ rule plot_tpr:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:

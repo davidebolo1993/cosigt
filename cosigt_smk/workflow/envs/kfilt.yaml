@@ -1,0 +1,6 @@
+channels:
+ - conda-forge
+ - bioconda
+dependencies:
+ - meryl=1.4.1
+ - kfilt=0.1.0

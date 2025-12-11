@@ -12,8 +12,8 @@ rule subset_gtf:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt *  config['default']['small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt *  config['default']['small']['time']
 	container:
 		'docker://davidebolo1993/bedtools:2.31.0'
 	conda:
@@ -41,8 +41,8 @@ rule pangene_getaa:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
+		mem_mb=lambda wildcards, attempt: attempt *  config['default']['mid']['mem_mb'],
+		time=lambda wildcards, attempt: attempt *  config['default']['mid']['time']
 	container:
 		'docker://davidebolo1993/pangene:1.1'
 	conda:
@@ -72,8 +72,8 @@ checkpoint pangene_prepare:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
+		mem_mb=lambda wildcards, attempt: attempt *  config['default']['mid']['mem_mb'],
+		time=lambda wildcards, attempt: attempt *  config['default']['mid']['time']
 	container:
 		'docker://davidebolo1993/pangene:1.1'
 	conda:
@@ -110,8 +110,8 @@ rule pangene_graph:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_high']['time']
+		mem_mb=lambda wildcards, attempt: attempt *  config['default']['high']['mem_mb'],
+		time=lambda wildcards, attempt: attempt *  config['default']['high']['time']
 	container:
 		'docker://davidebolo1993/pangene:1.1'
 	conda:
@@ -137,8 +137,8 @@ rule pangene_viz:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
+		mem_mb=lambda wildcards, attempt: attempt *  config['default']['high']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['high']['time']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:

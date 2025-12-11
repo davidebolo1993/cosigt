@@ -24,6 +24,9 @@ rule copy_fasta_over:
 		gzi=config['output'] + '/alleles/{chr}/{region}/{region}.fasta.gz.gzi'
 	threads:
 		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['high']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['mid']['time']
 	container:
 		'docker://davidebolo1993/samtools:1.22'
 	conda:
@@ -57,16 +60,18 @@ rule samtools_fasta_mapped:
 	output:
 		temp(config['output'] + '/samtools/fasta/{sample}/{chr}/{region}/{region}.mapped.fasta.gz')
 	threads:
-		config['samtools']['threads']
+		config['samtools']['fasta_mapped']['threads']
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['samtools']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['samtools']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['samtools']['fasta_mapped']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['samtools']['fasta_mapped']['time']
 	container:
 		'docker://davidebolo1993/samtools:1.22'
 	conda:
 		'../envs/samtools.yaml'	
 	benchmark:
 		'benchmarks/{sample}.{chr}.{region}.samtools_fasta_mapped.benchmark.txt'
+	params:
+		tmpfile=config['output'] + '/samtools/fasta/{sample}/{chr}/{region}/{region}'
 	shell:
 		'''
 		samtools view \
@@ -76,7 +81,11 @@ rule samtools_fasta_mapped:
 			-M \
 			-b \
 			{input.sample} | \
-			samtools sort -n | \
+			samtools sort \
+			-n \
+			-@ {threads} \
+			-T {params.tmpfile} \
+			- | \
 			samtools fasta \
 			-@ {threads} \
 			- | gzip > {output}
@@ -95,16 +104,18 @@ rule samtools_fasta_unmapped:
 	output:
 		temp(config['output'] + '/samtools/fasta/{sample}/unmapped.fasta.gz')
 	threads:
-		config['samtools']['threads']
+		config['samtools']['fasta_unmapped']['threads']
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['samtools']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['samtools']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['samtools']['fasta_unmapped']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['samtools']['fasta_unmapped']['time']
 	container:
 		'docker://davidebolo1993/samtools:1.22'
 	conda:
 		'../envs/samtools.yaml'	
 	benchmark:
 		'benchmarks/{sample}.samtools_fasta_unmapped.benchmark.txt'
+	params:
+		tmpfile=config['output'] + '/samtools/fasta/{sample}/unmapped'
 	shell:
 		'''
 		samtools view \
@@ -113,10 +124,13 @@ rule samtools_fasta_unmapped:
 			-@ {threads} \
 			-T {input.fasta} \
 			{input.sample} | \
-			samtools sort -@ {threads} \
-			-n | \
+			samtools sort \
+			-n \
+			-@ {threads} \
+			-T {params.tmpfile} | \
 			samtools fasta \
-			-0 /dev/null - \
-			-@ {threads} | \
+			-0 /dev/null \
+			-@ {threads} \
+			- | \
 			gzip > {output}
 		'''

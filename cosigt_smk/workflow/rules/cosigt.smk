@@ -14,8 +14,8 @@ rule cosigt_genotype:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
 	container:
 		'docker://davidebolo1993/cosigt:0.1.7'
 	conda:
@@ -50,8 +50,8 @@ rule samtools_faidx_besthaps_fasta:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
 	container:
 		'docker://davidebolo1993/samtools:1.22'
 	conda:
@@ -77,10 +77,10 @@ rule minimap2_ava:
 	output:
 		temp(config['output'] + '/cosigt/{sample}/{chr}/{region}/viz/{region}.haplotypes.paf'),
 	threads:
-		1
+		config['minimap2']['ava']['threads']
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['minimap2']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['minimap2']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['minimap2']['ava']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['minimap2']['ava']['time']
 	container:
 		'docker://davidebolo1993/minimap2:2.28'
 	conda:
@@ -112,8 +112,8 @@ rule plot_ava:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['high']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['high']['time']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:

@@ -10,8 +10,8 @@ rule make_reference_bed:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
 	benchmark:
 		'benchmarks/{chr}.{region}.make_reference_bed.benchmark.txt'
 	params:
@@ -35,8 +35,8 @@ rule make_alignment_bed:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
 	container:
 		'docker://davidebolo1993/bedtools:2.31.0'
 	conda:

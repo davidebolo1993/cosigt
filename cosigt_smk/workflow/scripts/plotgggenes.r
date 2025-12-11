@@ -31,26 +31,29 @@ gene_data$start<-ifelse(is.na(gene_data$start),1,gene_data$start)
 gene_data$end<-ifelse(is.na(gene_data$end),1,gene_data$end)
 gene_data$strand<-ifelse(is.na(gene_data$strand),1,gene_data$strand)
 #plot
-p<-ggplot(gene_data, aes(xmin=start, xmax=end, y=molecule,
-                         fill=gene, forward=strand, label=gene )) +
-  geom_gene_arrow(aes(xmin=mstart, xmax=mend, y=molecule,forward = T),fill="#eeeeee",
-                  color="#777777",show.legend = F,
+p <- ggplot(gene_data, aes(xmin=start, xmax=end, y=molecule,
+                           fill=gene, forward=strand, label=gene)) +
+  geom_gene_arrow(aes(xmin=mstart, xmax=mend, y=molecule, forward = TRUE),
+                  fill="#eeeeee", color="#777777", show.legend = FALSE,
                   arrowhead_height = unit(0, "mm"),
-                  arrowhead_width = unit(0, "mm"),arrow_body_height = unit(3,"mm"))+
+                  arrowhead_width = unit(0, "mm"),
+                  arrow_body_height = unit(3, "mm")) +
   geom_gene_arrow(arrowhead_height = unit(3, "mm"),
                   arrowhead_width = unit(1, "mm"),
-                  show.legend=FALSE) +
-  scale_fill_brewer(palette = "Set3") +
+                  show.legend = TRUE) +  # allow legend here
+  scale_fill_brewer(palette = "Set3", name = "Gene") +  # legend title
   geom_gene_label(align = "right") +
   theme_bw() +
-  labs(y="haplotype") +
-  facet_grid(rows=vars(c), scales="free_y", space="free_y") + 
-  theme(strip.text.y.right = element_text(angle = 0)
+  labs(y = "Haplotypes", x = "Genomic Position") +
+  facet_grid(rows=vars(c), scales = "free_y", space = "free_y") +
+  theme(strip.text.y.right = element_text(angle = 0),
+        legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.key.size = unit(0.6, "cm"),
+        legend.title = element_text(size=12),
+        legend.text = element_text(size=10)
   ) +
-  guides(fill = "none")+
-  scale_y_discrete(
-    expand = expansion(add = c(1,1)) # Add small expansion to both sides
-  )
+  scale_y_discrete(expand = expansion(add = c(1, 1)))
 
 #save
 plot_height <- max(5, 0.4*length(unique(gene_data$molecule)))
@@ -65,26 +68,29 @@ mini_gene$label<-paste0(mini_gene$c,"\n",mini_gene$Freq," haplotype(s)")
 mini_gene<-mini_gene[order(mini_gene$Freq,decreasing = T),]
 mini_gene$label<-factor(mini_gene$label,levels=unique(mini_gene$label))
 
-p<-ggplot(mini_gene, aes(xmin=start, xmax=end, y=molecule,
-                         fill=gene, forward=strand, label=gene )) +
-  geom_gene_arrow(aes(xmin=mstart, xmax=mend, y=molecule,forward = T),fill="#eeeeee",
-                  color="#777777",show.legend = F,
+p <- ggplot(mini_gene, aes(xmin=start, xmax=end, y=molecule,
+                           fill=gene, forward=strand, label=gene)) +
+  geom_gene_arrow(aes(xmin=mstart, xmax=mend, y=molecule, forward = TRUE),
+                  fill="#eeeeee", color="#777777", show.legend = FALSE,
                   arrowhead_height = unit(0, "mm"),
-                  arrowhead_width = unit(0, "mm"),arrow_body_height = unit(3,"mm"))+
+                  arrowhead_width = unit(0, "mm"),
+                  arrow_body_height = unit(3, "mm")) +
   geom_gene_arrow(arrowhead_height = unit(3, "mm"),
                   arrowhead_width = unit(1, "mm"),
-                  show.legend=FALSE) +
-  scale_fill_brewer(palette = "Set3") +
+                  show.legend = TRUE) +  # allow legend here
+  scale_fill_brewer(palette = "Set3", name = "Gene") +  # legend title
   geom_gene_label(align = "right") +
   theme_bw() +
-  labs(y="haplotype") +
-  facet_grid(rows=vars(label), scales="free_y", space="free_y") + 
-  theme(strip.text.y.right = element_text(angle = 0)#,axis.text.y=element_blank()
+  labs(y = "Haplotypes", x = "Genomic Position") +
+  facet_grid(rows=vars(label), scales = "free_y", space = "free_y") +
+  theme(strip.text.y.right = element_text(angle = 0),
+        legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.key.size = unit(0.6, "cm"),
+        legend.title = element_text(size=12),
+        legend.text = element_text(size=10)
   ) +
-  guides(fill = "none")+
-  scale_y_discrete(
-    expand = expansion(add = c(1,1)) # Add small expansion to both sides
-  )
+  scale_y_discrete(expand = expansion(add = c(1, 1)))
 
 plot_height <- max(5, 0.4*length(unique(medoids$V1)))
 ggsave(gsub(".png",".representative.png",args[4]), height=plot_height, width=25, limitsize = FALSE)
