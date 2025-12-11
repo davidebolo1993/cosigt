@@ -13,16 +13,18 @@ rule samtools_fasta_mapped:
 	output:
 		temp(config['output'] + '/samtools/fasta/{sample}/{chr}/{region}/{region}.mapped.fasta.gz')
 	threads:
-		config['samtools']['threads']
+		config['samtools']['fasta_mapped']['threads']
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['samtools']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['samtools']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['samtools']['fasta_mapped']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['samtools']['fasta_mapped']['time']
 	container:
 		'docker://davidebolo1993/samtools:1.22'
 	conda:
 		'../envs/samtools.yaml'	
 	benchmark:
 		'benchmarks/{sample}.{chr}.{region}.samtools_fasta_mapped.benchmark.txt'
+	params:
+		tmpfile=config['output'] + '/samtools/fasta/{sample}/{chr}/{region}/{region}'
 	shell:
 		'''
 		samtools view \
@@ -32,7 +34,11 @@ rule samtools_fasta_mapped:
 			-M \
 			-b \
 			{input.sample} | \
-			samtools sort -n | \
+			samtools sort \
+			-n \
+			-@ {threads} \
+			-T {params.tmpfile} \
+			- | \
 			samtools fasta \
 			-@ {threads} \
 			- | gzip > {output}

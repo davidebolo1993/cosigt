@@ -1,3 +1,31 @@
+rule impg_index:
+	'''
+	https://github.com/pangenome/impg
+	- Impg refine	
+	'''
+	input:
+		paf=get_merged_paf
+	output:
+		temp(config['output'] + '/impg/{chr}/{chr}.paf.gz.impg')
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
+	container:
+		'docker://davidebolo1993/impg:0.3.3'
+	conda:
+		'../envs/impg.yaml'
+	benchmark:
+		'benchmarks/{chr}.impg_index.benchmark.txt'
+	shell:
+		'''
+		impg index \
+			-p {input} \
+			-i {output} \
+			-f
+		'''
+
 rule impg_project_batches:
 	'''
 	https://github.com/pangenome/impg
@@ -8,7 +36,8 @@ rule impg_project_batches:
 	'''
 	input:
 		paf=get_merged_paf,
-		bed=lambda wildcards: glob('resources/regions/{chr}/{region}.bed'.format(chr=wildcards.chr, region=wildcards.region))
+		bed=lambda wildcards: glob('resources/regions/{chr}/{region}.bed'.format(chr=wildcards.chr, region=wildcards.region)),
+		index=rules.impg_index.output
 	output:
 		unfiltered=config['output'] + '/impg/{chr}/{region}/{region}.bedpe.gz',
 		noblck=config['output'] + '/impg/{chr}/{region}/{region}.noblck.bedpe.gz',
@@ -17,8 +46,8 @@ rule impg_project_batches:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
+		mem_mb=lambda wildcards, attempt: attempt *  config['default']['mid']['mem_mb'],
+		time=lambda wildcards, attempt: attempt *  config['default']['mid']['time']
 	container:
 		'docker://davidebolo1993/impg:0.3.3'
 	conda:
@@ -37,6 +66,7 @@ rule impg_project_batches:
 		impg \
 			query \
 			-p {input.paf} \
+			-i {input.index} \
 			-b <(awk -v var={params.pansn} '{{print var$1,$2,$3}}' OFS="\\t" {params.tmp_bed}) | gzip > {output.unfiltered}
 		rm {params.tmp_bed}
 		(bedtools \

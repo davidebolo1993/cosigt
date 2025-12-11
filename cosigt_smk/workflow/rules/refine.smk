@@ -5,15 +5,16 @@ rule impg_refine:
 	'''
 	input:
 		paf=get_merged_paf,
-		bed=lambda wildcards: glob('resources/regions/{chr}/{region}.bed'.format(chr=wildcards.chr, region=wildcards.region))
+		bed=lambda wildcards: glob('resources/regions/{chr}/{region}.bed'.format(chr=wildcards.chr, region=wildcards.region)),
+		index=rules.impg_index.output
 	output:
 		haplotypes_bed=config['output'] + '/refine/impg/{chr}/{region}/{region}.haplotypes.bed',
 		refined_bed=config['output'] + '/refine/impg/{chr}/{region}/{region}.refined.bed'
 	threads:
 		4
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_mid']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['mid']['time']
 	container:
 		'docker://davidebolo1993/impg:0.3.3'
 	conda:
@@ -29,6 +30,7 @@ rule impg_refine:
 			refine \
 			-p {input.paf} \
 			-b <(awk -v var={params.pansn} 'NF>=4{{print var$1,$2,$3,$4}} NF==3{{print var$1,$2,$3}}' OFS="\\t" {input.bed}) \
+			-i {input.index} \
 			-d 200000 \
 			--span-bp 1000 \
 			--pansn-mode haplotype \
@@ -67,8 +69,8 @@ rule make_bed_refined:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
 	benchmark:
 		'benchmarks/make_bed_refined.benchmark.txt'
 	shell:

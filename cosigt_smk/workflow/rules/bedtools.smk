@@ -1,7 +1,7 @@
 rule make_reference_bed:
 	'''
 	https://github.com/davidebolo1993/cosigt
-	- Extract reference region based on bedpe output
+	- Extract the reference region from impg .bedpe output
 	'''
 	input:
 		rules.impg_project_batches.output
@@ -10,8 +10,8 @@ rule make_reference_bed:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
 	container:
 		'docker://davidebolo1993/bedtools:2.31.0'
 	conda:
@@ -33,7 +33,7 @@ rule make_alignment_bed:
 	'''
 	https://github.com/davidebolo1993/cosigt
 	- Make alignment .bed - that is, .bed for extracting reads from the original .cram files
-	- This can be == to the reference bed if no alt contig where provided, can be different otherwise
+	- This can be == to the reference .bed if no alt contig where provided, different otherwise
 	'''
 	input:
 		ref_bed=rules.make_reference_bed.output,
@@ -43,8 +43,8 @@ rule make_alignment_bed:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_small']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
 	container:
 		'docker://davidebolo1993/bedtools:2.31.0'
 	conda:
@@ -68,8 +68,9 @@ rule make_alignment_bed:
 rule bedtools_getfasta:
 	'''
 	https://github.com/arq5x/bedtools2
-	- Extract the region of interest from the contigs
+	- Extract the sequence of the alleles from impg .bedpe output
 	- Do the same for the reference
+	- Compress with bgzip
 	- Build index
 	'''
 	input:
@@ -84,8 +85,8 @@ rule bedtools_getfasta:
 	threads:
 		1
 	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default_high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default_high']['time']
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['high']['mem_mb'],
+		time=lambda wildcards, attempt: attempt * config['default']['high']['time']
 	container:
 		'docker://davidebolo1993/bedtools:2.31.0'
 	benchmark:

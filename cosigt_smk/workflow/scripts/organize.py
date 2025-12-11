@@ -6,55 +6,87 @@ import argparse
 import sys
 import gzip
 
+
 def make_default_config(tmp) -> dict:
     '''
     Make default config
     '''
     config=dict()
-    config=dict()
     #RESOURCES FOR THE MAIN BRANCH
     #THESE ARE DEFAULT RESOURCES USERS MAY WANT TO ADJUST IN THE CONFIG
     #config/config.yaml
-    #bwa_index and bwa_aln
+    #bwamem2_index and bwamem2_mem_samtools_sort
     config['bwa']=dict()
     config['bwa']['threads'] = 5
     config['bwa']['mem_mb'] = 5000
     config['bwa']['time'] = 2
-    #minimap2 for minimap2_ava
-    config['minimap2_small']=dict()
-    config['minimap2_small']['threads'] = 5
-    config['minimap2_small']['mem_mb'] = 5000
-    config['minimap2_small']['time'] =  2
-    #samtools for samtools_fasta
+    #minimap2 for all-vs-all alignment
+    config['minimap2']=dict()
+    config['minimap2']['ava']=dict()
+    config['minimap2']['ava']['threads'] = 4
+    config['minimap2']['ava']['mem_mb'] = 5000
+    config['minimap2']['ava']['time'] =  2
+    #samtools for samtools_fasta_mapped rule in samtools.smk
     config['samtools']=dict()
-    config['samtools']['threads'] = 2
-    config['samtools']['mem_mb'] = 2000
-    config['samtools']['time'] = 2
+    config['samtools']['fasta_mapped'] = dict()
+    config['samtools']['fasta_mapped']['threads'] = 2
+    config['samtools']['fasta_mapped']['mem_mb'] = 2000
+    config['samtools']['fasta_mapped']['time'] = 2
+    #samtools for samtools_fasta_unmapped rule in samtools.smk
+    #depending on the size of the .bam this can be a lot slower than the fasta_mapped counterpart,
+    #so we increment the resources here
+    config['samtools']['fasta_unmapped'] = dict()
+    config['samtools']['fasta_unmapped']['threads'] = 6
+    config['samtools']['fasta_unmapped']['mem_mb'] = 6000
+    config['samtools']['fasta_unmapped']['time'] = 6      
     #pggb
+    #this really needs to be adjusted based on region length and parameters
+    #but based on some benchmarking we did
+    #on >300 loci in a single run
     config['pggb']=dict()
     config['pggb']['threads'] = 24
     config['pggb']['mem_mb'] = 20000
     config['pggb']['time'] =  40
     config['pggb']['tmpdir'] = tmp
     config['pggb']['params'] =  '-c 2 -k 101'
-    #minimap2 for batch alignment
-    config['minimap2_large']=dict()
-    config['minimap2_large']['threads'] = 5
-    config['minimap2_large']['mem_mb'] = 40000
-    config['minimap2_large']['time'] =  40
-    #many tiny rules use these resources instead
+    #minimap2 for all-vs-one alignment
+    #this depends a lot on the number of contigs
+    #5 cores, 40 Gb, 40 min max - there are cases where we hit 80G(?) but overall
+    #this should complete in minutes and do not exceed 10-20G
+    config['minimap2']['avo']=dict()
+    config['minimap2']['avo']['threads'] = 5
+    config['minimap2']['avo']['mem_mb'] = 40000
+    config['minimap2']['avo']['time'] =  40
+    #meryl for db construction of the reference genome
+    config['meryl']=dict()
+    config['meryl']['threads'] = 10
+    config['meryl']['mem_mb'] = 25000
+    config['meryl']['time'] =  20
+    #kfilt
+    config['kfilt']=dict()
+    config['kfilt']['threads'] = 8
+    config['kfilt']['mem_mb'] = 10000
+    config['kfilt']['time'] =  20
+    #tiny rules use these resources instead
     #default - small
-    config['default_small']=dict()
-    config['default_small']['mem_mb'] = 200
-    config['default_small']['time'] =  2
+    config['default'] = dict()
+    config['default']['small']=dict()
+    config['default']['small']['mem_mb'] = 500
+    config['default']['small']['time'] =  2
     #default - mid
-    config['default_mid']=dict()
-    config['default_mid']['mem_mb'] = 2000
-    config['default_mid']['time'] =  5
+    config['default']['mid']=dict()
+    config['default']['mid']['mem_mb'] = 2000
+    config['default']['mid']['time'] =  5
     #default - high
-    config['default_high']=dict()
-    config['default_high']['mem_mb'] = 10000
-    config['default_high']['time'] =  10
+    config['default']['high']=dict()
+    config['default']['high']['mem_mb'] = 10000
+    config['default']['high']['time'] =  10
+    #viz
+    config['wally_viz'] = False
+    config['svbyeye_viz'] = False
+    config['odgi_viz'] = True
+    config['pangene_viz'] = True
+    #done
     print(f'Config template prepared!')
     return config
 
@@ -117,22 +149,46 @@ def read_assemblies_file(assemblies_file) -> dict():
     print(f'Loaded table with assemblies {assemblies_file}!')
     return assemblies_out
 
-def read_alignment_map(alignment_map) -> dict():
+
+# NEW: read_alignments_map replaces read_alignment_map + read_alignments(folder)
+def read_alignments_map(alignment_map_file) -> dict():
     '''
-    If provided, read and validate the alignment map
+    Read and validate alignments from a tab-separated file:
+    alignment_path <TAB> sample_id
+    Return a dict mapping each sample_id to its alignment path
     '''
-    aln_map=dict()
-    if alignment_map is None:
-        return None
-    with open(alignment_map, 'r') as map_in:
+    aln_dict = dict()
+    if not os.path.exists(alignment_map_file):
+        print(f'Alignments table: {alignment_map_file} does not exist!')
+        sys.exit(1)
+    if not os.access(alignment_map_file, os.R_OK):
+        print(f'Alignments table: {alignment_map_file} is not readable!')
+        sys.exit(1)
+
+    with open(alignment_map_file, 'r') as map_in:
         for line in map_in:
-            aln_path,aln_id=line.rstrip().split('\t')
-            if aln_id in aln_map:
-                print(f'Duplicate alignment id {aln_id} in alignment map {alignment_map}!')
+            line = line.rstrip()
+            if not line:
+                continue
+            try:
+                aln_path, aln_id = line.split('\t')
+            except ValueError:
+                print(f'Alignments table: {alignment_map_file} has an invalid line (expected 2 columns): {line}')
                 sys.exit(1)
-            aln_map[os.path.abspath(aln_path)] = aln_id
-    print(f'Loaded alignment map {alignment_map}!')
-    return aln_map
+
+            aln_path = os.path.abspath(aln_path)
+            if aln_id in aln_dict:
+                print(f'Duplicate alignment id {aln_id} in alignments table {alignment_map_file}!')
+                sys.exit(1)
+
+            if not validate_alignment(aln_path):
+                sys.exit(1)
+
+            aln_dict[aln_id] = aln_path
+
+    print(f'Loaded alignments from {alignment_map_file}!')
+    return aln_dict
+
 
 def validate_alignment(alignment) -> bool:
     '''
@@ -153,29 +209,10 @@ def validate_alignment(alignment) -> bool:
             print(f'Alignment file: {alignment} is not indexed - expected .crai; samtools index {alignment} and retry!')
             return False
     return True
-    
-def read_alignments(aln_folder, alignment_map) -> dict():
-    '''
-    Search for alignments in the provided alignment folder
-    Return a dict mapping each alignment to its name
-    '''
-    aln_dict=dict()
-    aln_list=[os.path.abspath(x) for x in glob.glob(aln_folder + '/**/*am*', recursive=True) if not x.endswith('i') and os.path.isfile(x)]
-    for aln in aln_list:
-        if validate_alignment(aln):
-            if alignment_map is None:
-                aln_id='.'.join(os.path.basename(aln).split('.')[:-1])
-                if aln_id in aln_dict:
-                    print(f'Duplicate alignment id {aln_id} when extracting the alignment name from {aln}: matches {aln_dict[aln_id]}. Consider using a dedicated alignment map (--map)!')
-                    sys.exit(1)
-            else:
-                if aln not in alignment_map:
-                    print(f'Alignment {aln} not present in the alignment map provided!')
-                    sys.exit(1)
-                aln_id=alignment_map[aln]
-            aln_dict[aln_id] = aln
-    print(f'Loaded alignments in {aln_folder}!')
-    return aln_dict
+
+
+# OLD read_alignments removed
+
 
 def read_bed(bed_file, asm_dict) -> dict():
     '''
@@ -239,6 +276,7 @@ def read_genome(genome_file) -> dict():
     print(f'Loaded reference file {genome_file}!')    
     return ref_dict
 
+
 def read_gtf(gtf_file) -> dict():
     '''
     Read and validate reference genome
@@ -259,6 +297,7 @@ def read_gtf(gtf_file) -> dict():
         gtf_dict[os.path.basename(gtf_file)]=os.path.abspath(gtf_file)
         print(f'Loaded gtf file {gtf_file}!')    
     return gtf_dict
+
 
 def read_proteins(proteins_file) -> dict():
     '''
@@ -288,6 +327,7 @@ def read_proteins(proteins_file) -> dict():
         print(f'Loaded proteins FASTA file {proteins_file}!')    
     return proteins_dict
 
+
 def validate_output(output_folder, config_yaml) -> dict():
     '''
     Validate output folder
@@ -300,6 +340,7 @@ def validate_output(output_folder, config_yaml) -> dict():
     config_yaml['output'] = out_folder
     print(f'Checked output folder {out_folder}!')
     return config_yaml
+
 
 def write_assemblies(asm_dict, bed_dict, config_yaml, RESOURCES) -> dict:
     '''
@@ -325,6 +366,7 @@ def write_assemblies(asm_dict, bed_dict, config_yaml, RESOURCES) -> dict:
     print(f'Added assemblies to {asm_dir}!')
     return config_yaml
 
+
 def write_alignments(aln_dict, config_yaml, RESOURCES) -> dict:
     '''
     Write alignments to resources/alignments
@@ -347,12 +389,13 @@ def write_alignments(aln_dict, config_yaml, RESOURCES) -> dict:
     print(f'Added alignments to {aln_dir}!')
     return config_yaml
 
+
+
 def reference_contigs(config_yaml) -> dict:
     '''
     Given the reference index, return a dict
     with contig, start end
     '''
-
     ctg_dict=dict()
     ref_idx=config_yaml['reference'] + '.fai'
     with open(ref_idx, 'r') as refidx:
@@ -361,6 +404,7 @@ def reference_contigs(config_yaml) -> dict:
             chrom,start,end=fields[0],'0',fields[1]
             ctg_dict[chrom] = (chrom,start,end)
     return ctg_dict
+
 
 def write_regions(bed_dict, config_yaml, RESOURCES) -> dict:
     '''
@@ -393,6 +437,7 @@ def write_regions(bed_dict, config_yaml, RESOURCES) -> dict:
     print(f'Added regions to {reg_dir}!')
     return config_yaml
 
+
 def write_reference(genome_dict, config_yaml, RESOURCES) -> dict:
     '''
     Write reference to resources/reference
@@ -409,6 +454,7 @@ def write_reference(genome_dict, config_yaml, RESOURCES) -> dict:
     config_yaml['SINGULARITY_BIND'].add(os.path.dirname(v))
     print(f'Added reference to {ref_dir}!')
     return config_yaml
+
 
 def write_gtf(gtf_dict, config_yaml, RESOURCES) -> dict:
     '''
@@ -427,6 +473,7 @@ def write_gtf(gtf_dict, config_yaml, RESOURCES) -> dict:
             config_yaml['SINGULARITY_BIND'].add(os.path.dirname(v))
     print(f'Added gtf to {gtf_dir}!')
     return config_yaml
+
 
 def write_proteins(proteins_dict, config_yaml, RESOURCES) -> dict:
     '''
@@ -448,7 +495,7 @@ def write_proteins(proteins_dict, config_yaml, RESOURCES) -> dict:
             config_yaml['SINGULARITY_BIND'].add(os.path.dirname(v))
     print(f'Added proteins to {proteins_dir}!')
     return config_yaml
- 
+
 def validate_flagger(flagger_blacklist, config_yaml, RESOURCES):
     '''
     Write flagger blacklist
@@ -547,27 +594,39 @@ def setup_arg_parser():
     required = parser.add_argument_group('Required I/O arguments')
     required.add_argument('-a', '--assemblies', help='assemblies individuals to -r will be genotyped against. This is a tab-separated file mapping chromosomes in -b to a FASTA with contigs for that chromosome. FASTA can be bgzip-compressed and must be indexed', metavar='FASTA', required=True)
     required.add_argument('-g', '--genome', help='reference genome. This is the FASTA regions to -b refers to. FASTA can be bgzip-compressed and must be indexed', metavar='FASTA', required=True)
-    required.add_argument('-r', '--reads', help='individuals to genotype. This is a folder with individual reads aligned to a reference genome (same to -g) in BAM/CRAM format. Alignment files must be indexed (BAI,CSI/CRAI) and will be searched recursively', metavar='FOLDER', required=True)
+    # CHANGED: --reads is now a TSV map, not a folder
+    required.add_argument(
+        '-r', '--reads',
+        help='individuals to genotype. This is a tab-separated file mapping each alignment file (1st column, BAM/CRAM, indexed) to an id (2nd column)',
+        metavar='TSV',
+        required=True
+    )
     required.add_argument('-b', '--bed', help='regions to genotype. A standard 3-column BED file, but can have a 4th column to label the region and a 5th column listing comma-separated alternative contigs for that region', metavar='BED', required=True)
     required.add_argument('-o', '--output', help='output folder. This is where results from cosigt pipeline will be stored', metavar='FOLDER', required=True)
     optional = parser.add_argument_group('Optional arguments')
-    optional.add_argument('--map', help='tab-separated file mapping each alignment file (1st column) to an id (2nd column). Guess the name removing file extension otherwise [None]', metavar='', required=False, default=None)
+    # REMOVED: --map
     optional.add_argument('--gtf', help='Gene annotation on the reference chromosomes in GTF format [None]', metavar='', required=False, default=None)
     optional.add_argument('--proteins', help='Protein-coding transcript translation sequences in FASTA format.  FASTA can be bgzip-compressed and must be indexed [None]', metavar='', required=False, default=None)
-    optional.add_argument('--tmp', help='tmp directory. Will be used by tools for which a tmp directory can be specified [/tmp]', metavar='', required=False, default='/tmp')
+    optional.add_argument('--tmp', help='tmp directory. Will be used by singularity and pggb [/tmp]', metavar='', required=False, default='/tmp')
     optional.add_argument('--pansn', help='PanSN prefix naming for the reference genome [grch38#1#]', metavar='', required=False, default='grch38#1#')
     optional.add_argument('--profile', help='snakemake profile, if available [None]', metavar='', required=False, default=None)
     optional.add_argument('--flagger', help='regions to exclude for each contigs. This is a standard BED file coming from flagger, with contigs names matching those of the assemblies in -a [None]', metavar='', required=False, default=None)
     optional.add_argument('--conda', help='prepare for running using conda instead of singularity [False]', action='store_true')
     optional.add_argument('--threads', help='run snakemake using that many cores - ignored if using a profile [32]', metavar='', required=False, default=32)
+    optional.add_argument('--no_pangene', help='DO NOT visualize coding genes on input haplotypes [False]', action='store_false')
+    optional.add_argument('--no_odgi', help='DO NOT visualize node coverage on input haplotypes in a "odgi viz"-like format [False]', action='store_false')
+    optional.add_argument('--wally', help='run wally to visualize reads-to-haplotypes realignment [False]', action='store_true')
+    optional.add_argument('--svbyeye', help='run SVByEye to visualize predicted haplotypes-to-reference realignment [False]', action='store_true')
+
     return parser
+
 
 def main():
     '''
-    Main
-    '''
+    Maind    '''
     parser = setup_arg_parser()
     args = parser.parse_args()
+
 
     CWD=os.path.realpath(__file__)
     BASE=os.path.dirname(os.path.dirname(os.path.dirname(CWD)))
@@ -577,43 +636,45 @@ def main():
     os.makedirs(CONFIG, exist_ok=True)
 
     #check conflicts
-
     if (args.gtf is None and args.proteins is not None) or (args.gtf is not None and args.proteins is None):
         print(f"When providing argument to --gtf, also an argument to --proteins must be specified")
         sys.exit(1)
+
 
     if os.path.isdir(RESOURCES):
         if os.listdir(RESOURCES):
             print(f"Directory {RESOURCES} is not empty: clean it and retry!")
             sys.exit(1)
 
+
     #READ
     #initial config
     #config
     config=make_default_config(os.path.abspath(args.tmp))
+    config['wally_viz'] = args.wally
+    config['svbyeye_viz'] = args.svbyeye
+    if args.svbyeye:
+        print(f"When --svbyeye is specified, --conda must be set to False since SVByEye is not implemented in a dedicated conda environment")
+        sys.exit(1)
+    config['pangene_viz'] = args.no_pangene
+    config['odgi_viz'] = args.no_odgi
     config['SINGULARITY_BIND'] = set()
     config['SINGULARITY_BIND'].add(os.path.abspath(args.tmp))
     config['pansn_prefix'] = args.pansn
     #assemblies
     asm_dict=read_assemblies_file(os.path.abspath(args.assemblies))
-    #print(asm_dict)
-    #alignment map
-    alignment_map=read_alignment_map(args.map)
-    #print(alignment_map)
-    #reads
-    aln_dict=read_alignments(os.path.abspath(args.reads), alignment_map)
-    #print(aln_dict)
-    #bed file
+    # bed file
     bed_dict=read_bed(os.path.abspath(args.bed),asm_dict)
-    #print(bed_dict)
+    #genome
     genome_dict=read_genome(os.path.abspath(args.genome))
-    #print(genome_dict)
+    #gtf / proteins
     gtf_dict=read_gtf(args.gtf)
-    #print(gtf_dict)
     proteins_dict=read_proteins(args.proteins)
-    #print(proteins_dict)
+    # NEW: read alignments from TSV map
+    aln_dict=read_alignments_map(os.path.abspath(args.reads))
     #output
     config=validate_output(os.path.abspath(args.output), config)
+
 
     #WRITE    
     #assemblies
@@ -652,12 +713,13 @@ def main():
         else:
             cmd += 'snakemake --use-conda -j ' + str(args.threads) + ' cosigt'
 
-    cmd+=' --rerun-triggers=mtime --rerun-incomplete\n'
+    cmd+=' --rerun-triggers=mtime --rerun-incomplete --scheduler greedy\n'
     cmd_out=os.path.join(BASE, 'cosigt_smk.sh')
     with open(cmd_out, 'w') as fout:
         fout.write(cmd)
     print(f'Wrote cosigt command to run the the pipeline in: {cmd_out}!')
     sys.exit(0)
+
 
 if __name__ == "__main__":
     main()
