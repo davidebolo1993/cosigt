@@ -18,8 +18,8 @@ def make_default_config(tmp) -> dict:
     #bwamem2_index and bwamem2_mem_samtools_sort
     config['bwa-mem2']=dict()
     config['bwa-mem2']['threads'] = 5
-    config['bwa-mem2']['mem_mb'] = 5000
-    config['bwa-mem2']['time'] = 2
+    config['bwa-mem2']['mem_mb'] = 10000
+    config['bwa-mem2']['time'] = 4
     #minimap2 for all-vs-all alignment
     config['minimap2']=dict()
     config['minimap2']['ava']=dict()
@@ -54,9 +54,9 @@ def make_default_config(tmp) -> dict:
     #5 cores, 40 Gb, 40 min max - there are cases where we hit 80G(?) but overall
     #this should complete in minutes and do not exceed 10-20G
     config['minimap2']['avo']=dict()
-    config['minimap2']['avo']['threads'] = 5
+    config['minimap2']['avo']['threads'] = 6
     config['minimap2']['avo']['mem_mb'] = 40000
-    config['minimap2']['avo']['time'] =  40
+    config['minimap2']['avo']['time'] =  50
     #meryl for db construction of the reference genome
     config['meryl']=dict()
     config['meryl']['threads'] = 10
@@ -65,7 +65,7 @@ def make_default_config(tmp) -> dict:
     #kfilt
     config['kfilt']=dict()
     config['kfilt']['threads'] = 8
-    config['kfilt']['mem_mb'] = 10000
+    config['kfilt']['mem_mb'] = 20000
     config['kfilt']['time'] =  20
     #tiny rules use these resources instead
     #default - small
