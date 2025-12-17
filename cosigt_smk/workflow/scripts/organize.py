@@ -582,7 +582,7 @@ def setup_arg_parser():
     )
     # Required arguments
     required = parser.add_argument_group('Required I/O arguments')
-    required.add_argument('-a', '--assemblies', help='assemblies individuals to -r will be genotyped against. This is a tab-separated file mapping chromosomes in -b to a FASTA with contigs for that chromosome. FASTA can be bgzip-compressed and must be indexed', metavar='FASTA', required=True)
+    required.add_argument('-a', '--assemblies', help='assemblies individuals to -r will be genotyped against. This is a tab-separated file mapping chromosomes in -b to a FASTA with contigs for that chromosome. FASTA can be bgzip-compressed and must be indexed', metavar='TSV', required=True)
     required.add_argument('-g', '--genome', help='reference genome. This is the FASTA regions to -b refers to. FASTA can be bgzip-compressed and must be indexed', metavar='FASTA', required=True)
     # CHANGED: --reads is now a TSV map, not a folder
     required.add_argument(
