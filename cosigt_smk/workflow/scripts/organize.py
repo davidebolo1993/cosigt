@@ -54,9 +54,9 @@ def make_default_config(tmp) -> dict:
     #5 cores, 40 Gb, 40 min max - there are cases where we hit 80G(?) but overall
     #this should complete in minutes and do not exceed 10-20G
     config['minimap2']['avo']=dict()
-    config['minimap2']['avo']['threads'] = 5
+    config['minimap2']['avo']['threads'] = 6
     config['minimap2']['avo']['mem_mb'] = 40000
-    config['minimap2']['avo']['time'] =  40
+    config['minimap2']['avo']['time'] =  50
     #tiny rules use these resources instead
     #default - small
     config['default'] = dict()
