@@ -18,8 +18,8 @@ def make_default_config(tmp) -> dict:
     #bwamem2_index and bwamem2_mem_samtools_sort
     config['bwa']=dict()
     config['bwa']['threads'] = 5
-    config['bwa']['mem_mb'] = 5000
-    config['bwa']['time'] = 2
+    config['bwa']['mem_mb'] = 10000
+    config['bwa']['time'] = 4
     #minimap2 for all-vs-all alignment
     config['minimap2']=dict()
     config['minimap2']['ava']=dict()
@@ -36,9 +36,9 @@ def make_default_config(tmp) -> dict:
     #depending on the size of the .bam this can be a lot slower than the fasta_mapped counterpart,
     #so we increment the resources here
     config['samtools']['fasta_unmapped'] = dict()
-    config['samtools']['fasta_unmapped']['threads'] = 6
-    config['samtools']['fasta_unmapped']['mem_mb'] = 6000
-    config['samtools']['fasta_unmapped']['time'] = 6      
+    config['samtools']['fasta_unmapped']['threads'] = 8
+    config['samtools']['fasta_unmapped']['mem_mb'] = 8000
+    config['samtools']['fasta_unmapped']['time'] = 8      
     #pggb
     #this really needs to be adjusted based on region length and parameters
     #but based on some benchmarking we did
@@ -57,16 +57,6 @@ def make_default_config(tmp) -> dict:
     config['minimap2']['avo']['threads'] = 5
     config['minimap2']['avo']['mem_mb'] = 40000
     config['minimap2']['avo']['time'] =  40
-    #meryl for db construction of the reference genome
-    config['meryl']=dict()
-    config['meryl']['threads'] = 10
-    config['meryl']['mem_mb'] = 25000
-    config['meryl']['time'] =  20
-    #kfilt
-    config['kfilt']=dict()
-    config['kfilt']['threads'] = 8
-    config['kfilt']['mem_mb'] = 10000
-    config['kfilt']['time'] =  20
     #tiny rules use these resources instead
     #default - small
     config['default'] = dict()
