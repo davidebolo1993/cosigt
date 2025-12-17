@@ -586,7 +586,7 @@ def setup_arg_parser():
     )
     # Required arguments
     required = parser.add_argument_group('Required I/O arguments')
-    required.add_argument('-a', '--alleles', help='Alleles file for each region. This is a tab-separated file mapping regions in -b to a FASTA with alleles for that region. FASTA can be bgzip-compressed and must be indexed', metavar='FASTA', required=True)
+    required.add_argument('-a', '--alleles', help='Alleles file for each region. This is a tab-separated file mapping regions in -b to a FASTA with alleles for that region. FASTA can be bgzip-compressed and must be indexed', metavar='TSV', required=True)
     required.add_argument('-g', '--genome', help='reference genome. This is the FASTA regions to -b refers to. FASTA can be bgzip-compressed and must be indexed', metavar='FASTA', required=True)
     # CHANGED: --reads is now a TSV map, not a folder
     required.add_argument(
