@@ -36,9 +36,9 @@ def make_default_config(tmp) -> dict:
     #depending on the size of the .bam this can be a lot slower than the fasta_mapped counterpart,
     #so we increment the resources here
     config['samtools']['fasta_unmapped'] = dict()
-    config['samtools']['fasta_unmapped']['threads'] = 6
-    config['samtools']['fasta_unmapped']['mem_mb'] = 6000
-    config['samtools']['fasta_unmapped']['time'] = 6      
+    config['samtools']['fasta_unmapped']['threads'] = 8
+    config['samtools']['fasta_unmapped']['mem_mb'] = 8000
+    config['samtools']['fasta_unmapped']['time'] = 8      
     #pggb
     #this really needs to be adjusted based on region length and parameters
     #but based on some benchmarking we did
