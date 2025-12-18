@@ -12,7 +12,7 @@ args <- commandArgs(trailingOnly = TRUE)
 input_file <- args[1]
 output_file <- args[2]
 similarity_threshold <- args[3]
-region_similarity <- round(as.numeric(args[4]), 2) #ignored at the moment
+#region_similarity <- round(as.numeric(args[4]), 2) #ignored at the moment
 levels <- as.integer(args[5])
 
 df <- fread(input_file, header=TRUE)
@@ -21,6 +21,10 @@ df <- fread(input_file, header=TRUE)
 regularMatrix <- acast(df, group.a ~ group.b, value.var = "estimated.difference.rate")
 maxD <- max(regularMatrix[is.finite(regularMatrix)])
 normRegularMatrix <- regularMatrix / maxD
+#sort of global similarity
+mpd_norm <- mean(normRegularMatrix[upper.tri(normRegularMatrix)])
+region_similarity<-1-mpd_norm
+
 
 # Function to determine optimal eps
 find_optimal_eps <- function(distanceMatrix, similarity_threshold) {
@@ -32,7 +36,7 @@ find_optimal_eps <- function(distanceMatrix, similarity_threshold) {
   for (eps in seq(0.01, 0.30, 0.01)) {
     cclust <- length(table(dbscan(distanceMatrix, eps=eps, minPts=1)$cluster))
     if (abs(pclust - cclust) <= 1) {
-      if ((cclust <= round(attr(distanceMatrix, "Size") / 10))) {
+      if ((cclust <= round(attr(distanceMatrix, "Size") / 10)) || region_similarity < 0.9) {
         optimal_eps <- eps
         break
       }
