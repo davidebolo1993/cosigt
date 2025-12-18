@@ -699,9 +699,9 @@ def main():
             cmd += 'snakemake --profile ' + args.profile + ' cosigt'
     else: #no profile
         if not args.conda:
-            cmd +='SINGULARITY_TMPDIR=' + os.path.abspath(args.tmp) + ' snakemake --retries 5 --use-singularity --singularity-args "-B '+ ','.join(paths) + ' -e" -j ' + str(args.threads) + ' cosigt'
+            cmd +='SINGULARITY_TMPDIR=' + os.path.abspath(args.tmp) + ' snakemake --use-singularity --singularity-args "-B '+ ','.join(paths) + ' -e" -j ' + str(args.threads) + ' cosigt'
         else:
-            cmd += 'snakemake --retries 5 --use-conda -j ' + str(args.threads) + ' cosigt'
+            cmd += 'snakemake --use-conda -j ' + str(args.threads) + ' cosigt'
 
     cmd+=' --rerun-triggers=mtime --rerun-incomplete --scheduler greedy\n'
     cmd_out=os.path.join(BASE, 'cosigt_smk.sh')
