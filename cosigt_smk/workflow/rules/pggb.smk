@@ -83,7 +83,7 @@ rule pggb_construct:
 			-n $(wc -l {input.fai}) \
 			{params.flags} \
 		&& odgi paths -i {params.prefix}/*smooth.final.og -L | grep {params.pansn} > {params.prefix}/ref_path.txt \
-		&& odgi sort -i {params.prefix}/*smooth.final.og -Y -H {params.prefix}/ref_path.txt -o {output} \
+		&& odgi sort -i {params.prefix}/*smooth.final.og -Y -H {params.prefix}/ref_path.txt -o {output} -C {params.tmpdir} \
 		&& rm {params.prefix}/ref_path.txt
 		rm -rf {params.tmpdir}
 		'''
