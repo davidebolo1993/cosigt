@@ -48,7 +48,7 @@ rule meryl_build_alleles_db_meryl_difference_kfilt_index:
 		db=rules.meryl_build_reference_db.output,
 		fasta=rules.bedtools_getfasta.output.fasta
 	output:
-		temp(config['output'] + '/kfilt/{chr}/{region}/{region}.kfilt.idx')
+		temp(config['output'] + '/kfilt/index/{chr}/{region}/{region}.kfilt.idx')
 	threads:
 		1
 	resources:
