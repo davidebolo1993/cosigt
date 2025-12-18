@@ -653,7 +653,7 @@ def main():
     config=make_default_config(os.path.abspath(args.tmp))
     config['wally_viz'] = args.wally
     config['svbyeye_viz'] = args.svbyeye
-    if args.svbyeye:
+    if args.svbyeye and args.conda:
         print(f"When --svbyeye is specified, --conda must be set to False since SVByEye is not implemented in a dedicated conda environment")
         sys.exit(1)
     config['pangene_viz'] = args.no_pangene
