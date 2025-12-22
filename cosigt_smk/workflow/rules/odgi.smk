@@ -8,7 +8,7 @@ rule odgi_utils:
 	input:
 		rules.pggb_construct.output
 	output:
-		gfa=temp(config['output'] + '/odgi/view/{chr}/{region}/{region}.gfa.gz'),
+		gfa=config['output'] + '/odgi/view/{chr}/{region}/{region}.gfa.gz',
 		paths=config['output'] + '/odgi/paths/{chr}/{region}/{region}.tsv.gz',
 		length=config['output'] + '/odgi/view/{chr}/{region}/{region}.node.length.tsv'
 	threads:
@@ -46,7 +46,7 @@ rule panplexity_filter:
 	input:
 		rules.odgi_utils.output.gfa
 	output:
-		temp(config['output'] + '/panplexity/{chr}/{region}/{region}.mask.tsv')
+		config['output'] + '/panplexity/{chr}/{region}/{region}.mask.tsv'
 	threads:
 		4
 	resources:
