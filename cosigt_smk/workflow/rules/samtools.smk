@@ -11,7 +11,7 @@ rule samtools_fasta_mapped:
 		bed=rules.make_alignment_bed.output,
 		fasta=config['reference']
 	output:
-		temp(config['output'] + '/samtools/fasta/{sample}/{chr}/{region}/{region}.mapped.fasta.gz')
+		config['output'] + '/samtools/fasta/{sample}/{chr}/{region}/{region}.mapped.fasta.gz'
 	threads:
 		config['samtools']['fasta_mapped']['threads']
 	resources:
