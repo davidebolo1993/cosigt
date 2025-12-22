@@ -108,7 +108,7 @@ rule kfilt_filter_unmapped:
 		idx=rules.meryl_build_alleles_db_meryl_difference_kfilt_index.output,
 		sample=rules.samtools_fasta_unmapped.output
 	output:
-		temp(config['output'] + '/kfilt/{sample}/{chr}/{region}/{region}.unmapped.fasta.gz')
+		config['output'] + '/kfilt/{sample}/{chr}/{region}/{region}.unmapped.fasta.gz'
 	threads:
 		config['kfilt']['threads']
 	resources:
