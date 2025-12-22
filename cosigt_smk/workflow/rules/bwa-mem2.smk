@@ -6,7 +6,7 @@ rule bwamem2_index:
 	input:
 		rules.bedtools_getfasta.output.fasta
 	output:
-		temp(multiext(config['output'] + '/bedtools/getfasta/{chr}/{region}/{region}.fasta.gz', '.bwt.2bit.64', '.pac', '.ann', '.amb', '.0123'))	
+		multiext(config['output'] + '/bedtools/getfasta/{chr}/{region}/{region}.fasta.gz', '.bwt.2bit.64', '.pac', '.ann', '.amb', '.0123')	
 	threads:
 		1
 	resources:
