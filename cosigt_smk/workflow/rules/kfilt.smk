@@ -48,7 +48,7 @@ rule meryl_build_alleles_db_meryl_difference_kfilt_index:
 		db=rules.meryl_build_reference_db.output,
 		fasta=rules.copy_fasta_over.output.fasta
 	output:
-		temp(config['output'] + '/kfilt/index/{chr}/{region}/{region}.kfilt.idx')
+		config['output'] + '/kfilt/index/{chr}/{region}/{region}.kfilt.idx'
 	threads:
 		1
 	resources:
@@ -108,7 +108,7 @@ rule kfilt_filter_unmapped:
 		idx=rules.meryl_build_alleles_db_meryl_difference_kfilt_index.output,
 		sample=rules.samtools_fasta_unmapped.output
 	output:
-		temp(config['output'] + '/kfilt/{sample}/{chr}/{region}/{region}.unmapped.fasta.gz')
+		config['output'] + '/kfilt/{sample}/{chr}/{region}/{region}.unmapped.fasta.gz'
 	threads:
 		config['kfilt']['threads']
 	resources:
@@ -143,7 +143,7 @@ rule combine_mapped_unmapped:
 		fasta_mapped=rules.samtools_fasta_mapped.output,
 		fasta_unmapped=rules.kfilt_filter_unmapped.output
 	output:
-		temp(config['output'] + '/combine/{sample}/{chr}/{region}/{region}.fasta.gz')
+		config['output'] + '/combine/{sample}/{chr}/{region}/{region}.fasta.gz'
 	threads:
 		1
 	resources:
