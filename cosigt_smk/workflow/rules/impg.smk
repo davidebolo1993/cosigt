@@ -6,7 +6,7 @@ rule impg_index:
 	input:
 		paf=get_merged_paf
 	output:
-		temp(config['output'] + '/impg/{chr}/{chr}.paf.gz.impg')
+		config['output'] + '/impg/{chr}/{chr}.paf.gz.impg'
 	threads:
 		1
 	resources:
