@@ -11,7 +11,7 @@ rule samtools_fasta_mapped:
 		bed=rules.make_alignment_bed.output,
 		fasta=config['reference']
 	output:
-		temp(config['output'] + '/samtools/fasta/{sample}/{chr}/{region}/{region}.mapped.fasta.gz')
+		config['output'] + '/samtools/fasta/{sample}/{chr}/{region}/{region}.mapped.fasta.gz'
 	threads:
 		config['samtools']['fasta_mapped']['threads']
 	resources:
@@ -56,7 +56,7 @@ rule samtools_fasta_unmapped:
 		sample=lambda wildcards: glob('resources/alignments/{sample}.*am'.format(sample=wildcards.sample)),
 		fasta=config['reference']
 	output:
-		temp(config['output'] + '/samtools/fasta/{sample}/unmapped.fasta.gz')
+		config['output'] + '/samtools/fasta/{sample}/unmapped.fasta.gz'
 	threads:
 		config['samtools']['fasta_unmapped']['threads']
 	resources:
