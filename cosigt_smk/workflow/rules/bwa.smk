@@ -6,7 +6,7 @@ rule bwa_index:
 	input:
 		rules.bedtools_getfasta.output.fasta
 	output:
-		temp(multiext(config['output'] + '/bedtools/getfasta/{chr}/{region}/{region}.fasta.gz', '.bwt', '.pac', '.ann', '.amb', '.sa'))	
+		multiext(config['output'] + '/bedtools/getfasta/{chr}/{region}/{region}.fasta.gz', '.bwt', '.pac', '.ann', '.amb', '.sa')	
 	threads:
 		1
 	resources:
@@ -33,7 +33,7 @@ rule bwa_aln:
 		ref_fai=rules.bwa_index.output,
 		sample_fasta=rules.samtools_fasta_mapped.output
 	output:
-		temp(config['output'] + '/bwa/{sample}/{chr}/{region}/{region}.realigned.sai')
+		config['output'] + '/bwa/{sample}/{chr}/{region}/{region}.realigned.sai'
 	threads:
 		config['bwa']['threads']
 	resources:
