@@ -174,7 +174,7 @@ checkpoint merge_paf_per_region:
 	conda:
 		'../envs/minimap2.yaml'
 	benchmark:
-		'benchmarks/{chr}.merge_paf_per_region.txt'
+		'benchmarks/{chr}.merge_paf_per_region.benchmark.txt'
 	params:
 		batches_tmp=config['output'] + '/minimap2/{chr}/batches/ids'
 	shell:
