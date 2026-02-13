@@ -6,7 +6,7 @@
 
 ## Background
 
-Cosigt (COsine SImilarity-based GenoTyper) is a [snakemake pipeline](cosigt_smk/README.md) capable to assign structural haplotypes (that is, a genotype) to sequenced samples using pangenome graphs. An explanation of the rationale behind cosigt was first detailed in this manuscript [[2]](#2). A detailed description of the pipeline and the algorithm is available in this preprint [[1]](#1).
+Cosigt (COsine SImilarity-based GenoTyper) is a [snakemake pipeline](cosigt_smk/README.md) capable to assign structural haplotypes (that is, a genotype) to sequenced samples using pangenome graphs. An explanation of the rationale behind cosigt was first presented in this manuscript [[2]](#2). A detailed description of the pipeline and the algorithm is available in this preprint [[1]](#1).
 
 ## Pipeline
 
