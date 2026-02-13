@@ -1,4 +1,3 @@
 # Cosigt snakemake pipeline
 
-
-Docs for the pipeline are available [here](https://davidebolo1993.github.io/cosigtdoc/). 
+Docs for the pipeline are available [online](https://davidebolo1993.github.io/cosigtdoc/).
