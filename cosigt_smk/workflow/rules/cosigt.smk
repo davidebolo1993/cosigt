@@ -267,8 +267,8 @@ rule merge_sort_vcf:
 			region=config['regions']
 		)
 	output:
-		vcf=config['output'] + '/cosigt/vcf/all_regions.vcf.gz',
-		tbi=config['output'] + '/cosigt/vcf/all_regions.vcf.gz.tbi'
+		vcf=config['output'] + '/cosigt/vcf/cosigt.vcf.gz',
+		tbi=config['output'] + '/cosigt/vcf/cosigt.vcf.gz.tbi'
 	threads:
 		1
 	resources:
