@@ -86,6 +86,10 @@ def make_default_config(tmp) -> dict:
     config['svbyeye_viz'] = False
     config['odgi_viz'] = True
     config['pangene_viz'] = True
+    #sv calling
+    config['sv_calling'] = False
+    #merged VCF
+    config['vcf'] = False
     #done
     print(f'Config template prepared!')
     return config
@@ -209,9 +213,6 @@ def validate_alignment(alignment) -> bool:
             print(f'Alignment file: {alignment} is not indexed - expected .crai; samtools index {alignment} and retry!')
             return False
     return True
-
-
-# OLD read_alignments removed
 
 
 def read_bed(bed_file, asm_dict) -> dict():
@@ -617,7 +618,8 @@ def setup_arg_parser():
     optional.add_argument('--no_odgi', help='DO NOT visualize node coverage on input haplotypes in a "odgi viz"-like format [False]', action='store_false')
     optional.add_argument('--wally', help='run wally to visualize reads-to-haplotypes realignment [False]', action='store_true')
     optional.add_argument('--svbyeye', help='run SVByEye to visualize predicted haplotypes-to-reference realignment [False]', action='store_true')
-
+    optional.add_argument('--svcalling', help='run structural variant calling per-sample [False]', action='store_true')
+    optional.add_argument('--vcf', help='generate a VCF with all alleles called across all samples and regions [False]', action='store_true')
     return parser
 
 
@@ -653,6 +655,8 @@ def main():
     config=make_default_config(os.path.abspath(args.tmp))
     config['wally_viz'] = args.wally
     config['svbyeye_viz'] = args.svbyeye
+    config['sv_calling'] = args.svcalling
+    config['vcf'] = args.vcf
     if args.svbyeye and args.conda:
         print(f"When --svbyeye is specified, --conda must be set to False since SVByEye is not implemented in a dedicated conda environment")
         sys.exit(1)
