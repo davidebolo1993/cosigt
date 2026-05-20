@@ -222,13 +222,23 @@ rule make_region_vcf:
 	  a single per-region VCF. Allele 0 is the reference path; all other
 	  haplotypes are numbered 1..N-1 in alphabetical order and listed in
 	  INFO/ALLELES. Each sample gets a phased GT column (e.g. 0|1).
+	  {chr} is intentionally absent from output - it is derived from
+	  {region} via the same split logic used in the Snakefile, so
+	  merge_sort_vcf can expand over config['regions'] alone.
 	'''
 	input:
-		tsv=expand(
-			config['output'] + '/cosigt/{sample}/{{chr}}/{{region}}/{{region}}.cosigt_genotype.tsv',
-			sample=config['samples']
+		tsv=lambda wildcards: expand(
+			config['output'] + '/cosigt/{sample}/' +
+			'_'.join(wildcards.region.split('_')[:-2]) +
+			'/{region}/{region}.cosigt_genotype.tsv',
+			sample=config['samples'],
+			region=wildcards.region
 		),
-		fai=rules.bedtools_getfasta.output.fai
+		fai=lambda wildcards: expand(
+			rules.bedtools_getfasta.output.fai,
+			chr='_'.join(wildcards.region.split('_')[:-2]),
+			region=wildcards.region
+		)
 	output:
 		vcf=temp(config['output'] + '/cosigt/vcf/{region}.vcf')
 	threads:
@@ -239,18 +249,18 @@ rule make_region_vcf:
 	conda:
 		'../envs/python.yaml'
 	container:
-		'docker://davidebolo1993/python:3.13.3'	
+		'docker://davidebolo1993/python:3.13.3'
 	params:
-		pansn=config['pansn_prefix'] + '{chr}'
+		pansn=lambda wildcards: config['pansn_prefix'] + '_'.join(wildcards.region.split('_')[:-2])
 	benchmark:
 		'benchmarks/{region}.make_region_vcf.benchmark.txt'
 	shell:
 		'''
 		python workflow/scripts/make_region_vcf.py \
-			--fai {input.fai} \
-			--tsv {input.tsv} \
+			--fai    {input.fai} \
+			--tsv    {input.tsv} \
 			--output {output.vcf} \
-			--pansn {params.pansn}
+			--pansn  {params.pansn}
 		'''
 
 rule merge_sort_vcf:
