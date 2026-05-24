@@ -5,16 +5,17 @@ rule impg_refine:
 	'''
 	input:
 		paf=get_merged_paf,
-		bed=lambda wildcards: glob('resources/regions/{chr}/{region}.bed'.format(chr=wildcards.chr, region=wildcards.region)),
+		bed=region_bed_path,
+		flagger=rules.write_flagger_blacklist.output,
 		index=rules.impg_index.output
 	output:
-		haplotypes_bed=config['output'] + '/refine/impg/{chr}/{region}/{region}.haplotypes.bed',
-		refined_bed=config['output'] + '/refine/impg/{chr}/{region}/{region}.refined.bed'
+		haplotypes_bed=outpath("refine/impg/{chr}/{region}/{region}.haplotypes.bed"),
+		refined_bed=outpath("refine/impg/{chr}/{region}/{region}.refined.bed")
 	threads:
 		4
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['mid']['time']
+		runtime=lambda wildcards, attempt: attempt * config['default']['mid']['runtime']
 	container:
 		'docker://davidebolo1993/impg:0.3.3'
 	conda:
@@ -22,7 +23,6 @@ rule impg_refine:
 	benchmark:
 		'benchmarks/{chr}.{region}.impg_refine.benchmark.txt'
 	params:
-		flagger_blacklist=config['flagger_blacklist'],
 		pansn=config['pansn_prefix']
 	shell:
 		'''
@@ -36,7 +36,7 @@ rule impg_refine:
 			--pansn-mode haplotype \
 			--extension-step 10000 \
 			--support-output {output.haplotypes_bed} \
-			--blacklist-bed {params.flagger_blacklist} \
+			--blacklist-bed {input.flagger} \
 			-t 4 \
 			> {output.refined_bed}
 		'''
@@ -46,16 +46,10 @@ def get_all_optimal_beds(wildcards):
 	https://github.com/davidebolo1993/cosigt
 	- Generate all optimal bed files from impg_refine rule
 	'''
-	all_files = []
-	with open(config['all_regions']) as f:
-		for line in f:
-			fields = line.rstrip().split('\t')
-			chr_name = fields[0]
-			start = fields[1]
-			end = fields[2]
-			region = '_'.join([chr_name, start, end])
-			all_files.append(f"{config['output']}/refine/impg/{chr_name}/{region}/{region}.refined.bed")
-	return all_files
+	return [
+		outpath("refine", "impg", REGION_ROWS[region]["chrom"], region, f"{region}.refined.bed")
+		for region in REGION_ORDER
+	]
 
 rule make_bed_refined:
 	'''
@@ -65,12 +59,12 @@ rule make_bed_refined:
 	input:
 		get_all_optimal_beds
 	output:
-		config['output'] + '/refine/regions_refined.bed'
+		outpath("refine/regions_refined.bed")
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
+		runtime=lambda wildcards, attempt: attempt * config['default']['small']['runtime']
 	benchmark:
 		'benchmarks/make_bed_refined.benchmark.txt'
 	shell:
@@ -79,4 +73,3 @@ rule make_bed_refined:
 			awk 'NR>1 {{split($1, a, "#"); print a[3], $2, $3, $4}}' OFS="\\t" "$file"
 		done | sort -k1,1 -k2,2n | uniq > {output}
 		'''
-	

@@ -1,13 +1,14 @@
 #go files and executables
 go.sum
 go.mod
-cosigt
+/cosigt
 
 #cosigt smk files
 cosigt_smk/resources/*
 cosigt_smk/logs/*
 cosigt_smk/.snakemake/*
 cosigt_smk/config/*
+!cosigt_smk/config/*.example
 cosigt_smk/benchmarks/*
 cosigt_smk/.*sh
 cosigt_smk/.cache

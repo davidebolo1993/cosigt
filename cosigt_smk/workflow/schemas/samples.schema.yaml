@@ -1,0 +1,12 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+type: object
+properties:
+  sample:
+    type: string
+    pattern: "^[A-Za-z0-9_.-]+$"
+  alignment:
+    type: string
+required:
+  - sample
+  - alignment
+additionalProperties: false

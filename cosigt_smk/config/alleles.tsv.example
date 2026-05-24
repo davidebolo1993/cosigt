@@ -1,0 +1,3 @@
+region	fasta
+chr1_100000_120000	/path/to/chr1_100000_120000.alleles.fa.gz
+chr2_200000_230000	/path/to/chr2_200000_230000.alleles.fa.gz

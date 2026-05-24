@@ -1,0 +1,20 @@
+executor: cluster-generic
+jobs: 100
+printshellcmds: true
+rerun-incomplete: true
+rerun-triggers:
+  - mtime
+scheduler: greedy
+latency-wait: 60
+shared-fs-usage:
+  - input-output
+  - persistence
+  - software-deployment
+  - software-deployment-cache
+  - sources
+  - storage-local-copies
+default-resources:
+  - mem_mb=4000
+  - runtime=60
+# Add your site-specific submit/status commands via SMK_ARGS, for example:
+# make run-cluster-generic SMK_ARGS='--cluster-generic-submit-cmd "qsub"'

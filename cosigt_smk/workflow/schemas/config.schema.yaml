@@ -1,0 +1,51 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+type: object
+properties:
+  output:
+    type: string
+  reference:
+    type: string
+  samples:
+    type: string
+  regions:
+    type: string
+  allele_source:
+    type: string
+    enum: [assemblies, custom]
+  assemblies:
+    type: [string, "null"]
+  alleles:
+    type: [string, "null"]
+  read_mode:
+    type: string
+    enum: [short, ancient, ont, pacbio_hifi, pacbio_clr]
+  pansn_prefix:
+    type: string
+  tmpdir:
+    type: string
+  gtf:
+    type: [string, "null"]
+  proteins:
+    type: [string, "null"]
+  flagger_blacklist:
+    type: [string, "null"]
+  wally_viz:
+    type: boolean
+  svbyeye_viz:
+    type: boolean
+  odgi_viz:
+    type: boolean
+  pangene_viz:
+    type: boolean
+  sv_calling:
+    type: boolean
+  vcf:
+    type: boolean
+required:
+  - output
+  - reference
+  - samples
+  - regions
+  - allele_source
+  - read_mode
+additionalProperties: true

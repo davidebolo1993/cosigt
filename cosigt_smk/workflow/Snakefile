@@ -1,6 +1,8 @@
 from glob import glob
 configfile: 'config/config.yaml'
 
+include: 'lib/config.smk'
+include: 'rules/metadata.smk'
 include: 'rules/minimap2.smk'
 include: 'rules/impg.smk'
 include: 'rules/bedtools.smk'
@@ -10,50 +12,67 @@ include: 'rules/pggb.smk'
 include: 'rules/odgi.smk'
 include: 'rules/pangene.smk'
 include: 'rules/bwa-mem2.smk'
+include: 'rules/bwa.smk'
+include: 'rules/minimap2_reads.smk'
 include: 'rules/gfainject.smk'
 include: 'rules/gafpack.smk'
 include: 'rules/cosigt.smk'
 include: 'rules/benchmark.smk'
 include: 'rules/refine.smk'
+include: 'rules/wally.smk'
 
 cosigt_input    = set()
 refine_input    = set()
 cosigt_benchmark= set()
 
+wally_viz = config.get('wally_viz', False)
+svbyeye_viz = config.get('svbyeye_viz', False)
+sv_calling = config.get('sv_calling', False)
+odgi_viz = config.get('odgi_viz', True)
+pangene_viz = config.get('pangene_viz', True)
+vcf_output = config.get('vcf', False)
+has_gene_annotations = config.get('gtf', 'NA') != 'NA' and config.get('proteins', 'NA') != 'NA'
+
 for region in config['regions']:
     chrom = '_'.join(region.split('_')[:-2])   # robust: coords are always the last 2 blocks
     for sample in config['samples']:
         cosigt_input.add(
-            config['output'] + '/cosigt/' + sample + '/' + chrom + '/' + region + '/' + region + '.cosigt_genotype.tsv'
+            outpath("cosigt", sample, chrom, region, f"{region}.cosigt_genotype.tsv")
         )
-        if config['wally_viz']:
-            cosigt_input.add(config['output'] + '/wally/' + sample + '/' + chrom + '/' + region + '/wally.done')
-            cosigt_benchmark.add(config['output'] + '/wally/' + sample + '/' + chrom + '/' + region + '/wally.done')
-        if config['svbyeye_viz']:
-            cosigt_input.add(config['output'] + '/cosigt/' + sample + '/' + chrom + '/' + region + '/viz/' + region + '.ava.png')
-            cosigt_benchmark.add(config['output'] + '/cosigt/' + sample + '/' + chrom + '/' + region + '/viz/' + region + '.ava.png')
+        if wally_viz:
+            cosigt_input.add(outpath("wally", sample, chrom, region, "wally.done"))
+            cosigt_benchmark.add(outpath("wally", sample, chrom, region, "wally.done"))
+        if svbyeye_viz:
+            cosigt_input.add(outpath("cosigt", sample, chrom, region, "viz", f"{region}.ava.png"))
+            cosigt_benchmark.add(outpath("cosigt", sample, chrom, region, "viz", f"{region}.ava.png"))
         # optional per-sample SV calling with svim-asm
-        if config['sv_calling']:
+        if sv_calling:
             cosigt_input.add(
-                config['output'] + '/cosigt/' + sample + '/' + chrom + '/' + region + '/svim_asm/variants.vcf'
+                outpath("cosigt", sample, chrom, region, "svim_asm", "variants.vcf")
             )
-    if config['odgi_viz']:
-        cosigt_input.add(config['output'] + '/odgi/viz/' + chrom + '/' + region + '/' + region + '.viz.png')
-        cosigt_benchmark.add(config['output'] + '/odgi/viz/' + chrom + '/' + region + '/' + region + '.viz.png')
-    refine_input.add(config['output'] + '/refine/regions_refined.bed')
-    if config['gtf'] != 'NA' and config['proteins'] != 'NA' and config['pangene_viz']:
-        cosigt_input.add(config['output'] + '/pangene/viz/' + chrom + '/' + region + '/' + region + '.genes.png')
-        cosigt_benchmark.add(config['output'] + '/pangene/viz/' + chrom + '/' + region + '/' + region + '.genes.png')
-    cosigt_benchmark.add(config['output'] + '/benchmark/tpr.qv_bar.png')
+    if odgi_viz:
+        cosigt_input.add(outpath("odgi", "viz", chrom, region, f"{region}.viz.png"))
+        cosigt_benchmark.add(outpath("odgi", "viz", chrom, region, f"{region}.viz.png"))
+    if ALLELE_SOURCE == 'assemblies':
+        refine_input.add(outpath("refine", "regions_refined.bed"))
+    if has_gene_annotations and pangene_viz:
+        cosigt_input.add(outpath("pangene", "viz", chrom, region, f"{region}.genes.png"))
+        cosigt_benchmark.add(outpath("pangene", "viz", chrom, region, f"{region}.genes.png"))
+    cosigt_benchmark.add(outpath("benchmark", "tpr.qv_bar.png"))
 
 # optional multi-sample, multi-region merged VCF from cosigt genotypes
-if config['vcf']:
-    cosigt_input.add(config['output'] + '/cosigt/vcf/cosigt.vcf.gz')
+if vcf_output:
+    cosigt_input.add(outpath("cosigt", "vcf", "cosigt.vcf.gz"))
 
 # USED TO REFINE INPUT REGIONS
 rule refine:
     input:
         list(refine_input)
+
+# FAST CONFIG AND INPUT VALIDATION
+rule check:
+    input:
+        METADATA_TARGETS
 
 # COSIGT COMMAND
 rule cosigt:

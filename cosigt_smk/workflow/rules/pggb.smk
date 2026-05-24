@@ -53,12 +53,12 @@ rule pggb_construct:
 		fasta=rules.bedtools_getfasta.output.fasta,
 		fai=rules.bedtools_getfasta.output.fai
 	output:
-		config['output'] + '/pggb/{chr}/{region}/{region}.og'
+		outpath("pggb/{chr}/{region}/{region}.og")
 	threads:
 		config['pggb']['threads']
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['pggb']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['pggb']['time']
+		runtime=lambda wildcards, attempt: attempt * config['pggb']['runtime']
 	container:
 		'docker://ghcr.io/pangenome/pggb:20250423145743e25486'
 	conda:
@@ -66,9 +66,9 @@ rule pggb_construct:
 	benchmark:
 		'benchmarks/{chr}.{region}.pggb_construct.benchmark.txt'
 	params:
-		prefix=config['output'] + '/pggb/{chr}/{region}',
+		prefix=outpath("pggb/{chr}/{region}"),
 		flags=lambda wildcards, input: config['pggb']['params'] + ' ' + parse_fai_and_set_flags(input.fai),
-		tmpdir = config['pggb']['tmpdir'] + '/{chr}/{region}/{region}',
+		tmpdir=tmp_path(config['pggb']['tmpdir'], "{chr}", "{region}", "{region}"),
 		pansn=config['pansn_prefix']
 	shell:
 		'''

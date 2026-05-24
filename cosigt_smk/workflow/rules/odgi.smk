@@ -8,14 +8,14 @@ rule odgi_utils:
 	input:
 		rules.pggb_construct.output
 	output:
-		gfa=config['output'] + '/odgi/view/{chr}/{region}/{region}.gfa.gz',
-		paths=config['output'] + '/odgi/paths/{chr}/{region}/{region}.tsv.gz',
-		length=config['output'] + '/odgi/view/{chr}/{region}/{region}.node.length.tsv'
+		gfa=outpath("odgi/view/{chr}/{region}/{region}.gfa.gz"),
+		paths=outpath("odgi/paths/{chr}/{region}/{region}.tsv.gz"),
+		length=outpath("odgi/view/{chr}/{region}/{region}.node.length.tsv")
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt *  config['default']['mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt *  config['default']['high']['time']
+		runtime=lambda wildcards, attempt: attempt *  config['default']['high']['runtime']
 	container:
 		'docker://pangenome/odgi:1753347183'
 	conda:
@@ -46,12 +46,12 @@ rule panplexity_filter:
 	input:
 		rules.odgi_utils.output.gfa
 	output:
-		config['output'] + '/panplexity/{chr}/{region}/{region}.mask.tsv'
+		temp(outpath("panplexity/{chr}/{region}/{region}.mask.tsv"))
 	threads:
 		4
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt *  config['default']['mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt *  config['default']['mid']['time']
+		runtime=lambda wildcards, attempt: attempt *  config['default']['mid']['runtime']
 	container:
 		'docker://davidebolo1993/panplexity:0.1.1'
 	conda:
@@ -82,10 +82,10 @@ rule filter_nodes:
 		mask=rules.panplexity_filter.output,
 		lengths=rules.odgi_utils.output.length
 	output:
-		config['output'] + '/odgi/paths/{chr}/{region}/{region}.mask.tsv'
+		outpath("odgi/paths/{chr}/{region}/{region}.mask.tsv")
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt *  config['default']['small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt *  config['default']['small']['time']
+		runtime=lambda wildcards, attempt: attempt *  config['default']['small']['runtime']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
@@ -93,7 +93,7 @@ rule filter_nodes:
 	benchmark:
 		'benchmarks/{chr}.{region}.filter_nodes.benchmark.txt'
 	params:
-		prefix=config['output'] + '/odgi/paths/{chr}/{region}/{region}'
+		prefix=outpath("odgi/paths/{chr}/{region}/{region}")
 	shell:
 		'''
 		Rscript \
@@ -112,12 +112,12 @@ rule odgi_dissimilarity:
 	input:
 		rules.pggb_construct.output
 	output:
-		config['output'] + '/odgi/dissimilarity/{chr}/{region}/{region}.tsv.gz'
+		temp(outpath("odgi/dissimilarity/{chr}/{region}/{region}.tsv.gz"))
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt *  config['default']['small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt *  config['default']['small']['time']
+		runtime=lambda wildcards, attempt: attempt *  config['default']['small']['runtime']
 	container:
 		'docker://pangenome/odgi:1753347183'
 	conda:
@@ -140,12 +140,12 @@ rule make_clusters:
 	input:
 		rules.odgi_dissimilarity.output
 	output:
-		config['output'] + '/cluster/{chr}/{region}/{region}.clusters.json'
+		outpath("cluster/{chr}/{region}/{region}.clusters.json")
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt *  config['default']['mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt *  config['default']['mid']['time']
+		runtime=lambda wildcards, attempt: attempt *  config['default']['mid']['runtime']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
@@ -173,12 +173,12 @@ rule viz_odgi:
 		json=rules.make_clusters.output,
 		nodes_length=rules.odgi_utils.output.length
 	output:
-		config['output'] + '/odgi/viz/{chr}/{region}/{region}.viz.png'
+		outpath("odgi/viz/{chr}/{region}/{region}.viz.png")
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt *  config['default']['high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['mid']['time']
+		runtime=lambda wildcards, attempt: attempt * config['default']['mid']['runtime']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
@@ -186,7 +186,7 @@ rule viz_odgi:
 	benchmark:
 		'benchmarks/{chr}.{region}.viz_odgi.benchmark.txt'
 	params:
-		tsv=config['output'] + '/cluster/{chr}/{region}/{region}.clusters.medoids.tsv'
+		tsv=outpath("cluster/{chr}/{region}/{region}.clusters.medoids.tsv")
 	shell:
 		'''
 		Rscript \

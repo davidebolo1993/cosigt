@@ -5,14 +5,14 @@ rule gfainject_inject:
 	'''
 	input:
 		gfa=rules.odgi_utils.output.gfa,
-		cram=rules.bwamem2_mem_samtools_sort.output
+		cram=realigned_alignment_path
 	output:
-		config['output'] + '/gfainject/{sample}/{chr}/{region}/{region}.gaf.gz'
+		temp(outpath("gfainject/{sample}/{chr}/{region}/{region}.gaf.gz"))
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['mid']['time']
+		runtime=lambda wildcards, attempt: attempt * config['default']['mid']['runtime']
 	container:
 		'docker://davidebolo1993/gfainject:0.2.1'
 	conda:

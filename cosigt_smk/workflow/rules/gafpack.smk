@@ -7,12 +7,12 @@ rule gafpack_coverage:
 		gfa=rules.odgi_utils.output.gfa,
 		gaf=rules.gfainject_inject.output
 	output:
-		config['output'] + '/gafpack/{sample}/{chr}/{region}/{region}.gafpack.gz'
+		temp(outpath("gafpack/{sample}/{chr}/{region}/{region}.gafpack.gz"))
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['mid']['time']
+		runtime=lambda wildcards, attempt: attempt * config['default']['mid']['runtime']
 	container:
 		'docker://davidebolo1993/gafpack:0.1.3'
 	conda:

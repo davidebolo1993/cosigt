@@ -7,16 +7,16 @@ rule samtools_fasta_mapped:
 	- Compress
 	'''
 	input:
-		sample=lambda wildcards: glob('resources/alignments/{sample}.*am'.format(sample=wildcards.sample)),
+		sample=sample_alignment_path,
 		bed=rules.make_alignment_bed.output,
 		fasta=config['reference']
 	output:
-		config['output'] + '/samtools/fasta/{sample}/{chr}/{region}/{region}.mapped.fasta.gz'
+		temp(outpath("samtools/fasta/{sample}/{chr}/{region}/{region}.mapped.fasta.gz"))
 	threads:
 		config['samtools']['fasta_mapped']['threads']
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['samtools']['fasta_mapped']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['samtools']['fasta_mapped']['time']
+		runtime=lambda wildcards, attempt: attempt * config['samtools']['fasta_mapped']['runtime']
 	container:
 		'docker://davidebolo1993/samtools:1.22'
 	conda:
@@ -24,7 +24,7 @@ rule samtools_fasta_mapped:
 	benchmark:
 		'benchmarks/{sample}.{chr}.{region}.samtools_fasta_mapped.benchmark.txt'
 	params:
-		tmpfile=config['output'] + '/samtools/fasta/{sample}/{chr}/{region}/{region}'
+		tmpfile=outpath("samtools/fasta/{sample}/{chr}/{region}/{region}")
 	shell:
 		'''
 		samtools view \
@@ -53,15 +53,15 @@ rule samtools_fasta_unmapped:
 	- Compress
 	'''
 	input:
-		sample=lambda wildcards: glob('resources/alignments/{sample}.*am'.format(sample=wildcards.sample)),
+		sample=sample_alignment_path,
 		fasta=config['reference']
 	output:
-		config['output'] + '/samtools/fasta/{sample}/unmapped.fasta.gz'
+		outpath("samtools/fasta/{sample}/unmapped.fasta.gz")
 	threads:
 		config['samtools']['fasta_unmapped']['threads']
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['samtools']['fasta_unmapped']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['samtools']['fasta_unmapped']['time']
+		runtime=lambda wildcards, attempt: attempt * config['samtools']['fasta_unmapped']['runtime']
 	container:
 		'docker://davidebolo1993/samtools:1.22'
 	conda:
@@ -69,7 +69,7 @@ rule samtools_fasta_unmapped:
 	benchmark:
 		'benchmarks/{sample}.samtools_fasta_unmapped.benchmark.txt'
 	params:
-		tmpfile=config['output'] + '/samtools/fasta/{sample}/unmapped'
+		tmpfile=outpath("samtools/fasta/{sample}/unmapped")
 	shell:
 		'''
 		samtools view \

@@ -6,12 +6,12 @@ rule impg_index:
 	input:
 		paf=get_merged_paf
 	output:
-		config['output'] + '/impg/{chr}/{chr}.paf.gz.impg'
+		outpath("impg/{chr}/{chr}.paf.gz.impg")
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
+		runtime=lambda wildcards, attempt: attempt * config['default']['small']['runtime']
 	container:
 		'docker://davidebolo1993/impg:0.3.3'
 	conda:
@@ -36,18 +36,19 @@ rule impg_project_batches:
 	'''
 	input:
 		paf=get_merged_paf,
-		bed=lambda wildcards: glob('resources/regions/{chr}/{region}.bed'.format(chr=wildcards.chr, region=wildcards.region)),
+		bed=region_bed_path,
+		flagger=rules.write_flagger_blacklist.output,
 		index=rules.impg_index.output
 	output:
-		unfiltered=config['output'] + '/impg/{chr}/{region}/{region}.bedpe.gz',
-		noblck=config['output'] + '/impg/{chr}/{region}/{region}.noblck.bedpe.gz',
-		merged=config['output'] + '/impg/{chr}/{region}/{region}.noblck.merged.bedpe.gz',
-		filtered=config['output'] + '/impg/{chr}/{region}/{region}.noblck.merged.filtered.bedpe.gz'
+		unfiltered=temp(outpath("impg/{chr}/{region}/{region}.bedpe.gz")),
+		noblck=temp(outpath("impg/{chr}/{region}/{region}.noblck.bedpe.gz")),
+		merged=temp(outpath("impg/{chr}/{region}/{region}.noblck.merged.bedpe.gz")),
+		filtered=temp(outpath("impg/{chr}/{region}/{region}.noblck.merged.filtered.bedpe.gz"))
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt *  config['default']['mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt *  config['default']['mid']['time']
+		runtime=lambda wildcards, attempt: attempt *  config['default']['mid']['runtime']
 	container:
 		'docker://davidebolo1993/impg:0.3.3'
 	conda:
@@ -55,11 +56,10 @@ rule impg_project_batches:
 	benchmark:
 		'benchmarks/{chr}.{region}.impg_project_batches.benchmark.txt'
 	params:
-		flagger_blacklist=config['flagger_blacklist'],
 		pansn=config['pansn_prefix'],
 		region='{region}',
 		chr='{chr}',
-		tmp_bed=config['output'] + '/impg/{chr}/{region}/{region}.tmp.bed'
+		tmp_bed=outpath("impg/{chr}/{region}/{region}.tmp.bed")
 	shell:
 		'''
 		grep -w {params.chr} {input.bed} > {params.tmp_bed}
@@ -72,7 +72,7 @@ rule impg_project_batches:
 		(bedtools \
 			intersect \
 			-a {output.unfiltered} \
-			-b {params.flagger_blacklist} \
+			-b {input.flagger} \
 			-v \
 			-wa | bedtools sort -i - || true) | gzip > {output.noblck}
 		(zcat {output.noblck} | sh workflow/scripts/bedpe_merge.sh - 200000 || true) | gzip > {output.merged}

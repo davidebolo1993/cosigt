@@ -10,7 +10,9 @@ Cosigt (COsine SImilarity-based GenoTyper) is a [snakemake pipeline](cosigt_smk/
 
 ## Pipeline
 
-Extensive documentation describing how to set-up and run cosigt ia availbale in the online [documentation](https://davidebolo1993.github.io/cosigtdoc/).
+Extensive documentation describing how to set up and run cosigt is available in the online [documentation](https://davidebolo1993.github.io/cosigtdoc/). For the unified Snakemake workflow, start with `make init`, edit the generated files in `cosigt_smk/config/`, then run `make check`. Local, SLURM, LSF, and generic-cluster profiles live under `cosigt_smk/profiles/`.
+
+The Go implementation of the genotyper lives in `cmd/cosigt/main.go`; the repository root is reserved for project-level files and pipeline entry points.
 
 ## License
 
@@ -29,4 +31,3 @@ Population-scalable genotyping from low-coverage sequencing data using pangenome
 Bolognini, D. et al., (2024). 
 Recurrent evolution and selection shape structural diversity at the amylase locus.
 **Nature** 634, 617–625
-

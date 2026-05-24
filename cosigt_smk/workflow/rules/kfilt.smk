@@ -7,12 +7,12 @@ rule meryl_build_reference_db:
 	input:
 		config['reference']
 	output:
-		config['output'] + '/meryl/reference.done'
+		outpath("meryl/reference.done")
 	threads:
 		20
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['meryl']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['meryl']['time']
+		runtime=lambda wildcards, attempt: attempt * config['meryl']['runtime']
 	container:
 		'docker://davidebolo1993/kfilt:0.1.1'
 	benchmark:
@@ -20,7 +20,7 @@ rule meryl_build_reference_db:
 	conda:
 		'../envs/kfilt.yaml'
 	params:
-		outdir=config['output'] + '/meryl/reference'
+		outdir=outpath("meryl/reference")
 	shell:
 		'''
 		if [ -d {params.outdir} ]; then
@@ -48,12 +48,12 @@ rule meryl_build_alleles_db_meryl_difference_kfilt_index:
 		db=rules.meryl_build_reference_db.output,
 		fasta=rules.bedtools_getfasta.output.fasta
 	output:
-		config['output'] + '/kfilt/index/{chr}/{region}/{region}.kfilt.idx'
+		outpath("kfilt/index/{chr}/{region}/{region}.kfilt.idx")
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt *  config['default']['high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt *  config['default']['high']['time']
+		runtime=lambda wildcards, attempt: attempt *  config['default']['high']['runtime']
 	container:
 		'docker://davidebolo1993/kfilt:0.1.1'
 	benchmark:
@@ -61,10 +61,10 @@ rule meryl_build_alleles_db_meryl_difference_kfilt_index:
 	conda:
 		'../envs/kfilt.yaml'
 	params:
-		outdir_alleles=config['output'] + '/meryl/{chr}/{region}/{region}',
-		outdir_diff=config['output'] + '/meryl/{chr}/{region}/{region}_unique',
-		out_diff=config['output'] + '/meryl/{chr}/{region}/{region}.unique_kmers.txt',
-		indir=config['output'] + '/meryl/reference'
+		outdir_alleles=outpath("meryl/{chr}/{region}/{region}"),
+		outdir_diff=outpath("meryl/{chr}/{region}/{region}_unique"),
+		out_diff=outpath("meryl/{chr}/{region}/{region}.unique_kmers.txt"),
+		indir=outpath("meryl/reference")
 	shell:
 		'''
 		if [ -d {params.outdir_alleles} ]; then
@@ -96,6 +96,7 @@ rule meryl_build_alleles_db_meryl_difference_kfilt_index:
 			-k {params.out_diff} \
 			-K 31 \
 			-o {output}
+		rm -f {params.out_diff}
 		'''
 
 rule kfilt_filter_unmapped:
@@ -108,12 +109,12 @@ rule kfilt_filter_unmapped:
 		idx=rules.meryl_build_alleles_db_meryl_difference_kfilt_index.output,
 		sample=rules.samtools_fasta_unmapped.output
 	output:
-		config['output'] + '/kfilt/{sample}/{chr}/{region}/{region}.unmapped.fasta.gz'
+		temp(outpath("kfilt/{sample}/{chr}/{region}/{region}.unmapped.fasta.gz"))
 	threads:
 		config['kfilt']['threads']
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['kfilt']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['kfilt']['time']
+		runtime=lambda wildcards, attempt: attempt * config['kfilt']['runtime']
 	container:
 		'docker://davidebolo1993/kfilt:0.1.1'
 	benchmark:
@@ -143,12 +144,12 @@ rule combine_mapped_unmapped:
 		fasta_mapped=rules.samtools_fasta_mapped.output,
 		fasta_unmapped=rules.kfilt_filter_unmapped.output
 	output:
-		config['output'] + '/combine/{sample}/{chr}/{region}/{region}.fasta.gz'
+		temp(outpath("combine/{sample}/{chr}/{region}/{region}.fasta.gz"))
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt *  config['default']['mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt *  config['default']['mid']['time']
+		runtime=lambda wildcards, attempt: attempt *  config['default']['mid']['runtime']
 	benchmark:
 		'benchmarks/{sample}.{chr}.{region}.combine_mapped_unmapped.benchmark.txt'
 	shell:

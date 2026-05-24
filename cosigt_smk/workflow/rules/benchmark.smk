@@ -6,22 +6,22 @@ rule make_tpr_table:
 	- +1 FN if at least one of the predicted haplotypes does not follow TP logic
 	'''
 	input:
-		samples=lambda wildcards: expand(config['output'] + '/cosigt/{sample}/{chr}/{region}/{region}.sorted_combos.tsv.gz', sample=config['samples'], chr='{chr}', region='{region}'),
+		samples=lambda wildcards: expand(outpath("cosigt/{sample}/{chr}/{region}/{region}.sorted_combos.tsv.gz"), sample=config['samples'], chr='{chr}', region='{region}'),
 		tsv=rules.odgi_dissimilarity.output,
 		json=rules.make_clusters.output
 	output:
-		config['output'] + '/benchmark/{chr}/{region}/tpr.tsv'
+		outpath("benchmark/{chr}/{region}/tpr.tsv")
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['high']['time']
+		runtime=lambda wildcards, attempt: attempt * config['default']['high']['runtime']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
 		'../envs/r.yaml'
 	params:
-		tsv=config['output'] + '/cluster/{chr}/{region}/{region}.clusters.hapdist.tsv'
+		tsv=outpath("cluster/{chr}/{region}/{region}.clusters.hapdist.tsv")
 	shell:
 		'''
 		Rscript \
@@ -42,19 +42,19 @@ rule odgi_flip_pggb_graph_to_fasta:
 	input:
 		rules.pggb_construct.output
 	output:
-		config['output'] + '/benchmark/{chr}/{region}/{region}.flipped.fasta'
+		outpath("benchmark/{chr}/{region}/{region}.flipped.fasta")
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
+		runtime=lambda wildcards, attempt: attempt * config['default']['small']['runtime']
 	container:
 		'docker://pangenome/odgi:1753347183'
 	conda:
 		'../envs/odgi.yaml'
 	params:
 		pansn=config['pansn_prefix'],
-		prefix=config['output'] + '/benchmark/{chr}/{region}'
+		prefix=outpath("benchmark/{chr}/{region}")
 	shell:
 		'''
 		odgi paths \
@@ -79,18 +79,18 @@ rule prepare_combinations_for_qv:
 		tsv=rules.make_tpr_table.output,
 		fasta=rules.odgi_flip_pggb_graph_to_fasta.output
 	output:
-		config['output'] + '/benchmark/{chr}/{region}/qv_prep.done'
+		outpath("benchmark/{chr}/{region}/qv_prep.done")
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
+		runtime=lambda wildcards, attempt: attempt * config['default']['small']['runtime']
 	container:
 		'docker://davidebolo1993/samtools:1.22'
 	conda:
 		'../envs/samtools.yaml'
 	params:
-		outdir=config['output'] + '/benchmark/{chr}/{region}/qv'
+		outdir=outpath("benchmark/{chr}/{region}/qv")
 	shell:
 		'''
 		if [ -f {output} ]; then
@@ -112,16 +112,16 @@ rule calculate_qv:
 	input:
 		rules.prepare_combinations_for_qv.output
 	output:
-		config['output'] + '/benchmark/{chr}/{region}/qv_calc.done'
+		outpath("benchmark/{chr}/{region}/qv_calc.done")
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['high']['time']
+		runtime=lambda wildcards, attempt: attempt * config['default']['high']['runtime']
 	container:
 		'docker://davidebolo1993/edlib:1.2.7'
 	params:
-		indir=config['output'] + '/benchmark/{chr}/{region}/qv'
+		indir=outpath("benchmark/{chr}/{region}/qv")
 	shell:
 		'''
 		if [ -f {output} ]; then
@@ -139,21 +139,21 @@ rule combine_tpr_qv:
 	'''
 	input:
 		tpr=rules.make_tpr_table.output,
-		qv=lambda wildcards: expand(config['output'] + '/benchmark/{chr}/{region}/qv_calc.done', chr='{chr}', region='{region}')
+		qv=lambda wildcards: expand(outpath("benchmark/{chr}/{region}/qv_calc.done"), chr='{chr}', region='{region}')
 	output:
-		config['output'] + '/benchmark/{chr}/{region}/{region}.tpr_qv.tsv'
+		outpath("benchmark/{chr}/{region}/{region}.tpr_qv.tsv")
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
+		runtime=lambda wildcards, attempt: attempt * config['default']['small']['runtime']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
 		'../envs/r.yaml'
 	params:
-		indir=config['output'] + '/benchmark/{chr}/{region}/qv',
-		outqv=config['output'] + '/benchmark/{chr}/{region}/bestqv.tsv'
+		indir=outpath("benchmark/{chr}/{region}/qv"),
+		outqv=outpath("benchmark/{chr}/{region}/bestqv.tsv")
 	shell:
 		'''
 		cat {params.indir}/*/qv.tsv > {params.outqv}
@@ -170,16 +170,10 @@ def get_all_tpr_qv_files(wildcards):
 	https://github.com/davidebolo1993/cosigt
 	Get all the files from the previuos analysis
 	'''
-	all_files = []
-	with open(config['all_regions']) as f:
-		for line in f:
-			fields = line.rstrip().split('\t')
-			chr = fields[0]
-			start= fields[1]
-			end= fields[2]
-			region='_'.join([chr, start, end])
-			all_files.append(f"{config['output']}/benchmark/{chr}/{region}/{region}.tpr_qv.tsv")
-	return all_files
+	return [
+		outpath("benchmark", REGION_ROWS[region]["chrom"], region, f"{region}.tpr_qv.tsv")
+		for region in REGION_ORDER
+	]
 
 rule plot_tpr:
 	'''
@@ -187,30 +181,29 @@ rule plot_tpr:
 	- Make final plot
 	'''
 	input:
-		get_all_tpr_qv_files
+		tpr_qv=get_all_tpr_qv_files,
+		annot_bed=rules.write_all_regions.output
 	output:
-		config['output'] + '/benchmark/tpr.edr.png',
-		config['output'] + '/benchmark/tpr.qv.png',
-		config['output'] + '/benchmark/tpr.tpr_bar.png',
-		config['output'] + '/benchmark/tpr.qv_bar.png'
+		outpath("benchmark/tpr.edr.png"),
+		outpath("benchmark/tpr.qv.png"),
+		outpath("benchmark/tpr.tpr_bar.png"),
+		outpath("benchmark/tpr.qv_bar.png")
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb']
+		runtime=lambda wildcards, attempt: attempt * config['default']['mid']['runtime']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
 		'../envs/r.yaml'
 	params:
-		annot_bed=config['all_regions'],
-		output_prefix=config['output'] + '/benchmark/tpr'
+		output_prefix=outpath("benchmark/tpr")
 	shell:
 		'''
 		Rscript \
 		workflow/scripts/plot_tpr.r \
 		{params.output_prefix} \
-		{params.annot_bed} \
-		{input}
+		{input.annot_bed} \
+		{input.tpr_qv}
 		'''
-	

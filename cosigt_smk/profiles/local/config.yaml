@@ -1,0 +1,14 @@
+printshellcmds: true
+rerun-incomplete: true
+rerun-triggers:
+  - mtime
+scheduler: greedy
+latency-wait: 30
+keep-going: false
+shared-fs-usage:
+  - input-output
+  - persistence
+  - software-deployment
+  - software-deployment-cache
+  - sources
+  - storage-local-copies

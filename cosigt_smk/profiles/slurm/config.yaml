@@ -1,0 +1,18 @@
+executor: slurm
+jobs: 100
+printshellcmds: true
+rerun-incomplete: true
+rerun-triggers:
+  - mtime
+scheduler: greedy
+latency-wait: 60
+shared-fs-usage:
+  - input-output
+  - persistence
+  - software-deployment
+  - software-deployment-cache
+  - sources
+  - storage-local-copies
+default-resources:
+  - mem_mb=4000
+  - runtime=60

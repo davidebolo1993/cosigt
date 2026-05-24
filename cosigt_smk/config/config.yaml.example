@@ -1,0 +1,92 @@
+# Edit this file after running `make init`.
+
+output: results
+
+reference: /path/to/reference.fa.gz
+samples: config/samples.tsv
+regions: config/regions.bed
+
+# Use "assemblies" for the standard workflow or "custom" for user-provided
+# allele FASTAs per region.
+allele_source: assemblies
+assemblies: config/assemblies.tsv
+alleles: config/alleles.tsv
+
+# short: bwa-mem2; ancient: bwa aln/samse; ont/pacbio_*: minimap2 presets.
+read_mode: short
+
+pansn_prefix: grch38#1#
+tmpdir: /tmp
+
+gtf:
+proteins:
+flagger_blacklist:
+
+wally_viz: false
+svbyeye_viz: false
+odgi_viz: true
+pangene_viz: true
+sv_calling: false
+vcf: false
+
+bwa-mem2:
+  threads: 5
+  mem_mb: 10000
+  runtime: 4
+
+bwa:
+  threads: 5
+  mem_mb: 10000
+  runtime: 4
+
+minimap2:
+  ava:
+    threads: 4
+    mem_mb: 5000
+    runtime: 2
+  avo:
+    threads: 6
+    mem_mb: 40000
+    runtime: 50
+  reads:
+    threads: 8
+    mem_mb: 16000
+    runtime: 8
+
+samtools:
+  fasta_mapped:
+    threads: 2
+    mem_mb: 2000
+    runtime: 2
+  fasta_unmapped:
+    threads: 8
+    mem_mb: 8000
+    runtime: 8
+
+pggb:
+  threads: 24
+  mem_mb: 20000
+  runtime: 40
+  tmpdir: /tmp
+  params: "-c 2 -k 101"
+
+meryl:
+  threads: 10
+  mem_mb: 25000
+  runtime: 20
+
+kfilt:
+  threads: 8
+  mem_mb: 20000
+  runtime: 20
+
+default:
+  small:
+    mem_mb: 500
+    runtime: 2
+  mid:
+    mem_mb: 2000
+    runtime: 5
+  high:
+    mem_mb: 10000
+    runtime: 10
