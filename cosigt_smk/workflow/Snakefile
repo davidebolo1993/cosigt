@@ -69,6 +69,8 @@ rule refine:
     input:
         list(refine_input)
 
+localrules: check, write_all_regions, write_flagger_blacklist, write_region_bed
+
 # FAST CONFIG AND INPUT VALIDATION
 rule check:
     input:
