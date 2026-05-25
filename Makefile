@@ -6,6 +6,8 @@ SOFTWARE ?= apptainer
 TARGET ?= cosigt
 CORES ?= 32
 SMK_ARGS ?=
+APPTAINER_ARGS ?=
+APPTAINER_ARG_FLAGS = $(if $(strip $(APPTAINER_ARGS)),--apptainer-args "$(APPTAINER_ARGS)",)
 CONDA_MIN_VERSION ?= 24.7.1
 
 .PHONY: init check check-dryrun dryrun run run-slurm run-lsf run-cluster-generic \
@@ -55,22 +57,22 @@ install-cluster-plugins:
 	$(PYTHON) -m pip install snakemake-executor-plugin-slurm snakemake-executor-plugin-lsf snakemake-executor-plugin-cluster-generic
 
 check: check-profile-plugin check-conda-version
-	cd $(COSIGT_DIR) && $(SNAKEMAKE) check --profile $(PROFILE) --cores $(CORES) --software-deployment-method $(SOFTWARE) $(SMK_ARGS)
+	cd $(COSIGT_DIR) && $(SNAKEMAKE) check --profile $(PROFILE) --cores $(CORES) --software-deployment-method $(SOFTWARE) $(APPTAINER_ARG_FLAGS) $(SMK_ARGS)
 
 check-dryrun: check-profile-plugin check-conda-version
-	cd $(COSIGT_DIR) && $(SNAKEMAKE) check --profile $(PROFILE) --cores $(CORES) --software-deployment-method $(SOFTWARE) --dry-run $(SMK_ARGS)
+	cd $(COSIGT_DIR) && $(SNAKEMAKE) check --profile $(PROFILE) --cores $(CORES) --software-deployment-method $(SOFTWARE) --dry-run $(APPTAINER_ARG_FLAGS) $(SMK_ARGS)
 
 dryrun: check-profile-plugin check-conda-version
-	cd $(COSIGT_DIR) && $(SNAKEMAKE) $(TARGET) --profile $(PROFILE) --cores $(CORES) --software-deployment-method $(SOFTWARE) --dry-run $(SMK_ARGS)
+	cd $(COSIGT_DIR) && $(SNAKEMAKE) $(TARGET) --profile $(PROFILE) --cores $(CORES) --software-deployment-method $(SOFTWARE) --dry-run $(APPTAINER_ARG_FLAGS) $(SMK_ARGS)
 
 run: check-profile-plugin check-conda-version
-	cd $(COSIGT_DIR) && $(SNAKEMAKE) $(TARGET) --profile $(PROFILE) --cores $(CORES) --software-deployment-method $(SOFTWARE) $(SMK_ARGS)
+	cd $(COSIGT_DIR) && $(SNAKEMAKE) $(TARGET) --profile $(PROFILE) --cores $(CORES) --software-deployment-method $(SOFTWARE) $(APPTAINER_ARG_FLAGS) $(SMK_ARGS)
 
 run-slurm: check-slurm-plugin check-conda-version
-	cd $(COSIGT_DIR) && $(SNAKEMAKE) $(TARGET) --profile profiles/slurm --software-deployment-method $(SOFTWARE) $(SMK_ARGS)
+	cd $(COSIGT_DIR) && $(SNAKEMAKE) $(TARGET) --profile profiles/slurm --software-deployment-method $(SOFTWARE) $(APPTAINER_ARG_FLAGS) $(SMK_ARGS)
 
 run-lsf: check-lsf-plugin check-conda-version
-	cd $(COSIGT_DIR) && $(SNAKEMAKE) $(TARGET) --profile profiles/lsf --software-deployment-method $(SOFTWARE) $(SMK_ARGS)
+	cd $(COSIGT_DIR) && $(SNAKEMAKE) $(TARGET) --profile profiles/lsf --software-deployment-method $(SOFTWARE) $(APPTAINER_ARG_FLAGS) $(SMK_ARGS)
 
 run-cluster-generic: check-cluster-generic-plugin check-conda-version
-	cd $(COSIGT_DIR) && $(SNAKEMAKE) $(TARGET) --profile profiles/cluster-generic --software-deployment-method $(SOFTWARE) $(SMK_ARGS)
+	cd $(COSIGT_DIR) && $(SNAKEMAKE) $(TARGET) --profile profiles/cluster-generic --software-deployment-method $(SOFTWARE) $(APPTAINER_ARG_FLAGS) $(SMK_ARGS)

@@ -45,6 +45,14 @@ With current Snakemake versions, `SOFTWARE=conda` requires conda 24.7.1 or
 newer in the environment that runs Snakemake. The Makefile checks this before
 launching Snakemake and prints a short update hint if conda is too old.
 
+Extra Apptainer/Singularity runtime options should be passed with
+`APPTAINER_ARGS`, not raw `SMK_ARGS`, because `SMK_ARGS` is interpreted by
+Snakemake itself:
+
+```bash
+make dryrun SOFTWARE=apptainer APPTAINER_ARGS="-B /project/ham,/group/soranzo"
+```
+
 Run with the SLURM executor plugin:
 
 ```bash
