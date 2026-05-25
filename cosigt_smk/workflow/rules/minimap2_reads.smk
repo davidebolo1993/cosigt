@@ -1,5 +1,36 @@
 if LONG_READ_PRESET is not None:
 
+	rule minimap2_reads_index:
+		'''
+		https://github.com/lh3/minimap2
+		- Build a preset-specific minimap2 index for allele contigs
+		- Reused across all samples for this region and long-read preset
+		'''
+		input:
+			ref_fasta=rules.bedtools_getfasta.output.fasta
+		output:
+			outpath(f"minimap2/{READ_MODE_LABEL}/index/{{chr}}/{{region}}/{{region}}.mmi")
+		threads:
+			1
+		resources:
+			mem_mb=lambda wildcards, attempt: attempt * config['minimap2']['reads']['mem_mb'],
+			runtime=lambda wildcards, attempt: attempt * config['minimap2']['reads']['runtime']
+		container:
+			'docker://davidebolo1993/minimap2:2.31'
+		conda:
+			'../envs/minimap2.yaml'
+		benchmark:
+			f'benchmarks/{{chr}}.{{region}}.{READ_MODE_LABEL}.minimap2_reads_index.benchmark.txt'
+		params:
+			preset=lambda wildcards: long_read_preset()
+		shell:
+			'''
+			minimap2 \
+				-x {params.preset} \
+				-d {output} \
+				{input.ref_fasta}
+			'''
+
 	rule minimap2_reads_samtools_sort:
 		'''
 		https://github.com/lh3/minimap2
@@ -9,6 +40,7 @@ if LONG_READ_PRESET is not None:
 		'''
 		input:
 			ref_fasta=rules.bedtools_getfasta.output.fasta,
+			ref_index=rules.minimap2_reads_index.output,
 			sample_fasta=rules.combine_mapped_unmapped.output
 		output:
 			cram=temp(outpath(f"minimap2/{READ_MODE_LABEL}/{{sample}}/{{chr}}/{{region}}/{{region}}.realigned.cram")),
@@ -19,7 +51,7 @@ if LONG_READ_PRESET is not None:
 			mem_mb=lambda wildcards, attempt: attempt * config['minimap2']['reads']['mem_mb'],
 			runtime=lambda wildcards, attempt: attempt * config['minimap2']['reads']['runtime']
 		container:
-			'docker://davidebolo1993/minimap2:2.28'
+			'docker://davidebolo1993/minimap2:2.31'
 		conda:
 			'../envs/minimap2.yaml'
 		benchmark:
@@ -33,7 +65,7 @@ if LONG_READ_PRESET is not None:
 				-a \
 				-x {params.preset} \
 				-t {threads} \
-				{input.ref_fasta} \
+				{input.ref_index} \
 				{input.sample_fasta} | \
 			samtools sort \
 				-T {params.tmp_prefix} | \

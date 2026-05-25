@@ -2,5 +2,5 @@ channels:
  - conda-forge
  - bioconda
 dependencies:
-  - samtools=1.22
+  - samtools=1.23.1
   - gfainject=0.2.1

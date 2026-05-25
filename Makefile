@@ -1,7 +1,7 @@
 COSIGT_DIR ?= cosigt_smk
 SNAKEMAKE ?= snakemake
 PYTHON ?= python
-PROFILE ?= profiles/local
+PROFILE ?= profiles/slurm
 SOFTWARE ?= conda
 TARGET ?= cosigt
 CORES ?= 32

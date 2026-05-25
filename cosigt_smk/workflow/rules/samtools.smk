@@ -18,7 +18,7 @@ rule samtools_fasta_mapped:
 		mem_mb=lambda wildcards, attempt: attempt * config['samtools']['fasta_mapped']['mem_mb'],
 		runtime=lambda wildcards, attempt: attempt * config['samtools']['fasta_mapped']['runtime']
 	container:
-		'docker://davidebolo1993/samtools:1.22'
+		'docker://davidebolo1993/samtools:1.23.1'
 	conda:
 		'../envs/samtools.yaml'	
 	benchmark:
@@ -63,7 +63,7 @@ rule samtools_fasta_unmapped:
 		mem_mb=lambda wildcards, attempt: attempt * config['samtools']['fasta_unmapped']['mem_mb'],
 		runtime=lambda wildcards, attempt: attempt * config['samtools']['fasta_unmapped']['runtime']
 	container:
-		'docker://davidebolo1993/samtools:1.22'
+		'docker://davidebolo1993/samtools:1.23.1'
 	conda:
 		'../envs/samtools.yaml'	
 	benchmark:

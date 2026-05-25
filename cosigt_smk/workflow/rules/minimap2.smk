@@ -17,7 +17,7 @@ rule pansnspec_target:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
 		runtime=lambda wildcards, attempt: attempt * config['default']['small']['runtime']
 	container:
-		'docker://davidebolo1993/samtools:1.22'
+		'docker://davidebolo1993/samtools:1.23.1'
 	benchmark:
 		'benchmarks/{chr}.pansnspec_target.benchmark.txt'
 	conda:
@@ -87,7 +87,7 @@ rule samtools_faidx_batches:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['high']['mem_mb'],
 		runtime=lambda wildcards, attempt: attempt * config['default']['high']['runtime']
 	container:
-		'docker://davidebolo1993/samtools:1.22'
+		'docker://davidebolo1993/samtools:1.23.1'
 	conda:
 		'../envs/samtools.yaml'
 	benchmark:
@@ -123,7 +123,7 @@ rule minimap2_align_batches:
 		mem_mb=lambda wildcards, attempt: attempt * config['minimap2']['avo']['mem_mb'],
 		runtime=lambda wildcards, attempt: attempt * config['minimap2']['avo']['runtime']
 	container:
-		'docker://davidebolo1993/minimap2:2.28'
+		'docker://davidebolo1993/minimap2:2.31'
 	conda:
 		'../envs/minimap2.yaml'
 	benchmark:
@@ -169,7 +169,7 @@ checkpoint merge_paf_per_region:
 		mem_mb=lambda wildcards, attempt: attempt *  config['default']['mid']['mem_mb'],
 		runtime=lambda wildcards, attempt: attempt *  config['default']['mid']['runtime']
 	container:
-		'docker://davidebolo1993/minimap2:2.28'
+		'docker://davidebolo1993/minimap2:2.31'
 	conda:
 		'../envs/minimap2.yaml'
 	benchmark:
