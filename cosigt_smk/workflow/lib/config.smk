@@ -384,17 +384,21 @@ def realigned_alignment_path(wildcards):
         folder = "bwa-mem2"
     elif READ_MODE == "ancient":
         folder = "bwa"
+    elif LONG_READ_PRESET is not None:
+        folder = f"minimap2/{READ_MODE_LABEL}"
     else:
-        folder = f"minimap2/{READ_MODE}"
+        _fail(f"Unsupported read_mode '{READ_MODE}'.")
     return outpath(folder, wildcards.sample, wildcards.chr, wildcards.region, f"{wildcards.region}.realigned.cram")
 
 
 def long_read_preset():
-    return {
-        "ont": "map-ont",
-        "pacbio_hifi": "map-hifi",
-        "pacbio_clr": "map-pb",
-    }[READ_MODE]
+    if LONG_READ_PRESET is None:
+        _fail(f"read_mode '{READ_MODE}' does not select a minimap2 long-read preset.")
+    return LONG_READ_PRESET
+
+
+def _read_mode_label(read_mode):
+    return read_mode.replace(":", "_").replace("/", "_")
 
 
 _deep_defaults(config, RESOURCE_DEFAULTS)
@@ -409,6 +413,8 @@ validate(config, CONFIG_SCHEMA)
 
 READ_MODE = config["read_mode"]
 ALLELE_SOURCE = config["allele_source"]
+LONG_READ_PRESET = READ_MODE.split(":", 1)[1] if READ_MODE.startswith("long:") else None
+READ_MODE_LABEL = _read_mode_label(READ_MODE)
 
 config["output"] = _resolve_path(config["output"])
 config["reference"] = _resolve_path(config["reference"])

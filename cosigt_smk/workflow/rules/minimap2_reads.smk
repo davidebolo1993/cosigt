@@ -1,4 +1,4 @@
-if READ_MODE in {'ont', 'pacbio_hifi', 'pacbio_clr'}:
+if LONG_READ_PRESET is not None:
 
 	rule minimap2_reads_samtools_sort:
 		'''
@@ -11,10 +11,8 @@ if READ_MODE in {'ont', 'pacbio_hifi', 'pacbio_clr'}:
 			ref_fasta=rules.bedtools_getfasta.output.fasta,
 			sample_fasta=rules.combine_mapped_unmapped.output
 		output:
-			cram=temp(outpath("minimap2/{read_mode}/{sample}/{chr}/{region}/{region}.realigned.cram")),
-			crai=temp(outpath("minimap2/{read_mode}/{sample}/{chr}/{region}/{region}.realigned.cram.crai"))
-		wildcard_constraints:
-			read_mode='ont|pacbio_hifi|pacbio_clr'
+			cram=temp(outpath(f"minimap2/{READ_MODE_LABEL}/{{sample}}/{{chr}}/{{region}}/{{region}}.realigned.cram")),
+			crai=temp(outpath(f"minimap2/{READ_MODE_LABEL}/{{sample}}/{{chr}}/{{region}}/{{region}}.realigned.cram.crai"))
 		threads:
 			config['minimap2']['reads']['threads']
 		resources:
@@ -25,9 +23,9 @@ if READ_MODE in {'ont', 'pacbio_hifi', 'pacbio_clr'}:
 		conda:
 			'../envs/minimap2.yaml'
 		benchmark:
-			'benchmarks/{sample}.{chr}.{region}.{read_mode}.minimap2_reads_samtools_sort.benchmark.txt'
+			f'benchmarks/{{sample}}.{{chr}}.{{region}}.{READ_MODE_LABEL}.minimap2_reads_samtools_sort.benchmark.txt'
 		params:
-			tmp_prefix=outpath("minimap2/{read_mode}/{sample}/{chr}/{region}"),
+			tmp_prefix=outpath(f"minimap2/{READ_MODE_LABEL}/{{sample}}/{{chr}}/{{region}}"),
 			preset=lambda wildcards: long_read_preset()
 		shell:
 			'''

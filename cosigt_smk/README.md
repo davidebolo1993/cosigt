@@ -65,8 +65,10 @@ make install-cluster-plugins
 
 Set `allele_source` in `config.yaml` to `assemblies` for the standard workflow
 or `custom` for user-provided per-region allele FASTAs. Set `read_mode` to
-`short`, `ancient`, `ont`, `pacbio_hifi`, or `pacbio_clr` to choose the read
-realignment strategy.
+`short`, `ancient`, or `long:<preset>` to choose the read realignment strategy.
+Supported long-read minimap2 presets are `map-pb`, `map-hifi`, `map-ont`,
+`map-iclr`, and `lr:hq`; for example, use `read_mode: long:map-ont` for ONT
+reads.
 
 The workflow keeps reusable graph, allele FASTA, aligner index, region metadata,
 sample unmapped-read FASTA, and final genotype outputs. Large per-sample,

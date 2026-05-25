@@ -12,7 +12,9 @@ allele_source: assemblies
 assemblies: config/assemblies.tsv
 alleles: config/alleles.tsv
 
-# short: bwa-mem2; ancient: bwa aln/samse; ont/pacbio_*: minimap2 presets.
+# short: bwa-mem2; ancient: bwa aln/samse; long:<preset>: minimap2.
+# Supported long-read presets: map-pb, map-hifi, map-ont, map-iclr, lr:hq.
+# Example: read_mode: "long:map-ont"
 read_mode: short
 
 pansn_prefix: grch38#1#

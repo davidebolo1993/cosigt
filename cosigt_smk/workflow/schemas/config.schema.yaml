@@ -18,7 +18,14 @@ properties:
     type: [string, "null"]
   read_mode:
     type: string
-    enum: [short, ancient, ont, pacbio_hifi, pacbio_clr]
+    enum:
+      - short
+      - ancient
+      - "long:map-pb"
+      - "long:map-hifi"
+      - "long:map-ont"
+      - "long:map-iclr"
+      - "long:lr:hq"
   pansn_prefix:
     type: string
   tmpdir:
