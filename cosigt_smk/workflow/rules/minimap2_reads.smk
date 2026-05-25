@@ -41,7 +41,7 @@ if LONG_READ_PRESET is not None:
 		input:
 			ref_fasta=rules.bedtools_getfasta.output.fasta,
 			ref_index=rules.minimap2_reads_index.output,
-			sample_fasta=rules.combine_mapped_unmapped.output
+			sample_fasta=rules.samtools_fasta_mapped.output
 		output:
 			cram=temp(outpath(f"minimap2/{READ_MODE_LABEL}/{{sample}}/{{chr}}/{{region}}/{{region}}.realigned.cram")),
 			crai=temp(outpath(f"minimap2/{READ_MODE_LABEL}/{{sample}}/{{chr}}/{{region}}/{{region}}.realigned.cram.crai"))
