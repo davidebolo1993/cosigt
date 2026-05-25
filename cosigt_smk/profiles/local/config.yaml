@@ -9,6 +9,5 @@ shared-fs-usage:
   - input-output
   - persistence
   - software-deployment
-  - software-deployment-cache
   - sources
   - storage-local-copies

@@ -6,10 +6,11 @@ SOFTWARE ?= conda
 TARGET ?= cosigt
 CORES ?= 32
 SMK_ARGS ?=
+CONDA_MIN_VERSION ?= 24.7.1
 
 .PHONY: init check dryrun run run-slurm run-lsf run-cluster-generic \
 	check-profile-plugin check-slurm-plugin check-lsf-plugin \
-	check-cluster-generic-plugin install-cluster-plugins
+	check-cluster-generic-plugin check-conda-version install-cluster-plugins
 
 define REQUIRE_PY_MODULE
 @command -v $(PYTHON) >/dev/null 2>&1 || { echo "$(PYTHON) was not found. Activate the environment that contains Snakemake, or set PYTHON=/path/to/python."; exit 1; }; \
@@ -42,23 +43,31 @@ check-lsf-plugin:
 check-cluster-generic-plugin:
 	$(call REQUIRE_PY_MODULE,snakemake_executor_plugin_cluster_generic,snakemake-executor-plugin-cluster-generic)
 
+check-conda-version:
+	@if printf '%s\n' "$(SOFTWARE)" | tr ',' ' ' | grep -qw conda; then \
+		command -v conda >/dev/null 2>&1 || { echo "SOFTWARE=conda was requested, but conda was not found in PATH."; exit 1; }; \
+		command -v $(PYTHON) >/dev/null 2>&1 || { echo "$(PYTHON) was not found. Activate the environment that contains Snakemake, or set PYTHON=/path/to/python."; exit 1; }; \
+		version=$$(conda --version | awk '{print $$2}'); \
+		$(PYTHON) -c 'import re, sys; parse=lambda v: tuple(map(int, (re.findall(r"\d+", v) + ["0", "0", "0"])[:3])); sys.exit(0 if parse(sys.argv[1]) >= parse(sys.argv[2]) else 1)' "$$version" "$(CONDA_MIN_VERSION)" || { echo "Snakemake requires conda >= $(CONDA_MIN_VERSION) when SOFTWARE=conda; found $$version."; echo "Update conda in the Snakemake environment, or run with another software deployment method if available."; exit 1; }; \
+	fi
+
 install-cluster-plugins:
 	$(PYTHON) -m pip install snakemake-executor-plugin-slurm snakemake-executor-plugin-lsf snakemake-executor-plugin-cluster-generic
 
-check: check-profile-plugin
+check: check-profile-plugin check-conda-version
 	cd $(COSIGT_DIR) && $(SNAKEMAKE) --profile $(PROFILE) --cores $(CORES) --software-deployment-method $(SOFTWARE) --dry-run check $(SMK_ARGS)
 
-dryrun: check-profile-plugin
+dryrun: check-profile-plugin check-conda-version
 	cd $(COSIGT_DIR) && $(SNAKEMAKE) --profile $(PROFILE) --cores $(CORES) --software-deployment-method $(SOFTWARE) --dry-run $(TARGET) $(SMK_ARGS)
 
-run: check-profile-plugin
+run: check-profile-plugin check-conda-version
 	cd $(COSIGT_DIR) && $(SNAKEMAKE) --profile $(PROFILE) --cores $(CORES) --software-deployment-method $(SOFTWARE) $(TARGET) $(SMK_ARGS)
 
-run-slurm: check-slurm-plugin
+run-slurm: check-slurm-plugin check-conda-version
 	cd $(COSIGT_DIR) && $(SNAKEMAKE) --profile profiles/slurm --software-deployment-method $(SOFTWARE) $(TARGET) $(SMK_ARGS)
 
-run-lsf: check-lsf-plugin
+run-lsf: check-lsf-plugin check-conda-version
 	cd $(COSIGT_DIR) && $(SNAKEMAKE) --profile profiles/lsf --software-deployment-method $(SOFTWARE) $(TARGET) $(SMK_ARGS)
 
-run-cluster-generic: check-cluster-generic-plugin
+run-cluster-generic: check-cluster-generic-plugin check-conda-version
 	cd $(COSIGT_DIR) && $(SNAKEMAKE) --profile profiles/cluster-generic --software-deployment-method $(SOFTWARE) $(TARGET) $(SMK_ARGS)

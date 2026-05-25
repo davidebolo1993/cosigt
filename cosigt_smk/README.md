@@ -17,11 +17,19 @@ running compute jobs:
 make check
 ```
 
+`make check` only builds the small validation target. It checks the config files,
+sample table, region BED, indexes, required input files, and generated metadata
+paths. Use it as the fast "is my setup sane?" command.
+
 Run a dry-run of the full genotyping target:
 
 ```bash
 make dryrun
 ```
+
+`make dryrun` builds the complete DAG for the selected target, `cosigt` by
+default, but still does not run jobs. Use it to see which real pipeline steps
+would run and whether all wildcards and dependencies resolve.
 
 Run locally:
 
@@ -31,6 +39,9 @@ make run
 
 The Makefile uses Snakemake's conda environments by default. On systems with
 Apptainer/Singularity available, add `SOFTWARE=apptainer` to any run command.
+With current Snakemake versions, `SOFTWARE=conda` requires conda 24.7.1 or
+newer in the environment that runs Snakemake. The Makefile checks this before
+launching Snakemake and prints a short update hint if conda is too old.
 
 Run with the SLURM executor plugin:
 
