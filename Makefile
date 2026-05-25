@@ -8,7 +8,7 @@ CORES ?= 32
 SMK_ARGS ?=
 CONDA_MIN_VERSION ?= 24.7.1
 
-.PHONY: init check dryrun run run-slurm run-lsf run-cluster-generic \
+.PHONY: init check check-dryrun dryrun run run-slurm run-lsf run-cluster-generic \
 	check-profile-plugin check-slurm-plugin check-lsf-plugin \
 	check-cluster-generic-plugin check-conda-version install-cluster-plugins
 
@@ -55,19 +55,22 @@ install-cluster-plugins:
 	$(PYTHON) -m pip install snakemake-executor-plugin-slurm snakemake-executor-plugin-lsf snakemake-executor-plugin-cluster-generic
 
 check: check-profile-plugin check-conda-version
-	cd $(COSIGT_DIR) && $(SNAKEMAKE) --profile $(PROFILE) --cores $(CORES) --software-deployment-method $(SOFTWARE) --dry-run check $(SMK_ARGS)
+	cd $(COSIGT_DIR) && $(SNAKEMAKE) --profile $(PROFILE) --cores $(CORES) --software-deployment-method $(SOFTWARE) $(SMK_ARGS) -- check
+
+check-dryrun: check-profile-plugin check-conda-version
+	cd $(COSIGT_DIR) && $(SNAKEMAKE) --profile $(PROFILE) --cores $(CORES) --software-deployment-method $(SOFTWARE) --dry-run $(SMK_ARGS) -- check
 
 dryrun: check-profile-plugin check-conda-version
-	cd $(COSIGT_DIR) && $(SNAKEMAKE) --profile $(PROFILE) --cores $(CORES) --software-deployment-method $(SOFTWARE) --dry-run $(TARGET) $(SMK_ARGS)
+	cd $(COSIGT_DIR) && $(SNAKEMAKE) --profile $(PROFILE) --cores $(CORES) --software-deployment-method $(SOFTWARE) --dry-run $(SMK_ARGS) -- $(TARGET)
 
 run: check-profile-plugin check-conda-version
-	cd $(COSIGT_DIR) && $(SNAKEMAKE) --profile $(PROFILE) --cores $(CORES) --software-deployment-method $(SOFTWARE) $(TARGET) $(SMK_ARGS)
+	cd $(COSIGT_DIR) && $(SNAKEMAKE) --profile $(PROFILE) --cores $(CORES) --software-deployment-method $(SOFTWARE) $(SMK_ARGS) -- $(TARGET)
 
 run-slurm: check-slurm-plugin check-conda-version
-	cd $(COSIGT_DIR) && $(SNAKEMAKE) --profile profiles/slurm --software-deployment-method $(SOFTWARE) $(TARGET) $(SMK_ARGS)
+	cd $(COSIGT_DIR) && $(SNAKEMAKE) --profile profiles/slurm --software-deployment-method $(SOFTWARE) $(SMK_ARGS) -- $(TARGET)
 
 run-lsf: check-lsf-plugin check-conda-version
-	cd $(COSIGT_DIR) && $(SNAKEMAKE) --profile profiles/lsf --software-deployment-method $(SOFTWARE) $(TARGET) $(SMK_ARGS)
+	cd $(COSIGT_DIR) && $(SNAKEMAKE) --profile profiles/lsf --software-deployment-method $(SOFTWARE) $(SMK_ARGS) -- $(TARGET)
 
 run-cluster-generic: check-cluster-generic-plugin check-conda-version
-	cd $(COSIGT_DIR) && $(SNAKEMAKE) --profile profiles/cluster-generic --software-deployment-method $(SOFTWARE) $(TARGET) $(SMK_ARGS)
+	cd $(COSIGT_DIR) && $(SNAKEMAKE) --profile profiles/cluster-generic --software-deployment-method $(SOFTWARE) $(SMK_ARGS) -- $(TARGET)

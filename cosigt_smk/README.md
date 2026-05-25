@@ -10,16 +10,18 @@ From the repository root:
 make init
 ```
 
-Edit the files created in `cosigt_smk/config/`, then validate them without
-running compute jobs:
+Edit the files created in `cosigt_smk/config/`, then run the lightweight
+validation target:
 
 ```bash
 make check
 ```
 
-`make check` only builds the small validation target. It checks the config files,
-sample table, region BED, indexes, required input files, and generated metadata
-paths. Use it as the fast "is my setup sane?" command.
+`make check` runs the small validation target. It checks the config files,
+sample table, region BED, indexes, required input files, and writes generated
+metadata files such as per-region BEDs and the normalized flagger blacklist. Use
+it as the fast "is my setup sane?" command. Use `make check-dryrun` to preview
+that validation target without writing files.
 
 Run a dry-run of the full genotyping target:
 
