@@ -156,10 +156,7 @@ rule make_clusters:
 		'''
 		Rscript workflow/scripts/cluster.r \
 			{input} \
-			{output} \
-			automatic \
-			100.0 \
-			1
+			{output}
 		'''
 
 rule viz_odgi:

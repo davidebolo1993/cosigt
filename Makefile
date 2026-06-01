@@ -1,6 +1,8 @@
 COSIGT_DIR ?= cosigt_smk
 SNAKEMAKE ?= snakemake
 PYTHON ?= python
+CXX ?= g++
+CXXFLAGS ?= -std=c++17 -O3
 PROFILE ?= profiles/slurm
 SOFTWARE ?= apptainer
 TARGET ?= cosigt
@@ -9,10 +11,12 @@ SMK_ARGS ?=
 APPTAINER_ARGS ?=
 APPTAINER_ARG_FLAGS = $(if $(strip $(APPTAINER_ARGS)),--apptainer-args "$(APPTAINER_ARGS)",)
 CONDA_MIN_VERSION ?= 24.7.1
+HAPLOGROUP_UNCERTAINTY ?= bin/cosigt_haplogroup_uncertainty
 
 .PHONY: init check check-dryrun dryrun run run-slurm run-lsf run-cluster-generic \
 	check-profile-plugin check-slurm-plugin check-lsf-plugin \
-	check-cluster-generic-plugin check-conda-version install-cluster-plugins
+	check-cluster-generic-plugin check-conda-version install-cluster-plugins \
+	build-haplogroup-uncertainty
 
 define REQUIRE_PY_MODULE
 @command -v $(PYTHON) >/dev/null 2>&1 || { echo "$(PYTHON) was not found. Activate the environment that contains Snakemake, or set PYTHON=/path/to/python."; exit 1; }; \
@@ -55,6 +59,10 @@ check-conda-version:
 
 install-cluster-plugins:
 	$(PYTHON) -m pip install snakemake-executor-plugin-slurm snakemake-executor-plugin-lsf snakemake-executor-plugin-cluster-generic
+
+build-haplogroup-uncertainty:
+	mkdir -p bin
+	$(CXX) $(CXXFLAGS) cosigt_smk/workflow/scripts/cosigt_haplogroup_uncertainty.cpp -lz -o $(HAPLOGROUP_UNCERTAINTY)
 
 check: check-profile-plugin check-conda-version
 	cd $(COSIGT_DIR) && $(SNAKEMAKE) check --profile $(PROFILE) --cores $(CORES) --software-deployment-method $(SOFTWARE) $(APPTAINER_ARG_FLAGS) $(SMK_ARGS)
