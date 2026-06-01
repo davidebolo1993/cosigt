@@ -221,10 +221,7 @@ rule make_region_vcf:
 	- Collects cosigt genotype TSVs for all samples in a region and writes
 	  a single per-region VCF. Allele 0 is the reference path; all other
 	  haplotypes are numbered 1..N-1 in alphabetical order and listed in
-	  INFO/ALLELES. Each sample gets a phased GT column (e.g. 0|1).
-	  {chr} is intentionally absent from output - it is derived from
-	  {region} via the same split logic used in the Snakefile, so
-	  merge_sort_vcf can expand over config['regions'] alone.
+	  INFO/ALLELES.
 	'''
 	input:
 		tsv=lambda wildcards: expand(
@@ -268,8 +265,6 @@ rule merge_sort_vcf:
 	https://github.com/samtools/bcftools
 	- Concatenates all per-region VCFs (non-overlapping, same sample set),
 	  sorts by coordinate, bgzips and tabix-indexes the result.
-	  Region list is derived the same way as in the Snakefile:
-	  chrom = all underscore-separated tokens except the last two.
 	'''
 	input:
 		expand(
