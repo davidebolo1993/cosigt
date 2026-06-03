@@ -22,7 +22,8 @@ rule cosigt_genotype:
 		'../envs/cosigt.yaml'
 	params:
 		prefix=outpath("cosigt/{sample}/{chr}/{region}"),
-		sample_id='{sample}'
+		sample_id='{sample}',
+		ploidy=lambda wildcards: region_ploidy(wildcards.region)
 	benchmark:
 		'benchmarks/{sample}.{chr}.{region}.cosigt_genotype.benchmark.txt'
 	shell:
@@ -33,6 +34,7 @@ rule cosigt_genotype:
 			-c {input.json} \
 			-o {params.prefix} \
 			-i {params.sample_id} \
+			--ploidy {params.ploidy} \
 			-m {input.mask}
 		'''
 	
@@ -46,7 +48,8 @@ rule samtools_faidx_besthaps_fasta:
 		fasta=rules.bedtools_getfasta.output.fasta,
 		fai=rules.bedtools_getfasta.output.fai
 	output:
-		temp(outpath("cosigt/{sample}/{chr}/{region}/viz/{region}.haplotypes.fasta")),
+		fasta=temp(outpath("cosigt/{sample}/{chr}/{region}/viz/{region}.haplotypes.fasta")),
+		regions=temp(outpath("cosigt/{sample}/{chr}/{region}/viz/{region}.haplotypes.regions.txt"))
 	threads:
 		1
 	resources:
@@ -57,14 +60,52 @@ rule samtools_faidx_besthaps_fasta:
 	conda:
 		'../envs/samtools.yaml'
 	params:
-		pansn=config['pansn_prefix'] + '{chr}'
+		pansn=config['pansn_prefix'] + '{chr}',
+		ploidy=lambda wildcards: region_ploidy(wildcards.region)
 	benchmark:
 		'benchmarks/{sample}.{chr}.{region}.samtools_faidx_besthaps_fasta.benchmark.txt'
 	shell:
 		'''
-		samtools faidx -r <(grep {params.pansn} {input.fai} | awk '{{print $1":1-"$2}}') {input.fasta} > {output} \
-		&& samtools faidx -r <(grep $(cut -f 2 {input.geno} | tail -1) {input.fai} | awk '{{print $1":1-"$2}}') {input.fasta} >> {output} \
-		&& samtools faidx -r <(grep $(cut -f 3 {input.geno} | tail -1) {input.fai} | awk '{{print $1":1-"$2}}') {input.fasta} >> {output}
+		if [ {params.ploidy} -gt 2 ]; then
+			echo "SVbyEye haplotype plotting supports ploidy 1 or 2; region {wildcards.region} has ploidy {params.ploidy}." >&2
+			exit 1
+		fi
+		awk -F '\\t' -v pansn="{params.pansn}" '
+			FNR == NR {{
+				len[$1] = $2
+				if (index($1, pansn) == 1) refs[++n_refs] = $1
+				next
+			}}
+			FNR == 1 {{
+				for (i = 1; i <= NF; i++) {{
+					if ($i ~ /^haplotype\\.[0-9]+$/) hap_cols[++n_haps] = i
+				}}
+				next
+			}}
+			NF > 0 {{
+				for (i = 1; i <= NF; i++) last[i] = $i
+			}}
+			END {{
+				if (n_refs < 1) {{
+					print "No reference path starts with " pansn > "/dev/stderr"
+					exit 2
+				}}
+				if (n_haps < 1) {{
+					print "No haplotype.N columns found in " FILENAME > "/dev/stderr"
+					exit 3
+				}}
+				for (i = 1; i <= n_refs; i++) print refs[i]
+				for (i = 1; i <= n_haps; i++) {{
+					hap = last[hap_cols[i]]
+					if (!(hap in len)) {{
+						print "Haplotype " hap " not found in FASTA index" > "/dev/stderr"
+						exit 4
+					}}
+					print hap
+				}}
+			}}
+		' {input.fai} {input.geno} > {output.regions}
+		samtools faidx -r {output.regions} {input.fasta} > {output.fasta}
 		'''
 
 rule minimap2_ava:
@@ -73,7 +114,7 @@ rule minimap2_ava:
 	- Realign predicted haplotypes, all-vs-all alignment
 	'''
 	input:
-		rules.samtools_faidx_besthaps_fasta.output
+		rules.samtools_faidx_besthaps_fasta.output.fasta
 	output:
 		temp(outpath("cosigt/{sample}/{chr}/{region}/viz/{region}.haplotypes.paf")),
 	threads:
@@ -151,8 +192,10 @@ rule minimap2_align_sort_haps:
 	output:
 		hap1_bam=temp(outpath("cosigt/{sample}/{chr}/{region}/svim_asm/{region}.hap1.sorted.bam")),
 		hap1_csi=temp(outpath("cosigt/{sample}/{chr}/{region}/svim_asm/{region}.hap1.sorted.bam.csi")),
+		hap1_regions=temp(outpath("cosigt/{sample}/{chr}/{region}/svim_asm/{region}.hap1.regions.txt")),
 		hap2_bam=temp(outpath("cosigt/{sample}/{chr}/{region}/svim_asm/{region}.hap2.sorted.bam")),
-		hap2_csi=temp(outpath("cosigt/{sample}/{chr}/{region}/svim_asm/{region}.hap2.sorted.bam.csi"))
+		hap2_csi=temp(outpath("cosigt/{sample}/{chr}/{region}/svim_asm/{region}.hap2.sorted.bam.csi")),
+		hap2_regions=temp(outpath("cosigt/{sample}/{chr}/{region}/svim_asm/{region}.hap2.regions.txt"))
 	threads:
 		1
 	resources:
@@ -162,23 +205,73 @@ rule minimap2_align_sort_haps:
 		'docker://davidebolo1993/minimap2:2.28'
 	conda:
 		'../envs/minimap2.yaml'
+	params:
+		ploidy=lambda wildcards: region_ploidy(wildcards.region)
 	benchmark:
 		'benchmarks/{sample}.{chr}.{region}.minimap2_align_sort_haps.benchmark.txt'
 	shell:
 		'''
+		if [ {params.ploidy} -gt 2 ]; then
+			echo "svim-asm supports ploidy 1 or 2; region {wildcards.region} has ploidy {params.ploidy}." >&2
+			exit 1
+		fi
+		awk -F '\\t' -v hap_col="haplotype.1" '
+			FNR == NR {{ len[$1] = $2; next }}
+			FNR == 1 {{
+				for (i = 1; i <= NF; i++) if ($i == hap_col) col = i
+				next
+			}}
+			NF > 0 {{ hap = $col }}
+			END {{
+				if (col < 1) {{
+					print "Missing " hap_col " in genotype table" > "/dev/stderr"
+					exit 2
+				}}
+				if (!(hap in len)) {{
+					print "Haplotype " hap " not found in FASTA index" > "/dev/stderr"
+					exit 3
+				}}
+				print hap
+			}}
+		' {input.fai} {input.geno} > {output.hap1_regions}
 		samtools faidx \
-			-r <(grep $(cut -f 2 {input.geno} | tail -1) {input.fai} | awk '{{print $1":1-"$2}}') \
+			-r {output.hap1_regions} \
 			{input.fasta} | \
 			minimap2 -a -x asm20 --cs -r2k -t {threads} {input.ref} - | \
 			samtools sort -o {output.hap1_bam} --write-index
-		samtools faidx \
-			-r <(grep $(cut -f 3 {input.geno} | tail -1) {input.fai} | awk '{{print $1":1-"$2}}') \
-			{input.fasta} | \
-			minimap2 -a -x asm20 --cs -r2k -t {threads} {input.ref} - | \
-			samtools sort -o {output.hap2_bam} --write-index
+
+		if [ {params.ploidy} -eq 2 ]; then
+			awk -F '\\t' -v hap_col="haplotype.2" '
+				FNR == NR {{ len[$1] = $2; next }}
+				FNR == 1 {{
+					for (i = 1; i <= NF; i++) if ($i == hap_col) col = i
+					next
+				}}
+				NF > 0 {{ hap = $col }}
+				END {{
+					if (col < 1) {{
+						print "Missing " hap_col " in genotype table" > "/dev/stderr"
+						exit 2
+					}}
+					if (!(hap in len)) {{
+						print "Haplotype " hap " not found in FASTA index" > "/dev/stderr"
+						exit 3
+					}}
+					print hap
+				}}
+			' {input.fai} {input.geno} > {output.hap2_regions}
+			samtools faidx \
+				-r {output.hap2_regions} \
+				{input.fasta} | \
+				minimap2 -a -x asm20 --cs -r2k -t {threads} {input.ref} - | \
+				samtools sort -o {output.hap2_bam} --write-index
+		else
+			: > {output.hap2_regions}
+			touch {output.hap2_bam} {output.hap2_csi}
+		fi
 		'''
 
-rule svim_asm_diploid:
+rule svim_asm:
 	'''
 	https://github.com/eldariont/svim-asm
 	- Call structural variants from cosigt-predicted haplotypes aligned to reference
@@ -201,16 +294,27 @@ rule svim_asm_diploid:
 	conda:
 		'../envs/svim-asm.yaml'
 	params:
-		workdir=outpath("cosigt/{sample}/{chr}/{region}/svim_asm")
+		workdir=outpath("cosigt/{sample}/{chr}/{region}/svim_asm"),
+		ploidy=lambda wildcards: region_ploidy(wildcards.region)
 	benchmark:
-		'benchmarks/{sample}.{chr}.{region}.svim_asm_diploid.benchmark.txt'
+		'benchmarks/{sample}.{chr}.{region}.svim_asm.benchmark.txt'
 	shell:
 		'''
-		svim-asm diploid \
-			{params.workdir} \
-			{input.hap1_bam} \
-			{input.hap2_bam} \
-			{input.ref}
+		if [ {params.ploidy} -eq 1 ]; then
+			svim-asm haploid \
+				{params.workdir} \
+				{input.hap1_bam} \
+				{input.ref}
+		elif [ {params.ploidy} -eq 2 ]; then
+			svim-asm diploid \
+				{params.workdir} \
+				{input.hap1_bam} \
+				{input.hap2_bam} \
+				{input.ref}
+		else
+			echo "svim-asm supports ploidy 1 or 2; region {wildcards.region} has ploidy {params.ploidy}." >&2
+			exit 1
+		fi
 		'''
 
 ##OPTIONALLY, MAKE A VCF WITH COSIGT GENOTYPES FOR THIS REGION
@@ -221,10 +325,8 @@ rule make_region_vcf:
 	- Collects cosigt genotype TSVs for all samples in a region and writes
 	  a single per-region VCF. Allele 0 is the reference path; all other
 	  haplotypes are numbered 1..N-1 in alphabetical order and listed in
-	  INFO/ALLELES. Each sample gets a phased GT column (e.g. 0|1).
-	  {chr} is intentionally absent from output - it is derived from
-	  {region} via the same split logic used in the Snakefile, so
-	  merge_sort_vcf can expand over config['regions'] alone.
+	  INFO/ALLELES. Each sample gets a phased GT column with one allele
+	  index per configured ploidy level.
 	'''
 	input:
 		tsv=lambda wildcards: expand(
@@ -272,8 +374,6 @@ rule merge_sort_vcf:
 	https://github.com/samtools/bcftools
 	- Concatenates all per-region VCFs (non-overlapping, same sample set),
 	  sorts by coordinate, bgzips and tabix-indexes the result.
-	  Region list is derived the same way as in the Snakefile:
-	  chrom = all underscore-separated tokens except the last two.
 	'''
 	input:
 		expand(

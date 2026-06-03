@@ -252,9 +252,27 @@ def _parse_regions(path, reference_contigs):
             if start_i < 0 or end_i <= start_i:
                 _fail(f"Regions BED line {lineno}: expected 0 <= start < end.")
             annot = fields[3] if len(fields) >= 4 and fields[3] else "unknown"
-            alts = fields[4] if len(fields) >= 5 and fields[4] else None
-            if len(fields) > 5:
-                _fail(f"Regions BED line {lineno}: expected at most 5 columns.")
+            alts = None
+            ploidy_text = None
+            field4 = fields[4] if len(fields) >= 5 else ""
+            field5 = fields[5] if len(fields) >= 6 else ""
+            if field4 and field4 != ".":
+                if len(fields) == 5 and field4.isdigit():
+                    ploidy_text = field4
+                else:
+                    alts = field4
+            if field5 and field5 != ".":
+                ploidy_text = field5
+            if len(fields) > 6:
+                _fail(f"Regions BED line {lineno}: expected at most 6 columns.")
+            if ploidy_text is None:
+                ploidy_text = "2"
+            try:
+                ploidy_i = int(ploidy_text)
+            except ValueError:
+                _fail(f"Regions BED line {lineno}: ploidy must be a positive integer.")
+            if ploidy_i < 1:
+                _fail(f"Regions BED line {lineno}: ploidy must be >= 1.")
             if alts is not None:
                 _parse_alt_regions(alts, lineno)
             region = f"{chrom}_{start}_{end}"
@@ -266,6 +284,7 @@ def _parse_regions(path, reference_contigs):
                 "end": str(end_i),
                 "annot": annot,
                 "alts": alts,
+                "ploidy": str(ploidy_i),
             }
     if not rows:
         _fail("Regions BED: no regions found.")
@@ -348,6 +367,14 @@ def _metadata_region_bed(region):
 
 def region_chrom(region):
     return REGION_ROWS[region]["chrom"]
+
+
+def region_ploidy(region):
+    return int(REGION_ROWS[region].get("ploidy", "2"))
+
+
+def region_supports_haploid_diploid_downstream(region):
+    return region_ploidy(region) <= 2
 
 
 def region_bed_path(wildcards):

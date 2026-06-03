@@ -32,9 +32,25 @@ odgi_viz = config.get('odgi_viz', True)
 pangene_viz = config.get('pangene_viz', True)
 vcf_output = config.get('vcf', False)
 has_gene_annotations = config.get('gtf', 'NA') != 'NA' and config.get('proteins', 'NA') != 'NA'
+polyploid_downstream_regions = [
+    region for region in config['regions']
+    if not region_supports_haploid_diploid_downstream(region)
+]
+
+if svbyeye_viz and polyploid_downstream_regions:
+    print(
+        "Skipping SVbyEye targets for regions with ploidy > 2: "
+        + ", ".join(polyploid_downstream_regions)
+    )
+if sv_calling and polyploid_downstream_regions:
+    print(
+        "Skipping svim-asm targets for regions with ploidy > 2: "
+        + ", ".join(polyploid_downstream_regions)
+    )
 
 for region in config['regions']:
     chrom = '_'.join(region.split('_')[:-2])   # robust: coords are always the last 2 blocks
+    supports_haploid_diploid_downstream = region_supports_haploid_diploid_downstream(region)
     for sample in config['samples']:
         cosigt_input.add(
             outpath("cosigt", sample, chrom, region, f"{region}.cosigt_genotype.tsv")
@@ -42,11 +58,11 @@ for region in config['regions']:
         if wally_viz:
             cosigt_input.add(outpath("wally", sample, chrom, region, "wally.done"))
             cosigt_benchmark.add(outpath("wally", sample, chrom, region, "wally.done"))
-        if svbyeye_viz:
+        if svbyeye_viz and supports_haploid_diploid_downstream:
             cosigt_input.add(outpath("cosigt", sample, chrom, region, "viz", f"{region}.ava.png"))
             cosigt_benchmark.add(outpath("cosigt", sample, chrom, region, "viz", f"{region}.ava.png"))
         # optional per-sample SV calling with svim-asm
-        if sv_calling:
+        if sv_calling and supports_haploid_diploid_downstream:
             cosigt_input.add(
                 outpath("cosigt", sample, chrom, region, "svim_asm", "variants.vcf")
             )
