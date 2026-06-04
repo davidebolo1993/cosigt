@@ -27,6 +27,7 @@ usage <- function() {
       "  --eps-max N                     Maximum eps considered for automatic selection [0.30]",
       "  --eps-step N                    Grid step for automatic eps scan [0.01]",
       "  --score-use-dbcv true|false     Use DBCV in automatic eps scoring [true]",
+      "  --dbcv-dim N                    Dimensionality passed to DBCV for dist input [2]",
       "  --low-diversity-mpd-norm N      Allow one giant/one cluster below this mpd_norm [0.05]",
       "  --giant-cluster-fraction N      Penalize giant clusters above this fraction [0.85]",
       "  --small-cluster-size N          Size cutoff for small-cluster diagnostics [2]",
@@ -55,6 +56,7 @@ parse_options <- function(extra_args) {
     eps_max = 0.30,
     eps_step = 0.01,
     score_use_dbcv = TRUE,
+    dbcv_dim = 2,
     low_diversity_mpd_norm = 0.05,
     giant_cluster_fraction = 0.85,
     small_cluster_size = 2,
@@ -91,6 +93,8 @@ parse_options <- function(extra_args) {
       opt$eps_step <- as.numeric(value)
     } else if (key == "--score-use-dbcv") {
       opt$score_use_dbcv <- parse_bool(value)
+    } else if (key == "--dbcv-dim") {
+      opt$dbcv_dim <- as.numeric(value)
     } else if (key == "--low-diversity-mpd-norm") {
       opt$low_diversity_mpd_norm <- as.numeric(value)
     } else if (key == "--giant-cluster-fraction") {
@@ -125,6 +129,9 @@ parse_options <- function(extra_args) {
   }
   if (!is.finite(opt$eps_step) || opt$eps_step <= 0) {
     stop("--eps-step must be > 0.")
+  }
+  if (!is.finite(opt$dbcv_dim) || opt$dbcv_dim <= 0) {
+    stop("--dbcv-dim must be > 0.")
   }
   if (!is.finite(opt$low_diversity_mpd_norm) || opt$low_diversity_mpd_norm < 0) {
     stop("--low-diversity-mpd-norm must be >= 0.")
@@ -333,24 +340,52 @@ cluster_nearest_distances <- function(matrix, clustering) {
   rbindlist(rows, fill = TRUE)
 }
 
-compute_dbcv_score <- function(distance_matrix, clustering) {
+order_clustering_for_distance <- function(clustering, distance_matrix) {
+  distance_labels <- labels(distance_matrix)
+  if (is.null(distance_labels)) {
+    return(clustering)
+  }
+  if (is.null(names(clustering))) {
+    if (length(clustering) != length(distance_labels)) {
+      stop("Unnamed clustering length does not match distance matrix size.")
+    }
+    names(clustering) <- distance_labels
+    return(clustering)
+  }
+  missing <- setdiff(distance_labels, names(clustering))
+  if (length(missing) > 0) {
+    stop(
+      "Clustering is missing label(s) present in the distance matrix: ",
+      paste(missing, collapse = ", ")
+    )
+  }
+  clustering[distance_labels]
+}
+
+compute_dbcv_score <- function(distance_matrix, clustering, dbcv_dim = 2) {
   n_clusters <- length(unique(clustering))
   if (length(clustering) < 3 || n_clusters < 2 || n_clusters >= length(clustering)) {
     return(NA_real_)
   }
 
   result <- tryCatch(
-    dbscan::dbcv(distance_matrix, as.integer(factor(clustering))),
+    suppressWarnings(
+      dbscan::dbcv(distance_matrix, as.integer(factor(clustering)), d = dbcv_dim)
+    ),
     error = function(e) NULL
   )
   if (is.null(result)) {
     return(NA_real_)
   }
   if (is.list(result) && "score" %in% names(result)) {
-    return(as.numeric(result$score)[[1]])
+    score <- as.numeric(result$score)[[1]]
+    return(ifelse(is.finite(score), score, NA_real_))
   }
   tryCatch(
-    as.numeric(result)[[1]],
+    {
+      score <- as.numeric(result)[[1]]
+      ifelse(is.finite(score), score, NA_real_)
+    },
     error = function(e) NA_real_
   )
 }
@@ -361,8 +396,10 @@ compute_cluster_metrics <- function(clustering,
                                     eps = NA_real_,
                                     mpd_norm = NA_real_,
                                     compute_dbcv = FALSE,
+                                    dbcv_dim = 2,
                                     small_cluster_size = 2,
                                     ambiguous_eps_ratio = 1.25) {
+  clustering <- order_clustering_for_distance(clustering, distance_matrix)
   clustering <- setNames(as.character(clustering), names(clustering))
   n_haplotypes <- length(clustering)
   sizes <- as.integer(cluster_sizes(clustering))
@@ -410,7 +447,7 @@ compute_cluster_metrics <- function(clustering,
   }
 
   dbcv_score <- if (compute_dbcv) {
-    compute_dbcv_score(distance_matrix, clustering)
+    compute_dbcv_score(distance_matrix, clustering, dbcv_dim = dbcv_dim)
   } else {
     NA_real_
   }
@@ -576,6 +613,7 @@ choose_eps <- function(distance_matrix,
       eps = eps,
       mpd_norm = mpd_norm,
       compute_dbcv = opt$score_use_dbcv,
+      dbcv_dim = opt$dbcv_dim,
       small_cluster_size = opt$small_cluster_size,
       ambiguous_eps_ratio = opt$ambiguous_eps_ratio
     )
@@ -1053,6 +1091,7 @@ metrics <- compute_cluster_metrics(
   eps = eps,
   mpd_norm = mpd_norm,
   compute_dbcv = TRUE,
+  dbcv_dim = opt$dbcv_dim,
   small_cluster_size = opt$small_cluster_size,
   ambiguous_eps_ratio = opt$ambiguous_eps_ratio
 )
@@ -1061,6 +1100,7 @@ metrics$eps_selection <- eps_choice$method
 metrics$max_raw_distance <- matrices$max_distance
 metrics$levels <- levels
 metrics$score_use_dbcv <- opt$score_use_dbcv
+metrics$dbcv_dim <- opt$dbcv_dim
 metrics$low_diversity_mpd_norm <- opt$low_diversity_mpd_norm
 metrics$giant_cluster_fraction_threshold <- opt$giant_cluster_fraction
 metrics$small_cluster_size_threshold <- opt$small_cluster_size
@@ -1094,6 +1134,7 @@ metric_order <- c(
   "region_similarity",
   "max_raw_distance",
   "score_use_dbcv",
+  "dbcv_dim",
   "low_diversity_mpd_norm",
   "giant_cluster_fraction_threshold",
   "small_cluster_size_threshold",
