@@ -8,6 +8,8 @@ rule gafpack_coverage:
 		gaf=rules.gfainject_inject.output
 	output:
 		temp(outpath("gafpack/{sample}/{chr}/{region}/{region}.gafpack.gz"))
+	group:
+		"genotype"
 	threads:
 		1
 	resources:

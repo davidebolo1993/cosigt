@@ -11,13 +11,15 @@ rule cosigt_genotype:
 	output:
 		geno=outpath("cosigt/{sample}/{chr}/{region}/{region}.cosigt_genotype.tsv"),
 		combos=outpath("cosigt/{sample}/{chr}/{region}/{region}.sorted_combos.tsv.gz")
+	group:
+		"genotype"
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
 		runtime=lambda wildcards, attempt: attempt * config['default']['small']['runtime']
 	container:
-		'docker://davidebolo1993/cosigt:0.1.7'
+		'docker://davidebolo1993/cosigt:0.2'
 	conda:
 		'../envs/cosigt.yaml'
 	params:
@@ -56,7 +58,7 @@ rule samtools_faidx_besthaps_fasta:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
 		runtime=lambda wildcards, attempt: attempt * config['default']['small']['runtime']
 	container:
-		'docker://davidebolo1993/samtools:1.22'
+		'docker://davidebolo1993/samtools:1.23.1'
 	conda:
 		'../envs/samtools.yaml'
 	params:
@@ -70,41 +72,11 @@ rule samtools_faidx_besthaps_fasta:
 			echo "SVbyEye haplotype plotting supports ploidy 1 or 2; region {wildcards.region} has ploidy {params.ploidy}." >&2
 			exit 1
 		fi
-		awk -F '\\t' -v pansn="{params.pansn}" '
-			FNR == NR {{
-				len[$1] = $2
-				if (index($1, pansn) == 1) refs[++n_refs] = $1
-				next
-			}}
-			FNR == 1 {{
-				for (i = 1; i <= NF; i++) {{
-					if ($i ~ /^haplotype\\.[0-9]+$/) hap_cols[++n_haps] = i
-				}}
-				next
-			}}
-			NF > 0 {{
-				for (i = 1; i <= NF; i++) last[i] = $i
-			}}
-			END {{
-				if (n_refs < 1) {{
-					print "No reference path starts with " pansn > "/dev/stderr"
-					exit 2
-				}}
-				if (n_haps < 1) {{
-					print "No haplotype.N columns found in " FILENAME > "/dev/stderr"
-					exit 3
-				}}
-				for (i = 1; i <= n_refs; i++) print refs[i]
-				for (i = 1; i <= n_haps; i++) {{
-					hap = last[hap_cols[i]]
-					if (!(hap in len)) {{
-						print "Haplotype " hap " not found in FASTA index" > "/dev/stderr"
-						exit 4
-					}}
-					print hap
-				}}
-			}}
-		' {input.fai} {input.geno} > {output.regions}
+		bash workflow/scripts/select_haplotypes.sh \
+			{input.fai} \
+			{input.geno} \
+			all \
+			{params.pansn} > {output.regions}
 		samtools faidx -r {output.regions} {input.fasta} > {output.fasta}
 		'''
 
@@ -123,7 +95,7 @@ rule minimap2_ava:
 		mem_mb=lambda wildcards, attempt: attempt * config['minimap2']['ava']['mem_mb'],
 		runtime=lambda wildcards, attempt: attempt * config['minimap2']['ava']['runtime']
 	container:
-		'docker://davidebolo1993/minimap2:2.28'
+		'docker://davidebolo1993/minimap2:2.31'
 	conda:
 		'../envs/minimap2.yaml'
 	benchmark:
@@ -137,6 +109,7 @@ rule minimap2_ava:
 			-D \
 			-P \
 			--dual=no \
+			-t {threads} \
 			{input} \
 			{input} > {output}
 		'''
@@ -202,7 +175,7 @@ rule minimap2_align_sort_haps:
 		mem_mb=lambda wildcards, attempt: attempt * config['minimap2']['ava']['mem_mb'],
 		runtime=lambda wildcards, attempt: attempt * config['minimap2']['ava']['runtime']
 	container:
-		'docker://davidebolo1993/minimap2:2.28'
+		'docker://davidebolo1993/minimap2:2.31'
 	conda:
 		'../envs/minimap2.yaml'
 	params:
@@ -215,25 +188,10 @@ rule minimap2_align_sort_haps:
 			echo "svim-asm supports ploidy 1 or 2; region {wildcards.region} has ploidy {params.ploidy}." >&2
 			exit 1
 		fi
-		awk -F '\\t' -v hap_col="haplotype.1" '
-			FNR == NR {{ len[$1] = $2; next }}
-			FNR == 1 {{
-				for (i = 1; i <= NF; i++) if ($i == hap_col) col = i
-				next
-			}}
-			NF > 0 {{ hap = $col }}
-			END {{
-				if (col < 1) {{
-					print "Missing " hap_col " in genotype table" > "/dev/stderr"
-					exit 2
-				}}
-				if (!(hap in len)) {{
-					print "Haplotype " hap " not found in FASTA index" > "/dev/stderr"
-					exit 3
-				}}
-				print hap
-			}}
-		' {input.fai} {input.geno} > {output.hap1_regions}
+		bash workflow/scripts/select_haplotypes.sh \
+			{input.fai} \
+			{input.geno} \
+			haplotype.1 > {output.hap1_regions}
 		samtools faidx \
 			-r {output.hap1_regions} \
 			{input.fasta} | \
@@ -241,25 +199,10 @@ rule minimap2_align_sort_haps:
 			samtools sort -o {output.hap1_bam} --write-index
 
 		if [ {params.ploidy} -eq 2 ]; then
-			awk -F '\\t' -v hap_col="haplotype.2" '
-				FNR == NR {{ len[$1] = $2; next }}
-				FNR == 1 {{
-					for (i = 1; i <= NF; i++) if ($i == hap_col) col = i
-					next
-				}}
-				NF > 0 {{ hap = $col }}
-				END {{
-					if (col < 1) {{
-						print "Missing " hap_col " in genotype table" > "/dev/stderr"
-						exit 2
-					}}
-					if (!(hap in len)) {{
-						print "Haplotype " hap " not found in FASTA index" > "/dev/stderr"
-						exit 3
-					}}
-					print hap
-				}}
-			' {input.fai} {input.geno} > {output.hap2_regions}
+			bash workflow/scripts/select_haplotypes.sh \
+				{input.fai} \
+				{input.geno} \
+				haplotype.2 > {output.hap2_regions}
 			samtools faidx \
 				-r {output.hap2_regions} \
 				{input.fasta} | \
@@ -344,7 +287,8 @@ rule make_region_vcf:
 			rules.bedtools_getfasta.output.fai,
 			chr='_'.join(wildcards.region.split('_')[:-2]),
 			region=wildcards.region
-		)
+		),
+		ref_fai=config['reference'] + '.fai'
 	output:
 		vcf=temp(outpath("cosigt/vcf/{region}.vcf"))
 	threads:
@@ -355,7 +299,7 @@ rule make_region_vcf:
 	conda:
 		'../envs/python.yaml'
 	container:
-		'docker://davidebolo1993/python:3.13.3'
+		'docker://davidebolo1993/pythonenv:3.13.3'
 	params:
 		pansn=lambda wildcards: config['pansn_prefix'] + '_'.join(wildcards.region.split('_')[:-2])
 	benchmark:
@@ -363,10 +307,11 @@ rule make_region_vcf:
 	shell:
 		'''
 		python workflow/scripts/make_region_vcf.py \
-			--fai    {input.fai} \
-			--tsv    {input.tsv} \
-			--output {output.vcf} \
-			--pansn  {params.pansn}
+			--fai     {input.fai} \
+			--tsv     {input.tsv} \
+			--output  {output.vcf} \
+			--pansn   {params.pansn} \
+			--ref-fai {input.ref_fai}
 		'''
 
 rule merge_sort_vcf:
@@ -389,7 +334,7 @@ rule merge_sort_vcf:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
 		runtime=lambda wildcards, attempt: attempt * config['default']['mid']['runtime']
 	container:
-		'docker://davidebolo1993/bcftools:1.21'
+		'docker://davidebolo1993/bcftools:1.23.1'
 	conda:
 		'../envs/bcftools.yaml'
 	benchmark:

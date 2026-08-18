@@ -1,10 +1,14 @@
 #!/bin/bash
 # A contribution by chiara.paleni@fht.org
 
+#   pangene_prepare.sh <alleles.fasta.gz> <proteins.faa.gz> <pansn_prefix> <outdir> [threads]
+set -euo pipefail
+
 INPUT_ASM="$1"
 INPUT_PROTEINS="$2"
 REF_PATH="$3"
 OUTPUT_DIR="$4"
+THREADS="${5:-1}"
 
 mkdir -p "$OUTPUT_DIR"
 cd "$OUTPUT_DIR"
@@ -21,11 +25,12 @@ zcat "$INPUT_ASM" | awk -v out=$OUTPUT_DIR '/^>/ {
     print | cmd
 }'
 
-# run miniprot for each single assembly
-for fasta_file_gz in *.fasta.gz; do
-    base_name="${fasta_file_gz%.fasta.gz}"
-    miniprot -u $fasta_file_gz $INPUT_PROTEINS | bgzip > "${base_name}.paf.gz"
-done
+# run miniprot for each single assembly, in parallel: the invocations are
+# independent and each writes its own PAF
+ls ./*.fasta.gz \
+  | sed 's|^\./||; s|\.fasta\.gz$||' \
+  | xargs -P "$THREADS" -I{} sh -c \
+      'miniprot -u "{}.fasta.gz" "'"$INPUT_PROTEINS"'" | bgzip > "{}.paf.gz"'
 
 # function to flip PAF (works on uncompressed input, so uncompress first)
 flip_paf() {
@@ -51,7 +56,19 @@ get_orientation_profile() {
     zcat "$file" | awk '$5 != "*" {print $1, $5, $3}' | sort | uniq -c | awk '{print $2, $3, $1}'
 }
 
-REF_PAF=$(ls *paf.gz | grep "$REF_PATH")
+# Match the PanSN prefix at the start of the contig name. `ls | grep` matched
+# anywhere in the path and returned every hit, so more than one match produced a
+# multi-line REF_PAF that broke the profile call below.
+REF_PAF=""
+for candidate in *.paf.gz; do
+    case "$(basename "$candidate" .paf.gz)" in
+        "$REF_PATH"*) REF_PAF="$candidate"; break ;;
+    esac
+done
+if [ -z "$REF_PAF" ]; then
+    echo "No contig starting with the reference prefix '$REF_PATH' in $INPUT_ASM" >&2
+    exit 1
+fi
 
 # reference profile
 get_orientation_profile "$REF_PAF" > reference.profile
@@ -85,10 +102,13 @@ for paf_file in *.paf.gz; do
         }
     ' reference.profile current.profile)
 
+    # Both branches emit bgzip. Previously flip wrote plain gzip while keep
+    # cp'd the bgzip input, so one rule produced two container formats
+    # depending on the orientation call.
     if [[ "$comparison_result" == "flip" ]]; then
-        flip_paf "$paf_file" | gzip > "${base_name}_oriented.paf.gz"
+        flip_paf "$paf_file" | bgzip > "${base_name}_oriented.paf.gz"
     else
-        cp "$paf_file" "${base_name}_oriented.paf.gz"
+        zcat "$paf_file" | bgzip > "${base_name}_oriented.paf.gz"
     fi
 
     rm "$paf_file" current.profile

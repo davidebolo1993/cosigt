@@ -3,4 +3,6 @@ channels:
  - bioconda
 dependencies:
   - samtools=1.23.1
-  - gfainject=0.2.1
+  # The container builds gfainject from upstream v0.2.1; bioconda stops at
+  # 0.2.0, so the conda path is one patch release behind by necessity.
+  - gfainject=0.2.0

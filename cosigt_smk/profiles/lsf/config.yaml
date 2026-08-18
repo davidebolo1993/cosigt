@@ -18,3 +18,11 @@ default-resources:
   # Uncomment and edit if your LSF site requires them.
   # - lsf_project=my_project
   # - lsf_queue=normal
+
+# Pack N (sample, region) genotyping chains into a single cluster submission.
+# The 'genotype' group fuses the ~7 per-(sample,region) rules (read extraction,
+# realignment, graph injection, coverage, genotyping) into one job, which alone
+# cuts submissions ~7x. Raise this further to trade retry granularity for fewer
+# queue entries; lower it if jobs are being killed for exceeding walltime.
+group-components:
+  - genotype=1

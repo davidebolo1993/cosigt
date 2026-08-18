@@ -39,6 +39,8 @@ checkpoint generate_batches:
 	https://github.com/davidebolo1993/cosigt
 	- Generate batches for parallel alignment
 	- With assemblies following PanSN specification, each sample is aligned independently
+	- Kept on disk (it is only a few small text files) so that re-evaluating the
+	  checkpoint on later runs still resolves the same batch wildcards
 	'''
 	input:
 		assembly_fai_path,
@@ -94,12 +96,7 @@ rule samtools_faidx_batches:
 		'benchmarks/{chr}.{batch}.samtools_faidx_batches.benchmark.txt'
 	shell:
 		'''
-		if [ -f {output.fasta} ]; then
-			rm {output.fasta}
-		fi
-		while read f; do
-			samtools faidx {input.fasta} $f | bgzip -c >> {output.fasta}
-		done < {input.ids}
+		samtools faidx -r {input.ids} {input.fasta} | bgzip -c > {output.fasta}
 		samtools faidx {output.fasta}
 		'''
 
@@ -174,13 +171,10 @@ checkpoint merge_paf_per_region:
 		'../envs/minimap2.yaml'
 	benchmark:
 		'benchmarks/{chr}.merge_paf_per_region.benchmark.txt'
-	params:
-		batches_tmp=outpath("minimap2/{chr}/batches/ids")
 	shell:
 		'''
 		cat {input} > {output.paf}
 		bgzip -r {output.paf}
-		rm -rf {params.batches_tmp}
 		'''
 
 def get_merged_paf(wildcards):

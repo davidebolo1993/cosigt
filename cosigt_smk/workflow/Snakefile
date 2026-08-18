@@ -74,7 +74,8 @@ for region in config['regions']:
     if has_gene_annotations and pangene_viz:
         cosigt_input.add(outpath("pangene", "viz", chrom, region, f"{region}.genes.png"))
         cosigt_benchmark.add(outpath("pangene", "viz", chrom, region, f"{region}.genes.png"))
-    cosigt_benchmark.add(outpath("benchmark", "tpr.qv_bar.png"))
+    cosigt_benchmark.add(outpath("benchmark", "benchmark.qv.tsv"))
+    cosigt_benchmark.add(outpath("benchmark", "benchmark.qv.png"))
 
 # optional multi-sample, multi-region merged VCF from cosigt genotypes
 if vcf_output:
@@ -85,7 +86,7 @@ rule refine:
     input:
         list(refine_input)
 
-localrules: check, write_all_regions, write_flagger_blacklist, write_region_bed
+localrules: check, write_all_regions, write_flagger_blacklist, write_region_bed, write_apptainer_args
 
 # FAST CONFIG AND INPUT VALIDATION
 rule check:

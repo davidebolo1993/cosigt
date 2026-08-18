@@ -34,6 +34,23 @@ rule write_region_bed:
 					handle.write('\t'.join([alt_chrom, alt_start, alt_end, alt_chrom]) + '\n')
 
 
+rule write_apptainer_args:
+	'''
+	Compose the Apptainer/Singularity flags for this configuration and write
+	them where the Makefile can pick them up. Bind mounts are derived from every
+	configured input and output location, so users do not have to work them out
+	by hand; -e (--cleanenv) is included because pggb fails without it.
+	Tools required from PATH when running without containers or conda are
+	verified at config-parse time, in lib/config.smk.
+	'''
+	output:
+		APPTAINER_ARGS_FILE
+	run:
+		os.makedirs(os.path.dirname(output[0]), exist_ok=True)
+		with open(output[0], 'w') as handle:
+			handle.write(apptainer_args() + '\n')
+
+
 rule write_flagger_blacklist:
 	'''
 	Write an empty or copied flagger blacklist at a workflow-owned path.

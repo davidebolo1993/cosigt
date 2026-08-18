@@ -17,7 +17,27 @@ def parse_args():
     p.add_argument('--tsv',     required=True, nargs='+',help='cosigt TSV files (one per sample)')
     p.add_argument('--output',  required=True,           help='Output VCF path')
     p.add_argument('--pansn',   required=True,           help='PanSN reference prefix, e.g. grch38#1#chr6')
+    p.add_argument('--ref-fai', required=False,          help='Reference genome .fai, used to set the contig length')
     return p.parse_args()
+
+
+def contig_length(ref_fai_path, chrom):
+    """
+    Look up the length of chrom in the reference .fai, so the VCF can declare a
+    contig length. Returns None when unavailable; the contig line is then
+    written without a length, which is valid but less informative.
+    """
+    if not ref_fai_path:
+        return None
+    try:
+        with open(ref_fai_path) as fh:
+            for line in fh:
+                fields = line.split('\t')
+                if len(fields) >= 2 and fields[0] == chrom:
+                    return int(fields[1])
+    except OSError:
+        return None
+    return None
 
 def parse_fai(fai_path, pansn_prefix):
     """
@@ -45,12 +65,16 @@ def parse_fai(fai_path, pansn_prefix):
 
 def ref_coords(ref_name):
     """
-    'grch38#1#chr6:32484347-32603538' -> ('chr6', 32484347, 32603538)
+    'grch38#1#chr6:32484347-32603538' -> ('chr6', 32484348, 32603538)
+
+    The name comes from bedtools getfasta, so start is 0-based half-open.
+    VCF POS is 1-based, hence the +1. END is 1-based inclusive, which is the
+    same number as the 0-based exclusive end, so it is used as-is.
     """
     chrom_coord = ref_name.split('#')[-1]
     chrom, span = chrom_coord.split(':')
     start, end  = span.split('-')
-    return chrom, int(start), int(end)
+    return chrom, int(start) + 1, int(end)
 
 
 def numbered_haplotype_columns(fieldnames):
@@ -110,10 +134,21 @@ def main():
             gt.append(str(idx))
         genotypes[sample_id] = '|'.join(gt)
 
-    # ── INFO ──────────────────────────────────────────────────────────────
+    # ── ALT / INFO ────────────────────────────────────────────────────────
+    # One symbolic ALT per alternate haplotype, so that every GT index below
+    # refers to an allele that actually exists. Names stay short and positional
+    # (<HAP1>..<HAPN>); INFO/ALLELES carries the index -> haplotype mapping.
+    # Deliberately left undeclared in the header: regions have different
+    # haplotype counts, and identical headers keep bcftools concat clean.
+    alt_field = ','.join(f'<HAP{i}>' for i in range(1, len(alleles))) or '.'
+
     allele_map = ','.join(f'{i}={name}' for i, name in enumerate(alleles))
     info       = f'END={end};ALLELES={allele_map}'
-    contig_line = f'##contig=<ID={chrom}>\n'
+    length     = contig_length(args.ref_fai, chrom)
+    contig_line = (
+        f'##contig=<ID={chrom},length={length}>\n' if length
+        else f'##contig=<ID={chrom}>\n'
+    )
 
     # ── write VCF ─────────────────────────────────────────────────────────
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
@@ -131,7 +166,7 @@ def main():
                   + '\t'.join(samples) + '\n')
 
         gt_cols = '\t'.join(genotypes.get(s, '.') for s in samples)
-        out.write(f'{chrom}\t{pos}\t.\tN\t<HAPLOTYPE>\t.\t.\t{info}\tGT\t{gt_cols}\n')
+        out.write(f'{chrom}\t{pos}\t.\tN\t{alt_field}\t.\t.\t{info}\tGT\t{gt_cols}\n')
 
 
 if __name__ == '__main__':

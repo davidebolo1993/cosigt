@@ -70,7 +70,7 @@ checkpoint pangene_prepare:
 	output:
 		temp(directory(outpath("pangene/assemblies/{chr}/{region}/single_assemblies")))
 	threads:
-		1
+		config['pangene']['threads']
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt *  config['default']['mid']['mem_mb'],
 		runtime=lambda wildcards, attempt: attempt *  config['default']['mid']['runtime']
@@ -84,7 +84,12 @@ checkpoint pangene_prepare:
 		pansn=config['pansn_prefix']
 	shell:
 		'''
-		bash workflow/scripts/pangene_prepare.sh {input.asm} {input.proteins} {params.pansn} {output}
+		bash workflow/scripts/pangene_prepare.sh \
+			{input.asm} \
+			{input.proteins} \
+			{params.pansn} \
+			{output} \
+			{threads}
 		'''
 
 def get_subpafs(wildcards):
@@ -146,10 +151,8 @@ rule pangene_viz:
 	benchmark:
 		'benchmarks/{chr}.{region}.pangene_viz.benchmark.txt'
 	params:
-		paf_folder=outpath("pangene/assemblies/{chr}/{region}/single_assemblies"),
 		tsv=outpath("cluster/{chr}/{region}/{region}.clusters.medoids.tsv")
 	shell:
 		'''
 		Rscript workflow/scripts/plotgggenes.r {input.bed} {input.json} {input.fai} {output} {params.tsv}
-		rm -rf {params.paf_folder}
 		'''

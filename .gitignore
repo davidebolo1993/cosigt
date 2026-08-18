@@ -13,8 +13,23 @@ cosigt_smk/config/*
 cosigt_smk/benchmarks/*
 cosigt_smk/.*sh
 cosigt_smk/.cache
+cosigt_smk/.cosigt/
+
+#os cruft
+.DS_Store
+**/.DS_Store
+
+#python bytecode
+__pycache__/
+*.py[cod]
+
+#separately cloned container recipes (own repo)
+cosigt_containers/
 
 #preserve .gitignore
 !.gitignore
 !*/.gitignore
 !**/.gitignore
+
+#separately cloned documentation (own repo)
+cosigtdoc/

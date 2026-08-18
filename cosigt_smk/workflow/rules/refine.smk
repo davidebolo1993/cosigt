@@ -12,7 +12,7 @@ rule impg_refine:
 		haplotypes_bed=outpath("refine/impg/{chr}/{region}/{region}.haplotypes.bed"),
 		refined_bed=outpath("refine/impg/{chr}/{region}/{region}.refined.bed")
 	threads:
-		4
+		config['impg']['threads']
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
 		runtime=lambda wildcards, attempt: attempt * config['default']['mid']['runtime']
@@ -37,7 +37,7 @@ rule impg_refine:
 			--extension-step 10000 \
 			--support-output {output.haplotypes_bed} \
 			--blacklist-bed {input.flagger} \
-			-t 4 \
+			-t {threads} \
 			> {output.refined_bed}
 		'''
 

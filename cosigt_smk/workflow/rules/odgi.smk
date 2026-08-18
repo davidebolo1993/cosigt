@@ -48,7 +48,7 @@ rule panplexity_filter:
 	output:
 		temp(outpath("panplexity/{chr}/{region}/{region}.mask.tsv"))
 	threads:
-		4
+		config['panplexity']['threads']
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt *  config['default']['mid']['mem_mb'],
 		runtime=lambda wildcards, attempt: attempt *  config['default']['mid']['runtime']
@@ -68,8 +68,8 @@ rule panplexity_filter:
 			-d 100 \
 			--complexity linguistic \
 			-m {output} \
-			--threads 4
-		'''	
+			--threads {threads}
+		'''
 
 rule filter_nodes:
 	'''
@@ -83,6 +83,8 @@ rule filter_nodes:
 		lengths=rules.odgi_utils.output.length
 	output:
 		outpath("odgi/paths/{chr}/{region}/{region}.mask.tsv")
+	threads:
+		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt *  config['default']['small']['mem_mb'],
 		runtime=lambda wildcards, attempt: attempt *  config['default']['small']['runtime']
@@ -152,11 +154,14 @@ rule make_clusters:
 		'../envs/r.yaml'
 	benchmark:
 		'benchmarks/{chr}.{region}.make_clusters.benchmark.txt'
+	params:
+		args=cluster_args()
 	shell:
 		'''
 		Rscript workflow/scripts/cluster.r \
 			{input} \
-			{output}
+			{output} \
+			{params.args}
 		'''
 
 rule viz_odgi:

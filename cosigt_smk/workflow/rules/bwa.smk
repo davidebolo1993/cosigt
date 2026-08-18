@@ -4,11 +4,14 @@ if READ_MODE == 'ancient':
 		'''
 		https://github.com/lh3/bwa
 		- Build index for allele contigs for ancient-DNA realignment
+		- Written under an aligner-specific prefix rather than next to the shared
+		  allele FASTA, so that switching read_mode cannot leave behind stale
+		  .pac/.ann/.amb files in the incompatible bwa-mem2 format
 		'''
 		input:
 			rules.bedtools_getfasta.output.fasta
 		output:
-			multiext(outpath("bedtools/getfasta/{chr}/{region}/{region}.fasta.gz"), '.bwt', '.pac', '.ann', '.amb', '.sa')
+			multiext(outpath("bwa/index/{chr}/{region}/{region}.fasta.gz"), '.bwt', '.pac', '.ann', '.amb', '.sa')
 		threads:
 			1
 		resources:
@@ -20,9 +23,11 @@ if READ_MODE == 'ancient':
 			'../envs/bwa.yaml'
 		benchmark:
 			'benchmarks/{chr}.{region}.bwa_index.benchmark.txt'
+		params:
+			prefix=outpath("bwa/index/{chr}/{region}/{region}.fasta.gz")
 		shell:
 			'''
-			bwa index {input}
+			bwa index -p {params.prefix} {input}
 			'''
 
 
@@ -37,6 +42,8 @@ if READ_MODE == 'ancient':
 			sample_fasta=rules.samtools_fasta_mapped.output
 		output:
 			temp(outpath("bwa/{sample}/{chr}/{region}/{region}.realigned.sai"))
+		group:
+			"genotype"
 		threads:
 			config['bwa']['threads']
 		resources:
@@ -48,6 +55,8 @@ if READ_MODE == 'ancient':
 			'../envs/bwa.yaml'
 		benchmark:
 			'benchmarks/{sample}.{chr}.{region}.bwa_aln.benchmark.txt'
+		params:
+			index_prefix=outpath("bwa/index/{chr}/{region}/{region}.fasta.gz")
 		shell:
 			'''
 			bwa aln \
@@ -56,7 +65,7 @@ if READ_MODE == 'ancient':
 				-l 1024 \
 				-n 0.01 \
 				-o 2 \
-				{input.ref_fasta} \
+				{params.index_prefix} \
 				{input.sample_fasta} > {output}
 			'''
 
@@ -75,6 +84,8 @@ if READ_MODE == 'ancient':
 		output:
 			cram=temp(outpath("bwa/{sample}/{chr}/{region}/{region}.realigned.cram")),
 			crai=temp(outpath("bwa/{sample}/{chr}/{region}/{region}.realigned.cram.crai"))
+		group:
+			"genotype"
 		threads:
 			config['samtools']['fasta_mapped']['threads']
 		resources:
@@ -87,15 +98,17 @@ if READ_MODE == 'ancient':
 		benchmark:
 			'benchmarks/{sample}.{chr}.{region}.bwa_samse_samtools_sort.benchmark.txt'
 		params:
-			tmp_prefix=outpath("bwa/{sample}/{chr}/{region}")
+			tmp_prefix=outpath("bwa/{sample}/{chr}/{region}"),
+			index_prefix=outpath("bwa/index/{chr}/{region}/{region}.fasta.gz")
 		shell:
 			'''
 			bwa samse \
 				-n 10000 \
-				{input.ref_fasta} \
+				{params.index_prefix} \
 				{input.sai} \
 				{input.sample_fasta} | \
 			samtools sort \
+				-@ {threads} \
 				-T {params.tmp_prefix} | \
 			samtools view \
 				-T {input.ref_fasta} \

@@ -45,6 +45,8 @@ if LONG_READ_PRESET is not None:
 		output:
 			cram=temp(outpath(f"minimap2/{READ_MODE_LABEL}/{{sample}}/{{chr}}/{{region}}/{{region}}.realigned.cram")),
 			crai=temp(outpath(f"minimap2/{READ_MODE_LABEL}/{{sample}}/{{chr}}/{{region}}/{{region}}.realigned.cram.crai"))
+		group:
+			"genotype"
 		threads:
 			config['minimap2']['reads']['threads']
 		resources:
@@ -68,6 +70,7 @@ if LONG_READ_PRESET is not None:
 				{input.ref_index} \
 				{input.sample_fasta} | \
 			samtools sort \
+				-@ {threads} \
 				-T {params.tmp_prefix} | \
 			samtools view \
 				-T {input.ref_fasta} \

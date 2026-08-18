@@ -9,7 +9,7 @@ rule meryl_build_reference_db:
 	output:
 		outpath("meryl/reference.done")
 	threads:
-		20
+		config['meryl']['threads']
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['meryl']['mem_mb'],
 		runtime=lambda wildcards, attempt: attempt * config['meryl']['runtime']
@@ -110,6 +110,8 @@ rule kfilt_filter_unmapped:
 		sample=rules.samtools_fasta_unmapped.output
 	output:
 		temp(outpath("kfilt/{sample}/{chr}/{region}/{region}.unmapped.fasta.gz"))
+	group:
+		"genotype"
 	threads:
 		config['kfilt']['threads']
 	resources:
@@ -145,6 +147,8 @@ rule combine_mapped_unmapped:
 		fasta_unmapped=rules.kfilt_filter_unmapped.output
 	output:
 		temp(outpath("combine/{sample}/{chr}/{region}/{region}.fasta.gz"))
+	group:
+		"genotype"
 	threads:
 		1
 	resources:

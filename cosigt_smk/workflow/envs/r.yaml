@@ -2,7 +2,7 @@ channels:
  - conda-forge
  - bioconda
 dependencies:
-  - r-data.table=1.15.4
+  - r-data.table=1.16.4
   - r-rjson=0.2.23
   - r-ggplot2=3.5.1
   - r-gggenes=0.5.1
@@ -13,10 +13,10 @@ dependencies:
   - r-randomcolor=1.1.0.1
   - r-base=4.3.3
   - r-tidyverse=2.0.0
-  - r-utils=2.12.3
+  - r-r.utils=2.12.3
   - r-dbscan=1.2.2
-  - r-devtools
-  - r-pafr
+  - r-devtools=2.4.5
+  - r-pafr=0.0.2
   - r-ggnewscale
   - r-ggforce
   - bioconductor-s4vectors
@@ -27,7 +27,7 @@ dependencies:
   - bioconductor-genomeinfodb
   - bioconductor-rsamtools
   - r-wesanderson
-  - r-abind
+  - r-abind=1.4_5
   - r-xml
   - r-v8
   - r-curl

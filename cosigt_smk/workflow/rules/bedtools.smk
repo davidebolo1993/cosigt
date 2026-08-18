@@ -102,6 +102,10 @@ if ALLELE_SOURCE == 'assemblies':
 		- Extract allele sequences from impg .bedpe output and append the reference
 		- Compress with bgzip
 		- Build index
+		- These are the alleles the genotyping graph is built from. Under
+		  benchmark_mode 'leave_all_out' the configured assemblies are expected to
+		  exclude the genotyped samples already; truth comes from the separately
+		  supplied per-region graphs.
 		'''
 		input:
 			asm_fasta=assembly_fasta_path,
@@ -112,7 +116,8 @@ if ALLELE_SOURCE == 'assemblies':
 			ref_bed=rules.make_reference_bed.output
 		output:
 			fasta=outpath("bedtools/getfasta/{chr}/{region}/{region}.fasta.gz"),
-			fai=outpath("bedtools/getfasta/{chr}/{region}/{region}.fasta.gz.fai")
+			fai=outpath("bedtools/getfasta/{chr}/{region}/{region}.fasta.gz.fai"),
+			gzi=outpath("bedtools/getfasta/{chr}/{region}/{region}.fasta.gz.gzi")
 		threads:
 			1
 		resources:
@@ -137,6 +142,7 @@ if ALLELE_SOURCE == 'assemblies':
 			samtools faidx {output.fasta}
 			'''
 
+
 else:
 
 	rule bedtools_getfasta:
@@ -158,7 +164,7 @@ else:
 			mem_mb=lambda wildcards, attempt: attempt * config['default']['high']['mem_mb'],
 			runtime=lambda wildcards, attempt: attempt * config['default']['mid']['runtime']
 		container:
-			'docker://davidebolo1993/samtools:1.22'
+			'docker://davidebolo1993/samtools:1.23.1'
 		benchmark:
 			'benchmarks/{chr}.{region}.bedtools_getfasta.benchmark.txt'
 		conda:

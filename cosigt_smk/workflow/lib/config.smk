@@ -1,7 +1,8 @@
 import csv
 import os
+import shlex
 from collections import OrderedDict
-from shutil import copyfile
+from shutil import copyfile, which
 
 from snakemake.exceptions import WorkflowError
 from snakemake.utils import validate
@@ -13,10 +14,18 @@ CONFIG_SCHEMA = os.path.join(SCHEMA_DIR, "config.schema.yaml")
 SAMPLES_SCHEMA = os.path.join(SCHEMA_DIR, "samples.schema.yaml")
 ASSEMBLIES_SCHEMA = os.path.join(SCHEMA_DIR, "assemblies.schema.yaml")
 ALLELES_SCHEMA = os.path.join(SCHEMA_DIR, "alleles.schema.yaml")
+TRUTH_GRAPHS_SCHEMA = os.path.join(SCHEMA_DIR, "truth_graphs.schema.yaml")
 
 
 RESOURCE_DEFAULTS = {
-    "bwa-mem2": {"threads": 5, "mem_mb": 10000, "runtime": 4},
+    # max_occ is bwa-mem2's -c. It aborts on an internal assert when too many
+    # seeds share a position, which an allele panel provokes by construction;
+    # lowering -c is the documented workaround, so each retry halves it down to
+    # min_max_occ. See bwa-mem2 issue #269.
+    "bwa-mem2": {
+        "threads": 5, "mem_mb": 10000, "runtime": 4,
+        "max_occ": 500, "min_max_occ": 50, "retries": 3,
+    },
     "bwa": {"threads": 5, "mem_mb": 10000, "runtime": 4},
     "minimap2": {
         "ava": {"threads": 4, "mem_mb": 5000, "runtime": 2},
@@ -34,8 +43,16 @@ RESOURCE_DEFAULTS = {
         "tmpdir": "/tmp",
         "params": "-c 2 -k 101",
     },
+    # pangene_prepare runs one miniprot per allele contig, in parallel.
+    "pangene": {"threads": 8},
+    "impg": {"threads": 4},
+    "panplexity": {"threads": 4},
     "meryl": {"threads": 10, "mem_mb": 25000, "runtime": 20},
     "kfilt": {"threads": 8, "mem_mb": 20000, "runtime": 20},
+    # benchmark_qv runs one edlib alignment per (true haplotype, panel
+    # haplotype) pair, so it scales with panel size x samples and is worth
+    # parallelising.
+    "benchmark": {"threads": 8, "mem_mb": 10000, "runtime": 60, "max_bars_per_row": 30},
     "default": {
         "small": {"mem_mb": 500, "runtime": 2},
         "mid": {"mem_mb": 2000, "runtime": 5},
@@ -52,6 +69,30 @@ BOOLEAN_DEFAULTS = {
     "sv_calling": False,
     "vcf": False,
 }
+
+
+# Tuning knobs for workflow/scripts/cluster.r. Keys mirror the script's
+# --kebab-case options and are rendered back into that form by cluster_args().
+CLUSTER_DEFAULTS = {
+    "similarity_threshold": "automatic",
+    "levels": 1,
+    "eps_selection": "quality",
+    "eps_min": 0,
+    "eps_max": 0.30,
+    "eps_step": 0.01,
+    "score_use_dbcv": True,
+    "dbcv_dim": 2,
+    "low_diversity_mpd_norm": 0.05,
+    "giant_cluster_fraction": 0.85,
+    "small_cluster_size": 2,
+    "ambiguous_eps_ratio": 1.25,
+    "plot_clusters": False,
+    "plot_label_max_cluster_size": 1,
+    "plot_width": 8,
+    "plot_height": 6,
+}
+
+CLUSTER_BOOLEAN_KEYS = ("score_use_dbcv", "plot_clusters")
 
 
 def _fail(message):
@@ -373,6 +414,19 @@ def region_ploidy(region):
     return int(REGION_ROWS[region].get("ploidy", "2"))
 
 
+def truth_graph_path(wildcards):
+    """Pre-built graph holding the true haplotypes for this region."""
+    try:
+        return TRUTH_GRAPHS[wildcards.region]["graph"]
+    except KeyError:
+        _fail(f"No truth graph configured for region '{wildcards.region}'.")
+
+
+def region_annotation(region):
+    """Label from column 4 of the regions BED, used as gene_name in reports."""
+    return REGION_ROWS[region].get("annot", "unknown")
+
+
 def region_supports_haploid_diploid_downstream(region):
     return region_ploidy(region) <= 2
 
@@ -428,7 +482,22 @@ def _read_mode_label(read_mode):
     return read_mode.replace(":", "_").replace("/", "_")
 
 
+def cluster_args():
+    """
+    Render config['cluster'] as the --key value option string cluster.r expects.
+    Booleans become the lowercase true/false spellings the script parses.
+    """
+    parts = []
+    for key in CLUSTER_DEFAULTS:
+        value = config["cluster"][key]
+        if isinstance(value, bool):
+            value = "true" if value else "false"
+        parts.append("--{} {}".format(key.replace("_", "-"), shlex.quote(str(value))))
+    return " ".join(parts)
+
+
 _deep_defaults(config, RESOURCE_DEFAULTS)
+_deep_defaults(config, {"cluster": CLUSTER_DEFAULTS})
 _migrate_time_to_runtime(config)
 
 config.setdefault("pansn_prefix", "grch38#1#")
@@ -436,10 +505,22 @@ config.setdefault("tmpdir", "/tmp")
 for key, default in BOOLEAN_DEFAULTS.items():
     config[key] = _normalize_bool(config.get(key, default), key)
 
+unknown_cluster_keys = sorted(set(config["cluster"]) - set(CLUSTER_DEFAULTS))
+if unknown_cluster_keys:
+    _fail(f"Config key 'cluster': unknown option(s): {', '.join(unknown_cluster_keys)}.")
+for key in CLUSTER_BOOLEAN_KEYS:
+    config["cluster"][key] = _normalize_bool(config["cluster"][key], f"cluster.{key}")
+
 validate(config, CONFIG_SCHEMA)
 
 READ_MODE = config["read_mode"]
 ALLELE_SOURCE = config["allele_source"]
+# leave_zero_out: the genotyped samples' own haplotypes stay in the graph, so an
+#   exact hit is possible and QV measures whether cosigt finds it.
+# leave_all_out: they are removed from the genotyping graph, so cosigt must
+#   reconstruct each sample from other people's haplotypes. A second graph
+#   containing everything supplies the truth sequences for comparison.
+BENCHMARK_MODE = config.get("benchmark_mode", "leave_zero_out")
 LONG_READ_PRESET = READ_MODE.split(":", 1)[1] if READ_MODE.startswith("long:") else None
 READ_MODE_LABEL = _read_mode_label(READ_MODE)
 
@@ -449,6 +530,7 @@ config["samples_table"] = _resolve_path(config["samples"])
 config["regions_bed"] = _resolve_path(config["regions"])
 config["assemblies_table"] = _resolve_optional_path(config.get("assemblies"))
 config["alleles_table"] = _resolve_optional_path(config.get("alleles"))
+config["truth_graphs_table"] = _resolve_optional_path(config.get("truth_graphs"))
 config["gtf"] = _resolve_optional_path(config.get("gtf")) or "NA"
 config["proteins"] = _resolve_optional_path(config.get("proteins")) or "NA"
 config["flagger_source"] = _resolve_optional_path(config.get("flagger_blacklist"))
@@ -530,12 +612,51 @@ else:
     if missing:
         _fail(f"Alleles TSV: missing region(s) used by regions BED: {', '.join(missing)}.")
 
+# leave_all_out compares against haplotypes that are, by design, absent from the
+# genotyping graph. Those come from pre-built per-region truth graphs supplied by
+# the user, one .og per region.
+TRUTH_GRAPHS = OrderedDict()
+if BENCHMARK_MODE == "leave_all_out":
+    if config.get("truth_graphs_table") is None:
+        _fail(
+            "Config key 'truth_graphs' is required when benchmark_mode is "
+            "'leave_all_out': it maps each region to a graph containing the "
+            "genotyped samples' own haplotypes, which the genotyping graph "
+            "deliberately lacks."
+        )
+    truth_rows = _read_tsv(
+        config["truth_graphs_table"],
+        ["region", "graph"],
+        TRUTH_GRAPHS_SCHEMA,
+        "Truth graphs TSV",
+    )
+    for row in truth_rows:
+        region = row["region"]
+        if region in TRUTH_GRAPHS:
+            _fail(f"Truth graphs TSV: duplicate region '{region}'.")
+        graph = _resolve_path(row["graph"])
+        _ensure_file(graph, f"Truth graph for '{region}'")
+        if not graph.endswith(".og"):
+            _fail(
+                f"Truth graph for '{region}': {graph} must be an odgi graph (.og). "
+                "Convert a GFA with 'odgi build -g in.gfa -o out.og'."
+            )
+        TRUTH_GRAPHS[region] = {"graph": graph}
+    missing = [region for region in REGION_ORDER if region not in TRUTH_GRAPHS]
+    if missing:
+        _fail(
+            "Truth graphs TSV: missing region(s) used by the regions BED: "
+            + ", ".join(missing)
+            + "."
+        )
+
 config["samples"] = list(SAMPLES.keys())
 config["regions"] = REGION_ORDER
 config["chromosomes"] = CHROMOSOMES
 
 REGION_BED_TARGETS = [_metadata_region_bed(region) for region in REGION_ORDER]
 METADATA_TARGETS = [config["all_regions"], config["flagger_blacklist"]] + REGION_BED_TARGETS
+# APPTAINER_ARGS_FILE is appended below, once the helpers it needs are defined.
 
 bind_paths = {
     os.path.dirname(config["reference"]),
@@ -554,6 +675,87 @@ for assembly in ASSEMBLIES.values():
     bind_paths.add(os.path.dirname(assembly["fasta"]))
 for allele in ALLELES.values():
     bind_paths.add(os.path.dirname(allele["fasta"]))
+for truth in TRUTH_GRAPHS.values():
+    bind_paths.add(os.path.dirname(truth["graph"]))
 
 BIND_PATHS = _find_optimal_bindings(sorted(bind_paths))
 _append_container_bind_env(BIND_PATHS)
+
+
+def deployment_methods():
+    """
+    Names of the software deployment methods Snakemake was invoked with, e.g.
+    {"apptainer"} or {"conda"}. Empty when running with tools taken from PATH.
+    """
+    try:
+        methods = workflow.deployment_settings.deployment_method
+    except AttributeError:
+        return set()
+    return {getattr(method, "name", str(method)).lower() for method in methods}
+
+
+def apptainer_args():
+    """
+    Compose the --apptainer-args string: bind mounts covering every configured
+    input/output location, plus -e (--cleanenv), which pggb requires. Extra
+    flags can be appended through the 'apptainer_extra' config key.
+    """
+    parts = []
+    if BIND_PATHS:
+        parts.append("-B " + ",".join(BIND_PATHS))
+    if config.get("apptainer_cleanenv", True):
+        parts.append("-e")
+    extra = str(config.get("apptainer_extra", "") or "").strip()
+    if extra:
+        parts.append(extra)
+    return " ".join(parts)
+
+
+def required_tools():
+    """
+    Binaries the current configuration will actually invoke. Kept in the
+    workflow rather than the Makefile because it depends on read_mode,
+    allele_source and the optional output switches.
+    """
+    tools = {
+        "samtools", "bgzip", "bedtools", "minimap2", "odgi", "impg",
+        "gafpack", "gfainject", "panplexity", "pggb", "cosigt", "Rscript",
+    }
+    if READ_MODE == "short":
+        tools.update({"bwa-mem2", "kfilt", "meryl"})
+    elif READ_MODE == "ancient":
+        tools.add("bwa")
+    if config.get("vcf"):
+        tools.update({"bcftools", "tabix", "python"})
+    if config.get("gtf") != "NA" and config.get("pangene_viz"):
+        tools.update({"pangene", "pangene.js", "miniprot"})
+    if config.get("wally_viz"):
+        tools.add("wally")
+    if config.get("sv_calling"):
+        tools.add("svim-asm")
+    return sorted(tools)
+
+
+def check_tools_on_path():
+    """
+    With no container or conda deployment every tool must already be on PATH.
+    Checked here, where the config is known, so the Makefile does not have to
+    replicate the read_mode/optional-output logic.
+    """
+    missing = [tool for tool in required_tools() if which(tool) is None]
+    if missing:
+        _fail(
+            "SOFTWARE=none was requested but these tools are not on PATH: "
+            + ", ".join(missing)
+            + ". Install them, or use SOFTWARE=apptainer or SOFTWARE=conda."
+        )
+
+
+DEPLOYMENT = deployment_methods()
+APPTAINER_ARGS_FILE = os.path.join(WORKDIR, ".cosigt", "apptainer.args")
+METADATA_TARGETS.append(APPTAINER_ARGS_FILE)
+
+# Fail fast, alongside the other input validation, rather than part-way through
+# a run. Only meaningful without containers or conda, where tools come from PATH.
+if not DEPLOYMENT:
+    check_tools_on_path()

@@ -20,9 +20,31 @@ read_mode: short
 pansn_prefix: grch38#1#
 tmpdir: /tmp
 
+# Apptainer/Singularity. `make check` derives the bind mounts from the paths
+# configured above, so they do not need to be listed here. -e (--cleanenv) is
+# added because pggb fails without it; set apptainer_cleanenv to false to drop
+# it. Anything in apptainer_extra is appended verbatim.
+apptainer_cleanenv: true
+apptainer_extra:
+
 gtf:
 proteins:
 flagger_blacklist:
+
+# Benchmarking (TARGET=benchmark only).
+#   leave_zero_out  the genotyped samples' own haplotypes stay in the graph, so
+#                   an exact hit is possible and QV measures whether it is found
+#   leave_all_out   they are removed from the genotyping graph, so cosigt must
+#                   reconstruct each sample from other people's haplotypes. A
+#                   second graph holding every allele supplies the truth, and
+#                   QVfrac reports how close the prediction came to the best
+#                   pair the genotyping graph could have offered.
+#                   Requires allele_source: assemblies.
+#                   leave_all_out also needs truth_graphs: a TSV mapping each
+#                   region to a pre-built odgi graph (.og) that does contain the
+#                   genotyped samples' haplotypes.
+benchmark_mode: leave_zero_out
+truth_graphs: config/truth_graphs.tsv
 
 wally_viz: false
 svbyeye_viz: false
@@ -31,10 +53,18 @@ pangene_viz: true
 sv_calling: false
 vcf: false
 
+# max_occ is bwa-mem2's -c (skip seeds with more than INT occurrences). An
+# allele panel repeats every locus once per haplotype, so seed counts are high
+# by construction and bwa-mem2 can abort on an internal assert. Each retry
+# halves -c down to min_max_occ; raise max_occ to keep more multi-mapping seeds,
+# lower it if the assert still fires on the first attempt.
 bwa-mem2:
   threads: 5
   mem_mb: 10000
   runtime: 4
+  max_occ: 500
+  min_max_occ: 50
+  retries: 3
 
 bwa:
   threads: 5
@@ -72,10 +102,50 @@ pggb:
   tmpdir: /tmp
   params: "-c 2 -k 101"
 
+# QV benchmarking (TARGET=benchmark). threads parallelises the edlib scan that
+# leave_all_out performs over every panel haplotype; max_bars_per_row splits the
+# summary plot into rows.
+benchmark:
+  threads: 8
+  mem_mb: 10000
+  runtime: 60
+  max_bars_per_row: 30
+
+# pangene_prepare parallelises miniprot over allele contigs.
+pangene:
+  threads: 8
+
+impg:
+  threads: 4
+
+panplexity:
+  threads: 4
+
 meryl:
   threads: 10
   mem_mb: 25000
   runtime: 20
+
+# DBSCAN clustering of graph paths (workflow/scripts/cluster.r).
+# All values below are the defaults; uncomment only what you want to change.
+# similarity_threshold accepts "automatic" or a fixed number.
+cluster:
+  similarity_threshold: automatic
+  levels: 1
+  eps_selection: quality
+  eps_min: 0
+  eps_max: 0.30
+  eps_step: 0.01
+  score_use_dbcv: true
+  dbcv_dim: 2
+  low_diversity_mpd_norm: 0.05
+  giant_cluster_fraction: 0.85
+  small_cluster_size: 2
+  ambiguous_eps_ratio: 1.25
+  plot_clusters: false
+  plot_label_max_cluster_size: 1
+  plot_width: 8
+  plot_height: 6
 
 kfilt:
   threads: 8

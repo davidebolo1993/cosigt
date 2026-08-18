@@ -8,6 +8,8 @@ rule gfainject_inject:
 		cram=realigned_alignment_path
 	output:
 		temp(outpath("gfainject/{sample}/{chr}/{region}/{region}.gaf.gz"))
+	group:
+		"genotype"
 	threads:
 		1
 	resources:

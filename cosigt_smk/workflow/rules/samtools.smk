@@ -12,6 +12,8 @@ rule samtools_fasta_mapped:
 		fasta=config['reference']
 	output:
 		temp(outpath("samtools/fasta/{sample}/{chr}/{region}/{region}.mapped.fasta.gz"))
+	group:
+		"genotype"
 	threads:
 		config['samtools']['fasta_mapped']['threads']
 	resources:

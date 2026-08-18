@@ -18,14 +18,18 @@ import (
     "sync"
 
     "github.com/akamensky/argparse"
-    "gonum.org/v1/gonum/stat/combin"
 )
 
 // Vector represents a float64 slice for cleaner type declarations
 type Vector []float64
 
-// Small epsilon value 
+// Small epsilon value
 const epsilon = 1e-10
+
+// Version of this build, reported by --version. Worth checking against: 0.2
+// made genotype enumeration deterministic and added the partially homozygous
+// combinations that earlier versions never scored, so results differ from 0.1.x.
+const version = "0.2"
 
 // GetMagnitudeWeighted calculates the weighted Euclidean magnitude of two vectors, with optional mask and weights
 func GetMagnitudeWeighted(A, B Vector, mask []bool, weights []float64) float64 {
@@ -294,6 +298,28 @@ func SliceContains(s string, ids []string) bool {
     return false
 }
 
+// NextMultiCombination advances combo to the next combination with repetition of
+// k haplotype indices drawn from n, in lexicographic order. Combinations are held
+// non-decreasing so that each unordered genotype is visited exactly once, and
+// repeated indices are allowed so that partially and fully homozygous genotypes
+// (for example A/A/B at ploidy 3) are enumerated alongside the fully
+// heterozygous ones. Starting from an all-zero combo, this yields all
+// C(n+k-1, k) genotypes. Returns false once the last one has been visited.
+func NextMultiCombination(combo []int, n int) bool {
+    i := len(combo) - 1
+    for i >= 0 && combo[i] == n-1 {
+        i--
+    }
+    if i < 0 {
+        return false
+    }
+    combo[i]++
+    for j := i + 1; j < len(combo); j++ {
+        combo[j] = combo[i]
+    }
+    return true
+}
+
 // SumSlices adds two float64 slices element-wise
 func SumSlices(a, b Vector) Vector {
     c := make(Vector, len(a))
@@ -304,6 +330,15 @@ func SumSlices(a, b Vector) Vector {
 }
 
 func main() {
+    // Checked before argparse, which would otherwise reject --version for
+    // missing the required -p/-g/-o/-i arguments.
+    for _, arg := range os.Args[1:] {
+        if arg == "--version" || arg == "-v" {
+            fmt.Println("cosigt", version)
+            return
+        }
+    }
+
     parser := argparse.NewParser("cosigt", "genotyping loci in pangenome graphs using cosine distance")
     p := parser.String("p", "paths", &argparse.Options{Required: true, Help: "gzip-compressed tsv file with path names and node coverages from odgi paths"})
     g := parser.String("g", "gafpack", &argparse.Options{Required: true, Help: "gzip-compressed tsv file with node coverages for a sample from gafpack"})
@@ -317,6 +352,10 @@ func main() {
 
     if err := parser.Parse(os.Args); err != nil {
         log.Fatalf("Error parsing arguments: %v", err)
+    }
+
+    if *ploidy < 1 {
+        log.Fatalf("Invalid ploidy %d: must be >= 1", *ploidy)
     }
 
     hapid, gcov, err := ReadGz(*p)
@@ -369,7 +408,6 @@ func main() {
         }
     }
 
-    var seen sync.Map
     results := &sync.Map{}
     n := len(hapid)
     k := *ploidy
@@ -408,23 +446,6 @@ func main() {
                     }
                     indiv := strings.Join(haplotypeIDs, "$")
                     localResults[indiv] = GetCosineSimilarityWeighted(sum, bcov[0], mask, weights)
-                    for _, idx := range combo {
-                        _, seenHap := seen.LoadOrStore(idx, true)
-                        if !seenHap {
-                            homoSum := make(Vector, len(gcov[idx]))
-                            homoIDs := make([]string, k)
-                            for j := 0; j < k; j++ {
-                                if j == 0 {
-                                    copy(homoSum, gcov[idx])
-                                } else {
-                                    homoSum = SumSlices(homoSum, gcov[idx])
-                                }
-                                homoIDs[j] = hapid[idx]
-                            }
-                            homoIndiv := strings.Join(homoIDs, "$")
-                            localResults[homoIndiv] = GetCosineSimilarityWeighted(homoSum, bcov[0], mask, weights)
-                        }
-                    }
                 }
                 resultsChan <- localResults
             }
@@ -432,24 +453,26 @@ func main() {
     }
 
     go func() {
-        gen := combin.NewCombinationGenerator(n, k)
-        for gen.Next() {
-            combo := gen.Combination(nil)
-            jobs <- combo
+        combo := make([]int, k)
+        for ok := n > 0 && k > 0; ok; ok = NextMultiCombination(combo, n) {
+            jobs <- append([]int(nil), combo...)
         }
         close(jobs)
     }()
 
+    collectorDone := make(chan struct{})
     go func() {
+        defer close(collectorDone)
         for localResults := range resultsChan {
             for k, v := range localResults {
                 results.Store(k, v)
             }
         }
-        close(resultsChan)
     }()
 
     wg.Wait()
+    close(resultsChan)
+    <-collectorDone
 
     var keys []string
     results.Range(func(key, value interface{}) bool {

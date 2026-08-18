@@ -27,14 +27,23 @@ def parse_fai_and_set_flags(fai_input):
 
 	flags = []
 
-	# Set -s
+	# Set -s, the segment length, which must not exceed the shortest sequence.
+	# Values are unchanged from the original expressions; they are just produced
+	# as integers now. The original built them through float arithmetic and
+	# emitted '-s 500.0', which pggb parses as a segment length of 0, and
+	# '-s 0.0' for anything under 100 bp.
 	if min_len <= 1000:
-		a=min_len/1000
-		s_val=((a*10)//1)/10*1000
-		flags.append(f'-s {s_val}')
+		# round down to the nearest 100, but never below the sequence itself
+		s_val = (min_len // 100) * 100
+		if s_val < 100:
+			s_val = min_len
+		if s_val > 0:
+			flags.append(f'-s {s_val}')
 	elif min_len <= 5000:
-		s_val = min(1000, math.floor(min_len / 1000) * 1000)
-		flags.append(f'-s {s_val}')
+		# The original min(1000, floor(min_len/1000)*1000) is always 1000 here,
+		# since floor(...) >= 1 in this branch. Kept as-is: raising it would
+		# change the graphs. Revisit if a larger segment is wanted for 1-5 kb.
+		flags.append('-s 1000')
 
 	# Set -x
 	if num_seq > 50:
@@ -81,7 +90,7 @@ rule pggb_construct:
 			-o {params.prefix} \
 			-t {threads} \
 			-D {params.tmpdir} \
-			-n $(wc -l {input.fai}) \
+			-n $(wc -l < {input.fai}) \
 			{params.flags} \
 		&& odgi paths -i {params.prefix}/*smooth.final.og -L | grep {params.pansn} > {params.prefix}/ref_path.txt \
 		&& odgi sort -i {params.prefix}/*smooth.final.og -Y -H {params.prefix}/ref_path.txt -o {output} -C {params.tmpdir} \
