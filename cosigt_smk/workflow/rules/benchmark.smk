@@ -29,8 +29,7 @@ rule odgi_flip_pggb_graph_to_fasta:
 	input:
 		benchmark_graph
 	output:
-		fasta=outpath("benchmark/{chr}/{region}/{region}.flipped.fasta"),
-		fai=outpath("benchmark/{chr}/{region}/{region}.flipped.fasta.fai")
+		fasta=outpath("benchmark/{chr}/{region}/{region}.flipped.fasta")
 	threads:
 		1
 	resources:
@@ -58,7 +57,6 @@ rule odgi_flip_pggb_graph_to_fasta:
 			-i - \
 			-f | sed 's/_inv$//g' > {output.fasta}
 		rm {params.refpath}
-		samtools faidx {output.fasta}
 		'''
 
 
@@ -70,7 +68,6 @@ rule benchmark_prepare_qv:
 	'''
 	input:
 		fasta=rules.odgi_flip_pggb_graph_to_fasta.output.fasta,
-		fai=rules.odgi_flip_pggb_graph_to_fasta.output.fai,
 		# Names of the haplotypes the genotyping graph actually offered. In
 		# leave_all_out these are a strict subset of the FASTA above, and they
 		# define the candidate set the oracle is allowed to pick from.
@@ -101,6 +98,7 @@ rule benchmark_prepare_qv:
 	shell:
 		'''
 		mkdir -p {output.sequences}
+		samtools faidx {input.fasta}
 		bash workflow/scripts/benchmark_prepare.sh \
 			{input.fasta} \
 			{input.panel} \

@@ -6,7 +6,7 @@ if ALLELE_SOURCE == 'assemblies':
 		- Extract the reference region from impg .bedpe output
 		'''
 		input:
-			rules.impg_project_batches.output
+			rules.impg_project_batches.output.filtered
 		output:
 			outpath("bedtools/reference_bed/{chr}/{region}/{region}.bed.gz")
 		threads:

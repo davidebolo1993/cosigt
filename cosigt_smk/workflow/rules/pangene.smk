@@ -125,7 +125,7 @@ rule pangene_graph:
 		'benchmarks/{chr}.{region}.pangene_graph.benchmark.txt'
 	shell:
 		'''
-		pangene {input} --bed | sh workflow/scripts/convert_bed.sh - | gzip > {output}
+		pangene {input} --bed | bash workflow/scripts/convert_bed.sh - | gzip > {output}
 		'''
 
 rule pangene_viz:

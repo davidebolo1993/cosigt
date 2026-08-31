@@ -20,9 +20,14 @@ CONDA_MIN_VERSION ?= 24.7.1
 
 -include $(CONFIG_FILE)
 
-# Default to every core the machine reports. Matters most for PROFILE=local,
-# where this is the actual parallelism; on cluster profiles it only bounds
-# local rules, and the profile's own `jobs:` governs submissions.
+# Default to every core the machine reports. For PROFILE=local this is the
+# actual parallelism. On cluster profiles the profile's own `jobs:` governs how
+# many submissions are in flight, but --cores is NOT merely a local bound: it
+# also caps the resources Snakemake will aggregate into a `group:` job. Detected
+# from wherever make runs, which on a cluster is the login node -- so set CORES
+# to the largest core count a COMPUTE node offers. Leaving it higher lets
+# Snakemake build a group job that no node can ever satisfy, which the scheduler
+# rejects at submission with no rule log to point at.
 DETECTED_CORES := $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)
 CORES ?= $(DETECTED_CORES)
 
@@ -45,6 +50,23 @@ define RUN_SNAKEMAKE
 cd $(COSIGT_DIR) && $(SNAKEMAKE) $(1) $(PROFILE_FLAG) --cores $(CORES) $(SOFTWARE_FLAG) $(2) $(SMK_ARGS)
 endef
 
+# Persist the settings this invocation resolved to, so a later `make run` with
+# no arguments reproduces exactly what was validated. Command-line variables
+# still win over the file, and CORES is written back as-is so a hand-edited
+# value survives.
+define WRITE_CONFIG
+@printf '%s\n' \
+	'# Local cosigt defaults. Command-line variables override these.' \
+	'PROFILE := $(PROFILE_NAME)' \
+	'SOFTWARE := $(SOFTWARE_NAME)' \
+	'TARGET := $(TARGET)' \
+	'CORES := $(CORES)' \
+	'COSIGT_DIR := $(COSIGT_DIR)' \
+	'SNAKEMAKE := $(SNAKEMAKE)' \
+	'PYTHON := $(PYTHON)' \
+	> $(CONFIG_FILE)
+endef
+
 define REQUIRE_PY_MODULE
 $(PYTHON) -c "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('$(1)') else 1)" \
 	|| { echo "  FAIL  missing $(2). Install it with: $(PYTHON) -m pip install $(2)"; exit 1; }; \
@@ -58,16 +80,7 @@ init:
 	@cp -n $(COSIGT_DIR)/config/regions.bed.example    $(COSIGT_DIR)/config/regions.bed
 	@cp -n $(COSIGT_DIR)/config/assemblies.tsv.example $(COSIGT_DIR)/config/assemblies.tsv
 	@cp -n $(COSIGT_DIR)/config/alleles.tsv.example    $(COSIGT_DIR)/config/alleles.tsv
-	@printf '%s\n' \
-		'# Local cosigt defaults. Command-line variables override these.' \
-		'PROFILE := $(PROFILE_NAME)' \
-		'SOFTWARE := $(SOFTWARE_NAME)' \
-		'TARGET := $(TARGET)' \
-		'CORES := $(CORES)' \
-		'COSIGT_DIR := $(COSIGT_DIR)' \
-		'SNAKEMAKE := $(SNAKEMAKE)' \
-		'PYTHON := $(PYTHON)' \
-		> $(CONFIG_FILE)
+	$(WRITE_CONFIG)
 	@echo "Wrote $(CONFIG_FILE) and $(COSIGT_DIR)/config/."
 	@echo "Next: edit $(COSIGT_DIR)/config/*, then run 'make check'."
 
@@ -117,7 +130,9 @@ ifeq ($(USES_APPTAINER),yes)
 	@echo "apptainer flags (used automatically by 'make run'):"
 	@sed 's/^/  /' $(ARGS_FILE)
 endif
+	$(WRITE_CONFIG)
 	@echo
+	@echo "Wrote $(CONFIG_FILE): profile=$(PROFILE_NAME) software=$(SOFTWARE_NAME) target=$(TARGET) cores=$(CORES)"
 	@echo "All checks passed. Run the pipeline with: make run"
 
 run:
