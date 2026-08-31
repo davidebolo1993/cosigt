@@ -258,10 +258,37 @@ def _read_tsv(path, required_columns, schema_path, label):
         reader = csv.DictReader(handle, delimiter="\t")
         if reader.fieldnames is None:
             _fail(f"{label}: empty TSV.")
+        # A trailing or doubled tab on the header line produces a nameless
+        # column, which otherwise only surfaces much later as an opaque
+        # additionalProperties failure from the schema.
+        unnamed = [
+            index
+            for index, name in enumerate(reader.fieldnames, start=1)
+            if not (name or "").strip()
+        ]
+        if unnamed:
+            _fail(
+                f"{label}: header column(s) {', '.join(str(i) for i in unnamed)} "
+                "have no name. Check for a trailing or repeated tab on the header line."
+            )
         missing = [column for column in required_columns if column not in reader.fieldnames]
         if missing:
             _fail(f"{label}: missing required column(s): {', '.join(missing)}.")
+        columns = len(reader.fieldnames)
         for lineno, row in enumerate(reader, start=2):
+            # DictReader collects fields beyond the header under restkey (None)
+            # as a list, so a row with too many tabs used to reach .strip() and
+            # fail with "'list' object has no attribute 'strip'". A surplus of
+            # empty strings is just a trailing tab and is harmless; anything
+            # else means the row genuinely does not match the header.
+            surplus = row.pop(None, None) or []
+            if any((value or "").strip() for value in surplus):
+                _fail(
+                    f"{label} line {lineno}: {columns + len(surplus)} tab-separated "
+                    f"fields, but the header declares {columns} "
+                    f"({', '.join(reader.fieldnames)}). Unexpected extra value(s): "
+                    f"{', '.join(repr(v) for v in surplus)}."
+                )
             if row is None or all((value is None or value == "") for value in row.values()):
                 continue
             cleaned = {key: (value.strip() if value is not None else value) for key, value in row.items()}
@@ -521,6 +548,14 @@ ALLELE_SOURCE = config["allele_source"]
 #   reconstruct each sample from other people's haplotypes. A second graph
 #   containing everything supplies the truth sequences for comparison.
 BENCHMARK_MODE = config.get("benchmark_mode", "leave_zero_out")
+
+# Benchmark results are namespaced by mode. The two designs answer different
+# questions and must not overwrite each other; sharing paths also meant a
+# completed leave_zero_out run made a later leave_all_out run report "nothing to
+# be done", since the profiles restrict rerun-triggers to mtime and the changed
+# `mode` param alone invalidates nothing.
+BENCHMARK_DIR = f"benchmark/{BENCHMARK_MODE}"
+
 LONG_READ_PRESET = READ_MODE.split(":", 1)[1] if READ_MODE.startswith("long:") else None
 READ_MODE_LABEL = _read_mode_label(READ_MODE)
 

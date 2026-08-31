@@ -29,7 +29,7 @@ rule odgi_flip_pggb_graph_to_fasta:
 	input:
 		benchmark_graph
 	output:
-		fasta=outpath("benchmark/{chr}/{region}/{region}.flipped.fasta")
+		fasta=outpath(BENCHMARK_DIR + "/{chr}/{region}/{region}.flipped.fasta")
 	threads:
 		1
 	resources:
@@ -43,7 +43,7 @@ rule odgi_flip_pggb_graph_to_fasta:
 		'benchmarks/{chr}.{region}.odgi_flip_pggb_graph_to_fasta.benchmark.txt'
 	params:
 		pansn=config['pansn_prefix'],
-		refpath=outpath("benchmark/{chr}/{region}/ref_path.txt")
+		refpath=outpath(BENCHMARK_DIR + "/{chr}/{region}/ref_path.txt")
 	shell:
 		'''
 		odgi paths \
@@ -79,8 +79,8 @@ rule benchmark_prepare_qv:
 			region=wildcards.region
 		)
 	output:
-		manifest=temp(outpath("benchmark/{chr}/{region}/qv/manifest.tsv")),
-		sequences=temp(directory(outpath("benchmark/{chr}/{region}/qv/sequences")))
+		manifest=temp(outpath(BENCHMARK_DIR + "/{chr}/{region}/qv/manifest.tsv")),
+		sequences=temp(directory(outpath(BENCHMARK_DIR + "/{chr}/{region}/qv/sequences")))
 	threads:
 		1
 	resources:
@@ -93,7 +93,7 @@ rule benchmark_prepare_qv:
 	benchmark:
 		'benchmarks/{chr}.{region}.benchmark_prepare_qv.benchmark.txt'
 	params:
-		outdir=outpath("benchmark/{chr}/{region}/qv"),
+		outdir=outpath(BENCHMARK_DIR + "/{chr}/{region}/qv"),
 		mode=BENCHMARK_MODE
 	shell:
 		'''
@@ -119,7 +119,7 @@ rule benchmark_qv:
 		manifest=rules.benchmark_prepare_qv.output.manifest,
 		sequences=rules.benchmark_prepare_qv.output.sequences
 	output:
-		outpath("benchmark/{chr}/{region}/{region}.qv.tsv")
+		outpath(BENCHMARK_DIR + "/{chr}/{region}/{region}.qv.tsv")
 	threads:
 		config['benchmark']['threads']
 	resources:
@@ -130,7 +130,7 @@ rule benchmark_qv:
 	benchmark:
 		'benchmarks/{chr}.{region}.benchmark_qv.benchmark.txt'
 	params:
-		indir=outpath("benchmark/{chr}/{region}/qv"),
+		indir=outpath(BENCHMARK_DIR + "/{chr}/{region}/qv"),
 		region='{region}',
 		gene=lambda wildcards: region_annotation(wildcards.region),
 		mode=BENCHMARK_MODE
@@ -152,7 +152,7 @@ def get_all_qv_tables(wildcards):
 	- Per-region QV tables for every configured region
 	'''
 	return [
-		outpath("benchmark", REGION_ROWS[region]["chrom"], region, f"{region}.qv.tsv")
+		outpath(BENCHMARK_DIR, REGION_ROWS[region]["chrom"], region, f"{region}.qv.tsv")
 		for region in REGION_ORDER
 	]
 
@@ -165,7 +165,7 @@ rule benchmark_table:
 	input:
 		get_all_qv_tables
 	output:
-		outpath("benchmark/benchmark.qv.tsv")
+		outpath(BENCHMARK_DIR + "/benchmark.qv.tsv")
 	threads:
 		1
 	resources:
@@ -190,7 +190,7 @@ rule plot_benchmark:
 	input:
 		rules.benchmark_table.output
 	output:
-		outpath("benchmark/benchmark.qv.png")
+		outpath(BENCHMARK_DIR + "/benchmark.qv.png")
 	threads:
 		1
 	resources:

@@ -74,8 +74,8 @@ for region in config['regions']:
     if has_gene_annotations and pangene_viz:
         cosigt_input.add(outpath("pangene", "viz", chrom, region, f"{region}.genes.png"))
         cosigt_benchmark.add(outpath("pangene", "viz", chrom, region, f"{region}.genes.png"))
-    cosigt_benchmark.add(outpath("benchmark", "benchmark.qv.tsv"))
-    cosigt_benchmark.add(outpath("benchmark", "benchmark.qv.png"))
+    cosigt_benchmark.add(outpath(BENCHMARK_DIR, "benchmark.qv.tsv"))
+    cosigt_benchmark.add(outpath(BENCHMARK_DIR, "benchmark.qv.png"))
 
 # optional multi-sample, multi-region merged VCF from cosigt genotypes
 if vcf_output:

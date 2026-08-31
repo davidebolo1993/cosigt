@@ -104,7 +104,9 @@ each graph exists and is an `.og` (convert a GFA with
 the mode: it runs one edlib alignment per (true haplotype, panel haplotype) pair,
 so raise `benchmark.runtime` for large panels.
 
-The per-region tables are collected into `benchmark/benchmark.qv.tsv`:
+The per-region tables are collected into `benchmark/<mode>/benchmark.qv.tsv`,
+where `<mode>` is the configured `benchmark_mode`. The two modes write to
+separate trees, so running one does not overwrite or mask the other:
 
 | column | meaning |
 | --- | --- |
@@ -118,7 +120,7 @@ The per-region tables are collected into `benchmark/benchmark.qv.tsv`:
 | `QV_1_best`, `QV_2_best`, `QV_sum_best` | the QV those would have achieved |
 | `QVfrac` | `QV_sum_pred / QV_sum_best` |
 
-Alongside the table, `benchmark/benchmark.qv.png` summarises the result per gene
+Alongside the table, `benchmark/<mode>/benchmark.qv.png` summarises the result per gene
 as a stacked bar, genes ordered by the share in the best band, with the number of
 samples above each bar. What is banded depends on the mode:
 
@@ -161,7 +163,7 @@ one submission, giving a dial between full parallelism and a few large jobs. It
 is set in the cluster profiles and defaults to 1:
 
 ```bash
-make run PROFILE=slurm SMK_ARGS='--group-components genotype=8'
+make run PROFILE=slurm SMK_ARGS='--group-components genotype=1'
 ```
 
 Group resources are derived automatically, so no group-level resources need to
