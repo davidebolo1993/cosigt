@@ -6,12 +6,12 @@ rule impg_index:
 	input:
 		paf=get_merged_paf
 	output:
-		config['output'] + '/impg/{chr}/{chr}.paf.gz.impg'
+		outpath("impg/{chr}/{chr}.paf.gz.impg")
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
+		runtime=lambda wildcards, attempt: attempt * config['default']['small']['runtime']
 	container:
 		'docker://davidebolo1993/impg:0.3.3'
 	conda:
@@ -31,23 +31,23 @@ rule impg_project_batches:
 	https://github.com/pangenome/impg
 	- Lift-over regions of interest from the target to the queries
 	- Remove user-blacklisted contigs and contigs spanning at least 10% of a flagger bad region
-	- Merge bedpe entries in a 200k range
-	- Filter out contigs that do not span target flanks (1k) and remove contigs that align to multiple blocks
+	- Merge bedpe entries in a 200k range and keep only contigs spanning the target flanks (1k)
 	'''
 	input:
 		paf=get_merged_paf,
-		bed=lambda wildcards: glob('resources/regions/{chr}/{region}.bed'.format(chr=wildcards.chr, region=wildcards.region)),
+		bed=region_bed_path,
+		flagger=rules.write_flagger_blacklist.output,
 		index=rules.impg_index.output
 	output:
-		unfiltered=config['output'] + '/impg/{chr}/{region}/{region}.bedpe.gz',
-		noblck=config['output'] + '/impg/{chr}/{region}/{region}.noblck.bedpe.gz',
-		merged=config['output'] + '/impg/{chr}/{region}/{region}.noblck.merged.bedpe.gz',
-		filtered=config['output'] + '/impg/{chr}/{region}/{region}.noblck.merged.filtered.bedpe.gz'
+		unfiltered=temp(outpath("impg/{chr}/{region}/{region}.bedpe.gz")),
+		noblck=temp(outpath("impg/{chr}/{region}/{region}.noblck.bedpe.gz")),
+		region_bed=temp(outpath("impg/{chr}/{region}/{region}.tmp.bed")),
+		filtered=temp(outpath("impg/{chr}/{region}/{region}.noblck.merged.filtered.bedpe.gz"))
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt *  config['default']['mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt *  config['default']['mid']['time']
+		runtime=lambda wildcards, attempt: attempt *  config['default']['mid']['runtime']
 	container:
 		'docker://davidebolo1993/impg:0.3.3'
 	conda:
@@ -55,26 +55,25 @@ rule impg_project_batches:
 	benchmark:
 		'benchmarks/{chr}.{region}.impg_project_batches.benchmark.txt'
 	params:
-		flagger_blacklist=config['flagger_blacklist'],
 		pansn=config['pansn_prefix'],
 		region='{region}',
-		chr='{chr}',
-		tmp_bed=config['output'] + '/impg/{chr}/{region}/{region}.tmp.bed'
+		chr='{chr}'
 	shell:
 		'''
-		grep -w {params.chr} {input.bed} > {params.tmp_bed}
+		grep -w {params.chr} {input.bed} > {output.region_bed}
 		impg \
 			query \
 			-p {input.paf} \
 			-i {input.index} \
-			-b <(awk -v var={params.pansn} '{{print var$1,$2,$3}}' OFS="\\t" {params.tmp_bed}) | gzip > {output.unfiltered}
-		rm {params.tmp_bed}
-		(bedtools \
+			-b <(awk -v var={params.pansn} '{{print var$1,$2,$3}}' OFS="\\t" {output.region_bed}) | gzip > {output.unfiltered}
+		# No `|| true` here: every legitimately empty case already exits 0, so it
+		# only ever masked real failures, leaving a valid-but-empty gzip and a
+		# rule that reported success with no alleles for the region.
+		bedtools \
 			intersect \
 			-a {output.unfiltered} \
-			-b {params.flagger_blacklist} \
+			-b {input.flagger} \
 			-v \
-			-wa | bedtools sort -i - || true) | gzip > {output.noblck}
-		(zcat {output.noblck} | sh workflow/scripts/bedpe_merge.sh - 200000 || true) | gzip > {output.merged}
-		(zcat {output.merged} | sh workflow/scripts/bedpe_filter.sh - {params.region} 1000 || true) | gzip > {output.filtered}
+			-wa | bedtools sort -i - | gzip > {output.noblck}
+		zcat {output.noblck} | bash workflow/scripts/bedpe_merge_filter.sh - 200000 {params.region} 1000 | gzip > {output.filtered}
 		'''

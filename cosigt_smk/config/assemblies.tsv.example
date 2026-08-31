@@ -1,0 +1,3 @@
+chromosome	fasta
+chr1	/path/to/chr1.assemblies.fa.gz
+chr2	/path/to/chr2.assemblies.fa.gz

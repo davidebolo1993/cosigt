@@ -5,7 +5,9 @@ and the FASTA FAI that lists all haplotypes for that region.
 """
 
 import argparse
+import csv
 import os
+import re
 import sys
 
 
@@ -15,7 +17,27 @@ def parse_args():
     p.add_argument('--tsv',     required=True, nargs='+',help='cosigt TSV files (one per sample)')
     p.add_argument('--output',  required=True,           help='Output VCF path')
     p.add_argument('--pansn',   required=True,           help='PanSN reference prefix, e.g. grch38#1#chr6')
+    p.add_argument('--ref-fai', required=False,          help='Reference genome .fai, used to set the contig length')
     return p.parse_args()
+
+
+def contig_length(ref_fai_path, chrom):
+    """
+    Look up the length of chrom in the reference .fai, so the VCF can declare a
+    contig length. Returns None when unavailable; the contig line is then
+    written without a length, which is valid but less informative.
+    """
+    if not ref_fai_path:
+        return None
+    try:
+        with open(ref_fai_path) as fh:
+            for line in fh:
+                fields = line.split('\t')
+                if len(fields) >= 2 and fields[0] == chrom:
+                    return int(fields[1])
+    except OSError:
+        return None
+    return None
 
 def parse_fai(fai_path, pansn_prefix):
     """
@@ -43,31 +65,52 @@ def parse_fai(fai_path, pansn_prefix):
 
 def ref_coords(ref_name):
     """
-    'grch38#1#chr6:32484347-32603538' -> ('chr6', 32484347, 32603538)
+    'grch38#1#chr6:32484347-32603538' -> ('chr6', 32484348, 32603538)
+
+    The name comes from bedtools getfasta, so start is 0-based half-open.
+    VCF POS is 1-based, hence the +1. END is 1-based inclusive, which is the
+    same number as the 0-based exclusive end, so it is used as-is.
     """
     chrom_coord = ref_name.split('#')[-1]
     chrom, span = chrom_coord.split(':')
     start, end  = span.split('-')
-    return chrom, int(start), int(end)
+    return chrom, int(start) + 1, int(end)
+
+
+def numbered_haplotype_columns(fieldnames):
+    columns = []
+    for name in fieldnames:
+        match = re.fullmatch(r"haplotype\.(\d+)", name)
+        if match:
+            columns.append((int(match.group(1)), name))
+    return [name for _, name in sorted(columns)]
 
 
 def read_last_genotype(tsv_path):
     """
-    Return (sample_id, hap1_name, hap2_name) from the last non-empty line.
-    cosigt TSV columns: sample  hap1  hap2  haplogroup1  haplogroup2  score
+    Return (sample_id, haplotype_names) from the last non-empty data row.
+    cosigt TSV columns include haplotype.1 ... haplotype.N, where N is ploidy.
     """
     last = None
-    with open(tsv_path) as fh:
-        for line in fh:
-            line = line.rstrip('\n')
-            if line:
-                last = line
+    with open(tsv_path, newline='') as fh:
+        reader = csv.DictReader(fh, delimiter='\t')
+        if reader.fieldnames is None:
+            sys.exit(f'ERROR: {tsv_path} is empty')
+        hap_cols = numbered_haplotype_columns(reader.fieldnames)
+        if not hap_cols:
+            sys.exit(f'ERROR: no haplotype.N columns found in {tsv_path}')
+        sample_col = '#sample.id'
+        if sample_col not in reader.fieldnames:
+            sample_col = 'sample' if 'sample' in reader.fieldnames else reader.fieldnames[0]
+        for row in reader:
+            if row and any(value not in (None, '') for value in row.values()):
+                last = row
     if last is None:
         sys.exit(f'ERROR: {tsv_path} is empty')
-    parts = last.split('\t')
-    if len(parts) < 3:
-        sys.exit(f'ERROR: unexpected format in {tsv_path}: {last!r}')
-    return parts[0], parts[1], parts[2]
+    haplotypes = [last[column] for column in hap_cols]
+    if any(hap in (None, '') for hap in haplotypes):
+        sys.exit(f'ERROR: missing haplotype value in {tsv_path}')
+    return last[sample_col], haplotypes
 
 
 def main():
@@ -80,22 +123,32 @@ def main():
     samples   = []
     genotypes = {}
     for tsv in sorted(args.tsv):
-        sample_id, hap1, hap2 = read_last_genotype(tsv)
+        sample_id, haplotypes = read_last_genotype(tsv)
         samples.append(sample_id)
-        idx1 = allele_index.get(hap1)
-        idx2 = allele_index.get(hap2)
-        if idx1 is None:
-            print(f'WARNING: {hap1} not in FAI for {sample_id}; setting to .', file=sys.stderr)
-            idx1 = '.'
-        if idx2 is None:
-            print(f'WARNING: {hap2} not in FAI for {sample_id}; setting to .', file=sys.stderr)
-            idx2 = '.'
-        genotypes[sample_id] = f'{idx1}|{idx2}'
+        gt = []
+        for hap in haplotypes:
+            idx = allele_index.get(hap)
+            if idx is None:
+                print(f'WARNING: {hap} not in FAI for {sample_id}; setting to .', file=sys.stderr)
+                idx = '.'
+            gt.append(str(idx))
+        genotypes[sample_id] = '|'.join(gt)
 
-    # ── INFO ──────────────────────────────────────────────────────────────
+    # ── ALT / INFO ────────────────────────────────────────────────────────
+    # One symbolic ALT per alternate haplotype, so that every GT index below
+    # refers to an allele that actually exists. Names stay short and positional
+    # (<HAP1>..<HAPN>); INFO/ALLELES carries the index -> haplotype mapping.
+    # Deliberately left undeclared in the header: regions have different
+    # haplotype counts, and identical headers keep bcftools concat clean.
+    alt_field = ','.join(f'<HAP{i}>' for i in range(1, len(alleles))) or '.'
+
     allele_map = ','.join(f'{i}={name}' for i, name in enumerate(alleles))
     info       = f'END={end};ALLELES={allele_map}'
-    contig_line = f'##contig=<ID={chrom}>\n'
+    length     = contig_length(args.ref_fai, chrom)
+    contig_line = (
+        f'##contig=<ID={chrom},length={length}>\n' if length
+        else f'##contig=<ID={chrom}>\n'
+    )
 
     # ── write VCF ─────────────────────────────────────────────────────────
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
@@ -108,12 +161,12 @@ def main():
         out.write('##INFO=<ID=ALLELES,Number=1,Type=String,'
                   'Description="Allele index to haplotype name: 0=ref,1=alt1,...">\n')
         out.write('##FORMAT=<ID=GT,Number=1,Type=String,'
-                  'Description="Phased diploid genotype as allele indices">\n')
+                  'Description="Phased genotype as allele indices">\n')
         out.write('#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t'
                   + '\t'.join(samples) + '\n')
 
-        gt_cols = '\t'.join(genotypes.get(s, '.|.') for s in samples)
-        out.write(f'{chrom}\t{pos}\t.\tN\t<HAPLOTYPE>\t.\t.\t{info}\tGT\t{gt_cols}\n')
+        gt_cols = '\t'.join(genotypes.get(s, '.') for s in samples)
+        out.write(f'{chrom}\t{pos}\t.\tN\t{alt_field}\t.\t.\t{info}\tGT\t{gt_cols}\n')
 
 
 if __name__ == '__main__':

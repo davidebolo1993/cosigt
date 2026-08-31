@@ -1,7 +1,7 @@
 # Cosigt
 
 <p align="center">
-<img src="./cosigt.mod.png" width="350"/>
+<img src="./cosigt.png" width="350"/>
 </p>
 
 ## Background
@@ -10,7 +10,7 @@ Cosigt (COsine SImilarity-based GenoTyper) is a [snakemake pipeline](cosigt_smk/
 
 ## Pipeline
 
-Extensive documentation describing how to set-up and run cosigt ia availbale in the online [documentation](https://davidebolo1993.github.io/cosigtdoc/).
+Extensive documentation describing how to set up and run cosigt is available in the online [documentation](https://davidebolo1993.github.io/cosigtdoc/).
 
 ## License
 
@@ -29,4 +29,3 @@ Population-scalable genotyping from low-coverage sequencing data using pangenome
 Bolognini, D. et al., (2024). 
 Recurrent evolution and selection shape structural diversity at the amylase locus.
 **Nature** 634, 617–625
-

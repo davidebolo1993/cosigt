@@ -64,7 +64,9 @@ p3 <- ggplot(node_stats, aes(x = node, y = mask_type, color = mask_type)) +
   labs(title = "Masking Status by Node Index", x = "Node index", y = "Mask type", color = "Mask type") +
   theme_minimal()
 
-comb_plot <- grid.arrange(p1, p2, p3, ncol = 1)
+# arrangeGrob, not grid.arrange: grid.arrange draws immediately, which opens
+# R's default device and leaves a stray Rplots.pdf in the working directory.
+comb_plot <- arrangeGrob(p1, p2, p3, ncol = 1)
 ggsave(paste0(output_prefix, "_mask_distributions.png"), comb_plot, width = 10, height = 20, dpi = 400)
 
 mask_table <- node_stats[, .(node, panplexity_mask, coverage_mask, final_mask)]

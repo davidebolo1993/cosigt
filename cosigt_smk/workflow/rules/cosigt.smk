@@ -9,20 +9,23 @@ rule cosigt_genotype:
 		json=rules.make_clusters.output,
 		mask=rules.filter_nodes.output
 	output:
-		geno=config['output'] + '/cosigt/{sample}/{chr}/{region}/{region}.cosigt_genotype.tsv',
-		combos=config['output'] + '/cosigt/{sample}/{chr}/{region}/{region}.sorted_combos.tsv.gz'
+		geno=outpath("cosigt/{sample}/{chr}/{region}/{region}.cosigt_genotype.tsv"),
+		combos=outpath("cosigt/{sample}/{chr}/{region}/{region}.sorted_combos.tsv.gz")
+	group:
+		"genotype"
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
+		runtime=lambda wildcards, attempt: attempt * config['default']['small']['runtime']
 	container:
-		'docker://davidebolo1993/cosigt:0.1.7'
+		'docker://davidebolo1993/cosigt:0.2'
 	conda:
 		'../envs/cosigt.yaml'
 	params:
-		prefix=config['output'] + '/cosigt/{sample}/{chr}/{region}',
-		sample_id='{sample}'
+		prefix=outpath("cosigt/{sample}/{chr}/{region}"),
+		sample_id='{sample}',
+		ploidy=lambda wildcards: region_ploidy(wildcards.region)
 	benchmark:
 		'benchmarks/{sample}.{chr}.{region}.cosigt_genotype.benchmark.txt'
 	shell:
@@ -33,6 +36,7 @@ rule cosigt_genotype:
 			-c {input.json} \
 			-o {params.prefix} \
 			-i {params.sample_id} \
+			--ploidy {params.ploidy} \
 			-m {input.mask}
 		'''
 	
@@ -46,25 +50,34 @@ rule samtools_faidx_besthaps_fasta:
 		fasta=rules.bedtools_getfasta.output.fasta,
 		fai=rules.bedtools_getfasta.output.fai
 	output:
-		temp(config['output'] + '/cosigt/{sample}/{chr}/{region}/viz/{region}.haplotypes.fasta'),
+		fasta=temp(outpath("cosigt/{sample}/{chr}/{region}/viz/{region}.haplotypes.fasta")),
+		regions=temp(outpath("cosigt/{sample}/{chr}/{region}/viz/{region}.haplotypes.regions.txt"))
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
+		runtime=lambda wildcards, attempt: attempt * config['default']['small']['runtime']
 	container:
-		'docker://davidebolo1993/samtools:1.22'
+		'docker://davidebolo1993/samtools:1.23.1'
 	conda:
 		'../envs/samtools.yaml'
 	params:
-		pansn=config['pansn_prefix'] + '{chr}'
+		pansn=config['pansn_prefix'] + '{chr}',
+		ploidy=lambda wildcards: region_ploidy(wildcards.region)
 	benchmark:
 		'benchmarks/{sample}.{chr}.{region}.samtools_faidx_besthaps_fasta.benchmark.txt'
 	shell:
 		'''
-		samtools faidx -r <(grep {params.pansn} {input.fai} | awk '{{print $1":1-"$2}}') {input.fasta} > {output} \
-		&& samtools faidx -r <(grep $(cut -f 2 {input.geno} | tail -1) {input.fai} | awk '{{print $1":1-"$2}}') {input.fasta} >> {output} \
-		&& samtools faidx -r <(grep $(cut -f 3 {input.geno} | tail -1) {input.fai} | awk '{{print $1":1-"$2}}') {input.fasta} >> {output}
+		if [ {params.ploidy} -gt 2 ]; then
+			echo "SVbyEye haplotype plotting supports ploidy 1 or 2; region {wildcards.region} has ploidy {params.ploidy}." >&2
+			exit 1
+		fi
+		bash workflow/scripts/select_haplotypes.sh \
+			{input.fai} \
+			{input.geno} \
+			all \
+			{params.pansn} > {output.regions}
+		samtools faidx -r {output.regions} {input.fasta} > {output.fasta}
 		'''
 
 rule minimap2_ava:
@@ -73,16 +86,16 @@ rule minimap2_ava:
 	- Realign predicted haplotypes, all-vs-all alignment
 	'''
 	input:
-		rules.samtools_faidx_besthaps_fasta.output
+		rules.samtools_faidx_besthaps_fasta.output.fasta
 	output:
-		temp(config['output'] + '/cosigt/{sample}/{chr}/{region}/viz/{region}.haplotypes.paf'),
+		temp(outpath("cosigt/{sample}/{chr}/{region}/viz/{region}.haplotypes.paf")),
 	threads:
 		config['minimap2']['ava']['threads']
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['minimap2']['ava']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['minimap2']['ava']['time']
+		runtime=lambda wildcards, attempt: attempt * config['minimap2']['ava']['runtime']
 	container:
-		'docker://davidebolo1993/minimap2:2.28'
+		'docker://davidebolo1993/minimap2:2.31'
 	conda:
 		'../envs/minimap2.yaml'
 	benchmark:
@@ -96,6 +109,7 @@ rule minimap2_ava:
 			-D \
 			-P \
 			--dual=no \
+			-t {threads} \
 			{input} \
 			{input} > {output}
 		'''
@@ -108,12 +122,12 @@ rule plot_ava:
 	input:
 		rules.minimap2_ava.output
 	output:
-		config['output'] + '/cosigt/{sample}/{chr}/{region}/viz/{region}.ava.png',
+		outpath("cosigt/{sample}/{chr}/{region}/viz/{region}.ava.png"),
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['high']['time']
+		runtime=lambda wildcards, attempt: attempt * config['default']['high']['runtime']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
@@ -149,36 +163,58 @@ rule minimap2_align_sort_haps:
 		fai=rules.bedtools_getfasta.output.fai,
 		ref=config['reference']
 	output:
-		hap1_bam=temp(config['output'] + '/cosigt/{sample}/{chr}/{region}/svim_asm/{region}.hap1.sorted.bam'),
-		hap1_csi=temp(config['output'] + '/cosigt/{sample}/{chr}/{region}/svim_asm/{region}.hap1.sorted.bam.csi'),
-		hap2_bam=temp(config['output'] + '/cosigt/{sample}/{chr}/{region}/svim_asm/{region}.hap2.sorted.bam'),
-		hap2_csi=temp(config['output'] + '/cosigt/{sample}/{chr}/{region}/svim_asm/{region}.hap2.sorted.bam.csi')
+		hap1_bam=temp(outpath("cosigt/{sample}/{chr}/{region}/svim_asm/{region}.hap1.sorted.bam")),
+		hap1_csi=temp(outpath("cosigt/{sample}/{chr}/{region}/svim_asm/{region}.hap1.sorted.bam.csi")),
+		hap1_regions=temp(outpath("cosigt/{sample}/{chr}/{region}/svim_asm/{region}.hap1.regions.txt")),
+		hap2_bam=temp(outpath("cosigt/{sample}/{chr}/{region}/svim_asm/{region}.hap2.sorted.bam")),
+		hap2_csi=temp(outpath("cosigt/{sample}/{chr}/{region}/svim_asm/{region}.hap2.sorted.bam.csi")),
+		hap2_regions=temp(outpath("cosigt/{sample}/{chr}/{region}/svim_asm/{region}.hap2.regions.txt"))
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['minimap2']['ava']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['minimap2']['ava']['time']
+		runtime=lambda wildcards, attempt: attempt * config['minimap2']['ava']['runtime']
 	container:
-		'docker://davidebolo1993/minimap2:2.28'
+		'docker://davidebolo1993/minimap2:2.31'
 	conda:
 		'../envs/minimap2.yaml'
+	params:
+		ploidy=lambda wildcards: region_ploidy(wildcards.region)
 	benchmark:
 		'benchmarks/{sample}.{chr}.{region}.minimap2_align_sort_haps.benchmark.txt'
 	shell:
 		'''
+		if [ {params.ploidy} -gt 2 ]; then
+			echo "svim-asm supports ploidy 1 or 2; region {wildcards.region} has ploidy {params.ploidy}." >&2
+			exit 1
+		fi
+		bash workflow/scripts/select_haplotypes.sh \
+			{input.fai} \
+			{input.geno} \
+			haplotype.1 > {output.hap1_regions}
 		samtools faidx \
-			-r <(grep $(cut -f 2 {input.geno} | tail -1) {input.fai} | awk '{{print $1":1-"$2}}') \
+			-r {output.hap1_regions} \
 			{input.fasta} | \
 			minimap2 -a -x asm20 --cs -r2k -t {threads} {input.ref} - | \
 			samtools sort -o {output.hap1_bam} --write-index
-		samtools faidx \
-			-r <(grep $(cut -f 3 {input.geno} | tail -1) {input.fai} | awk '{{print $1":1-"$2}}') \
-			{input.fasta} | \
-			minimap2 -a -x asm20 --cs -r2k -t {threads} {input.ref} - | \
-			samtools sort -o {output.hap2_bam} --write-index
+
+		if [ {params.ploidy} -eq 2 ]; then
+			bash workflow/scripts/select_haplotypes.sh \
+				{input.fai} \
+				{input.geno} \
+				haplotype.2 > {output.hap2_regions}
+			samtools faidx \
+				-r {output.hap2_regions} \
+				{input.fasta} | \
+				minimap2 -a -x asm20 --cs -r2k -t {threads} {input.ref} - | \
+				samtools sort -o {output.hap2_bam} --write-index
+		else
+			: > {output.hap2_regions}
+			touch {output.hap2_bam} {output.hap2_csi}
+		fi
 		'''
 
-rule svim_asm_diploid:
+rule svim_asm:
 	'''
 	https://github.com/eldariont/svim-asm
 	- Call structural variants from cosigt-predicted haplotypes aligned to reference
@@ -190,27 +226,38 @@ rule svim_asm_diploid:
 		hap2_csi=rules.minimap2_align_sort_haps.output.hap2_csi,
 		ref=config['reference']
 	output:
-		vcf=config['output'] + '/cosigt/{sample}/{chr}/{region}/svim_asm/variants.vcf'
+		vcf=outpath("cosigt/{sample}/{chr}/{region}/svim_asm/variants.vcf")
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['mid']['time']
+		runtime=lambda wildcards, attempt: attempt * config['default']['mid']['runtime']
 	container:
 		'docker://davidebolo1993/svim-asm:1.0.3'
 	conda:
 		'../envs/svim-asm.yaml'
 	params:
-		workdir=config['output'] + '/cosigt/{sample}/{chr}/{region}/svim_asm'
+		workdir=outpath("cosigt/{sample}/{chr}/{region}/svim_asm"),
+		ploidy=lambda wildcards: region_ploidy(wildcards.region)
 	benchmark:
-		'benchmarks/{sample}.{chr}.{region}.svim_asm_diploid.benchmark.txt'
+		'benchmarks/{sample}.{chr}.{region}.svim_asm.benchmark.txt'
 	shell:
 		'''
-		svim-asm diploid \
-			{params.workdir} \
-			{input.hap1_bam} \
-			{input.hap2_bam} \
-			{input.ref}
+		if [ {params.ploidy} -eq 1 ]; then
+			svim-asm haploid \
+				{params.workdir} \
+				{input.hap1_bam} \
+				{input.ref}
+		elif [ {params.ploidy} -eq 2 ]; then
+			svim-asm diploid \
+				{params.workdir} \
+				{input.hap1_bam} \
+				{input.hap2_bam} \
+				{input.ref}
+		else
+			echo "svim-asm supports ploidy 1 or 2; region {wildcards.region} has ploidy {params.ploidy}." >&2
+			exit 1
+		fi
 		'''
 
 ##OPTIONALLY, MAKE A VCF WITH COSIGT GENOTYPES FOR THIS REGION
@@ -221,13 +268,18 @@ rule make_region_vcf:
 	- Collects cosigt genotype TSVs for all samples in a region and writes
 	  a single per-region VCF. Allele 0 is the reference path; all other
 	  haplotypes are numbered 1..N-1 in alphabetical order and listed in
-	  INFO/ALLELES.
+	  INFO/ALLELES. Each sample gets a phased GT column with one allele
+	  index per configured ploidy level.
 	'''
 	input:
 		tsv=lambda wildcards: expand(
-			config['output'] + '/cosigt/{sample}/' +
-			'_'.join(wildcards.region.split('_')[:-2]) +
-			'/{region}/{region}.cosigt_genotype.tsv',
+			outpath(
+				"cosigt",
+				"{sample}",
+				"_".join(wildcards.region.split("_")[:-2]),
+				"{region}",
+				"{region}.cosigt_genotype.tsv",
+			),
 			sample=config['samples'],
 			region=wildcards.region
 		),
@@ -235,18 +287,19 @@ rule make_region_vcf:
 			rules.bedtools_getfasta.output.fai,
 			chr='_'.join(wildcards.region.split('_')[:-2]),
 			region=wildcards.region
-		)
+		),
+		ref_fai=config['reference'] + '.fai'
 	output:
-		vcf=temp(config['output'] + '/cosigt/vcf/{region}.vcf')
+		vcf=temp(outpath("cosigt/vcf/{region}.vcf"))
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
+		runtime=lambda wildcards, attempt: attempt * config['default']['small']['runtime']
 	conda:
 		'../envs/python.yaml'
 	container:
-		'docker://davidebolo1993/python:3.13.3'
+		'docker://davidebolo1993/pythonenv:3.13.3'
 	params:
 		pansn=lambda wildcards: config['pansn_prefix'] + '_'.join(wildcards.region.split('_')[:-2])
 	benchmark:
@@ -254,10 +307,11 @@ rule make_region_vcf:
 	shell:
 		'''
 		python workflow/scripts/make_region_vcf.py \
-			--fai    {input.fai} \
-			--tsv    {input.tsv} \
-			--output {output.vcf} \
-			--pansn  {params.pansn}
+			--fai     {input.fai} \
+			--tsv     {input.tsv} \
+			--output  {output.vcf} \
+			--pansn   {params.pansn} \
+			--ref-fai {input.ref_fai}
 		'''
 
 rule merge_sort_vcf:
@@ -268,19 +322,19 @@ rule merge_sort_vcf:
 	'''
 	input:
 		expand(
-			config['output'] + '/cosigt/vcf/{region}.vcf',
+			outpath("cosigt/vcf/{region}.vcf"),
 			region=config['regions']
 		)
 	output:
-		vcf=config['output'] + '/cosigt/vcf/cosigt.vcf.gz',
-		tbi=config['output'] + '/cosigt/vcf/cosigt.vcf.gz.tbi'
+		vcf=outpath("cosigt/vcf/cosigt.vcf.gz"),
+		tbi=outpath("cosigt/vcf/cosigt.vcf.gz.tbi")
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['mid']['time']
+		runtime=lambda wildcards, attempt: attempt * config['default']['mid']['runtime']
 	container:
-		'docker://davidebolo1993/bcftools:1.21'
+		'docker://davidebolo1993/bcftools:1.23.1'
 	conda:
 		'../envs/bcftools.yaml'
 	benchmark:

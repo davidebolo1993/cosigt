@@ -1,0 +1,4 @@
+# chrom	start	end	label	optional_alt_regions	optional_ploidy
+chr1	100000	120000	region_1
+chr2	200000	230000	region_2	chr2_alt:200000-230000
+chr3	300000	330000	haploid_region	.	1

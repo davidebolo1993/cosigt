@@ -1,0 +1,25 @@
+executor: slurm
+jobs: 100
+printshellcmds: true
+rerun-incomplete: true
+rerun-triggers:
+  - mtime
+scheduler: greedy
+latency-wait: 60
+shared-fs-usage:
+  - input-output
+  - persistence
+  - software-deployment
+  - sources
+  - storage-local-copies
+default-resources:
+  - mem_mb=4000
+  - runtime=60
+
+# Pack N (sample, region) genotyping chains into a single cluster submission.
+# The 'genotype' group fuses the ~7 per-(sample,region) rules (read extraction,
+# realignment, graph injection, coverage, genotyping) into one job, which alone
+# cuts submissions ~7x. Raise this further to trade retry granularity for fewer
+# queue entries; lower it if jobs are being killed for exceeding walltime.
+group-components:
+  - genotype=1

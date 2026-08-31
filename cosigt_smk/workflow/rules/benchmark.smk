@@ -1,216 +1,216 @@
-rule make_tpr_table:
+#USED ONLY FOR BENCHMARKING - DO NOT USE OTHERWISE
+#
+#Each sample's own haplotypes are part of the pangenome, so the haplotypes cosigt
+#predicts can be compared directly against them. Sequences are compared with
+#edlib and reported as QV and error rate; there is no clustering-agreement step.
+
+def benchmark_graph(wildcards):
 	'''
 	https://github.com/davidebolo1993/cosigt
-	- Compute the tpr
-	- +1 TP if both the predicted haplotypes falls in the ground-truth haplotype clusters
-	- +1 FN if at least one of the predicted haplotypes does not follow TP logic
+	- leave_zero_out: the genotyping graph already contains the truth
+	- leave_all_out: the truth is absent from the genotyping graph by design and
+	  comes from a pre-built per-region graph listed in the truth_graphs table
 	'''
-	input:
-		samples=lambda wildcards: expand(config['output'] + '/cosigt/{sample}/{chr}/{region}/{region}.sorted_combos.tsv.gz', sample=config['samples'], chr='{chr}', region='{region}'),
-		tsv=rules.odgi_dissimilarity.output,
-		json=rules.make_clusters.output
-	output:
-		config['output'] + '/benchmark/{chr}/{region}/tpr.tsv'
-	threads:
-		1
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default']['high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['high']['time']
-	container:
-		'docker://davidebolo1993/renv:4.3.3'
-	conda:
-		'../envs/r.yaml'
-	params:
-		tsv=config['output'] + '/cluster/{chr}/{region}/{region}.clusters.hapdist.tsv'
-	shell:
-		'''
-		Rscript \
-			workflow/scripts/calc_tpr.r \
-			{input.tsv} \
-			{input.json} \
-			{params.tsv} \
-			{output} \
-			{input.samples}
-		'''
+	if BENCHMARK_MODE == 'leave_all_out':
+		return truth_graph_path(wildcards)
+	return outpath("pggb", wildcards.chr, wildcards.region, f"{wildcards.region}.og")
+
 
 rule odgi_flip_pggb_graph_to_fasta:
 	'''
 	https://github.com/pangenome/odgi
 	- Orient the haplotypes with respect to the target
-	- Output fasta file
+	- Output fasta file and its index
+	- Orientation matters because the edit distance between a sequence and the
+	  reverse complement of its match is meaningless
+	- Both predicted and true haplotypes are taken from this one FASTA, so they
+	  are guaranteed to share an orientation frame
 	'''
 	input:
-		rules.pggb_construct.output
+		benchmark_graph
 	output:
-		config['output'] + '/benchmark/{chr}/{region}/{region}.flipped.fasta'
+		fasta=outpath(BENCHMARK_DIR + "/{chr}/{region}/{region}.flipped.fasta")
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
+		runtime=lambda wildcards, attempt: attempt * config['default']['small']['runtime']
 	container:
 		'docker://pangenome/odgi:1753347183'
 	conda:
 		'../envs/odgi.yaml'
+	benchmark:
+		'benchmarks/{chr}.{region}.odgi_flip_pggb_graph_to_fasta.benchmark.txt'
 	params:
 		pansn=config['pansn_prefix'],
-		prefix=config['output'] + '/benchmark/{chr}/{region}'
+		refpath=outpath(BENCHMARK_DIR + "/{chr}/{region}/ref_path.txt")
 	shell:
 		'''
 		odgi paths \
 			-i {input} \
-			-L | grep {params.pansn} > {params.prefix}/ref_path.txt
+			-L | grep {params.pansn} > {params.refpath}
 		odgi flip \
 			-i {input} \
 			-o - \
-			--ref-flips <(cat {params.prefix}/ref_path.txt) | \
+			--ref-flips {params.refpath} | \
 		odgi paths \
 			-i - \
-			-f | sed 's/_inv$//g' > {output}
-		rm {params.prefix}/ref_path.txt
-		'''	
-
-rule prepare_combinations_for_qv:
-	'''
-	https://github.com/samtools/samtools
-	- Prepare all possible combinations for QV calculation
-	'''
-	input:
-		tsv=rules.make_tpr_table.output,
-		fasta=rules.odgi_flip_pggb_graph_to_fasta.output
-	output:
-		config['output'] + '/benchmark/{chr}/{region}/qv_prep.done'
-	threads:
-		1
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
-	container:
-		'docker://davidebolo1993/samtools:1.22'
-	conda:
-		'../envs/samtools.yaml'
-	params:
-		outdir=config['output'] + '/benchmark/{chr}/{region}/qv'
-	shell:
-		'''
-		if [ -f {output} ]; then
-			rm {output}
-		fi
-		if [ -d {params.outdir} ]; then
-			rm -rf {params.outdir}
-		fi
-		bash workflow/scripts/prepare_qv.sh {input.tsv} {input.fasta} {params.outdir} \
-		&& touch {output}
+			-f | sed 's/_inv$//g' > {output.fasta}
+		rm {params.refpath}
 		'''
 
-rule calculate_qv:
-	'''
-	https://github.com/Martinsos/edlib
-	https://github.com/davidebolo1993/cosigt
-	- Actually, calculate the qv
-	'''
-	input:
-		rules.prepare_combinations_for_qv.output
-	output:
-		config['output'] + '/benchmark/{chr}/{region}/qv_calc.done'
-	threads:
-		1
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default']['high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['high']['time']
-	container:
-		'docker://davidebolo1993/edlib:1.2.7'
-	params:
-		indir=config['output'] + '/benchmark/{chr}/{region}/qv'
-	shell:
-		'''
-		if [ -f {output} ]; then
-			rm {output}
-		fi
-		bash workflow/scripts/calculate_qv.sh {params.indir} \
-		&& touch {output} \
-		&& rm {params.indir}/*/qv.tmp.tsv
-		'''
 
-rule combine_tpr_qv:
+rule benchmark_prepare_qv:
 	'''
 	https://github.com/davidebolo1993/cosigt
-	- Combine tpr and all qvs for futher plotting
+	- Collect, per sample, the predicted and the true haplotype sequences
+	- One job per region, looping over samples internally
 	'''
 	input:
-		tpr=rules.make_tpr_table.output,
-		qv=lambda wildcards: expand(config['output'] + '/benchmark/{chr}/{region}/qv_calc.done', chr='{chr}', region='{region}')
+		fasta=rules.odgi_flip_pggb_graph_to_fasta.output.fasta,
+		# Names of the haplotypes the genotyping graph actually offered. In
+		# leave_all_out these are a strict subset of the FASTA above, and they
+		# define the candidate set the oracle is allowed to pick from.
+		panel=rules.bedtools_getfasta.output.fai,
+		genotypes=lambda wildcards: expand(
+			outpath("cosigt/{sample}/{chr}/{region}/{region}.cosigt_genotype.tsv"),
+			sample=config['samples'],
+			chr=wildcards.chr,
+			region=wildcards.region
+		)
 	output:
-		config['output'] + '/benchmark/{chr}/{region}/{region}.tpr_qv.tsv'
-	threads:
-		1
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['small']['time']
-	container:
-		'docker://davidebolo1993/renv:4.3.3'
-	conda:
-		'../envs/r.yaml'
-	params:
-		indir=config['output'] + '/benchmark/{chr}/{region}/qv',
-		outqv=config['output'] + '/benchmark/{chr}/{region}/bestqv.tsv'
-	shell:
-		'''
-		cat {params.indir}/*/qv.tsv > {params.outqv}
-		Rscript \
-			workflow/scripts/combine_tpr_qv.r \
-			{input.tpr} \
-			{params.outqv} \
-			{wildcards.region} \
-			{output}
-		'''
-
-def get_all_tpr_qv_files(wildcards):
-	'''
-	https://github.com/davidebolo1993/cosigt
-	Get all the files from the previuos analysis
-	'''
-	all_files = []
-	with open(config['all_regions']) as f:
-		for line in f:
-			fields = line.rstrip().split('\t')
-			chr = fields[0]
-			start= fields[1]
-			end= fields[2]
-			region='_'.join([chr, start, end])
-			all_files.append(f"{config['output']}/benchmark/{chr}/{region}/{region}.tpr_qv.tsv")
-	return all_files
-
-rule plot_tpr:
-	'''
-	https://github.com/davidebolo1993/cosigt
-	- Make final plot
-	'''
-	input:
-		get_all_tpr_qv_files
-	output:
-		config['output'] + '/benchmark/tpr.edr.png',
-		config['output'] + '/benchmark/tpr.qv.png',
-		config['output'] + '/benchmark/tpr.tpr_bar.png',
-		config['output'] + '/benchmark/tpr.qv_bar.png'
+		manifest=temp(outpath(BENCHMARK_DIR + "/{chr}/{region}/qv/manifest.tsv")),
+		sequences=temp(directory(outpath(BENCHMARK_DIR + "/{chr}/{region}/qv/sequences")))
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb']
+		runtime=lambda wildcards, attempt: attempt * config['default']['mid']['runtime']
+	container:
+		'docker://davidebolo1993/samtools:1.23.1'
+	conda:
+		'../envs/samtools.yaml'
+	benchmark:
+		'benchmarks/{chr}.{region}.benchmark_prepare_qv.benchmark.txt'
+	params:
+		outdir=outpath(BENCHMARK_DIR + "/{chr}/{region}/qv"),
+		mode=BENCHMARK_MODE
+	shell:
+		'''
+		mkdir -p {output.sequences}
+		samtools faidx {input.fasta}
+		bash workflow/scripts/benchmark_prepare.sh \
+			{input.fasta} \
+			{input.panel} \
+			{params.mode} \
+			{params.outdir} \
+			{input.genotypes}
+		'''
+
+
+rule benchmark_qv:
+	'''
+	https://github.com/Martinsos/edlib
+	https://github.com/davidebolo1993/cosigt
+	- Score predicted against true haplotypes with edlib
+	- Report QV and error rate for the better of the two assignments
+	'''
+	input:
+		manifest=rules.benchmark_prepare_qv.output.manifest,
+		sequences=rules.benchmark_prepare_qv.output.sequences
+	output:
+		outpath(BENCHMARK_DIR + "/{chr}/{region}/{region}.qv.tsv")
+	threads:
+		config['benchmark']['threads']
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['benchmark']['mem_mb'],
+		runtime=lambda wildcards, attempt: attempt * config['benchmark']['runtime']
+	container:
+		'docker://davidebolo1993/edlib:1.2.7'
+	benchmark:
+		'benchmarks/{chr}.{region}.benchmark_qv.benchmark.txt'
+	params:
+		indir=outpath(BENCHMARK_DIR + "/{chr}/{region}/qv"),
+		region='{region}',
+		gene=lambda wildcards: region_annotation(wildcards.region),
+		mode=BENCHMARK_MODE
+	shell:
+		'''
+		bash workflow/scripts/benchmark_qv.sh \
+			{params.indir} \
+			{params.region} \
+			{params.gene:q} \
+			{params.mode} \
+			{threads} \
+			{output}
+		'''
+
+
+def get_all_qv_tables(wildcards):
+	'''
+	https://github.com/davidebolo1993/cosigt
+	- Per-region QV tables for every configured region
+	'''
+	return [
+		outpath(BENCHMARK_DIR, REGION_ROWS[region]["chrom"], region, f"{region}.qv.tsv")
+		for region in REGION_ORDER
+	]
+
+
+rule benchmark_table:
+	'''
+	https://github.com/davidebolo1993/cosigt
+	- Concatenate the per-region QV tables into a single table
+	'''
+	input:
+		get_all_qv_tables
+	output:
+		outpath(BENCHMARK_DIR + "/benchmark.qv.tsv")
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
+		runtime=lambda wildcards, attempt: attempt * config['default']['small']['runtime']
+	benchmark:
+		'benchmarks/benchmark_table.benchmark.txt'
+	shell:
+		'''
+		head -n 1 {input[0]} > {output}
+		for file in {input}; do
+			tail -n +2 "$file" >> {output}
+		done
+		'''
+
+
+rule plot_benchmark:
+	'''
+	https://github.com/davidebolo1993/cosigt
+	- Summarise QV per region
+	'''
+	input:
+		rules.benchmark_table.output
+	output:
+		outpath(BENCHMARK_DIR + "/benchmark.qv.png")
+	threads:
+		1
+	resources:
+		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
+		runtime=lambda wildcards, attempt: attempt * config['default']['mid']['runtime']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
 		'../envs/r.yaml'
+	benchmark:
+		'benchmarks/plot_benchmark.benchmark.txt'
 	params:
-		annot_bed=config['all_regions'],
-		output_prefix=config['output'] + '/benchmark/tpr'
+		mode=BENCHMARK_MODE,
+		max_bars=config['benchmark']['max_bars_per_row']
 	shell:
 		'''
 		Rscript \
-		workflow/scripts/plot_tpr.r \
-		{params.output_prefix} \
-		{params.annot_bed} \
-		{input}
+			workflow/scripts/plot_qv.r \
+			{input} \
+			{output} \
+			{params.mode} \
+			{params.max_bars}
 		'''
-	

@@ -5,15 +5,15 @@ rule subset_gtf:
 	- Subset the gtf file to the region of interest
 	'''
 	input:
-		gtf=config['gtf'],
+		gtf=lambda wildcards: config.get('gtf', 'NA'),
 		bed=rules.make_reference_bed.output
 	output:
-		config['output'] + '/annotations/{chr}/{region}/{region}.gtf.gz'
+		outpath("annotations/{chr}/{region}/{region}.gtf.gz")
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt *  config['default']['small']['mem_mb'],
-		time=lambda wildcards, attempt: attempt *  config['default']['small']['time']
+		runtime=lambda wildcards, attempt: attempt *  config['default']['small']['runtime']
 	container:
 		'docker://davidebolo1993/bedtools:2.31.0'
 	conda:
@@ -35,14 +35,14 @@ rule pangene_getaa:
 	'''
 	input:
 		gtf=rules.subset_gtf.output,
-		proteins=config['proteins']
+		proteins=lambda wildcards: config.get('proteins', 'NA')
 	output:
-		config['output'] + '/pangene/proteins/{chr}/{region}/{region}.faa.gz'
+		outpath("pangene/proteins/{chr}/{region}/{region}.faa.gz")
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt *  config['default']['mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt *  config['default']['mid']['time']
+		runtime=lambda wildcards, attempt: attempt *  config['default']['mid']['runtime']
 	container:
 		'docker://davidebolo1993/pangene:1.1'
 	conda:
@@ -68,12 +68,12 @@ checkpoint pangene_prepare:
 		asm=rules.bedtools_getfasta.output.fasta,
 		proteins=rules.pangene_getaa.output
 	output:
-		temp(directory(config['output'] + '/pangene/assemblies/{chr}/{region}/single_assemblies'))
+		temp(directory(outpath("pangene/assemblies/{chr}/{region}/single_assemblies")))
 	threads:
-		1
+		config['pangene']['threads']
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt *  config['default']['mid']['mem_mb'],
-		time=lambda wildcards, attempt: attempt *  config['default']['mid']['time']
+		runtime=lambda wildcards, attempt: attempt *  config['default']['mid']['runtime']
 	container:
 		'docker://davidebolo1993/pangene:1.1'
 	conda:
@@ -84,7 +84,12 @@ checkpoint pangene_prepare:
 		pansn=config['pansn_prefix']
 	shell:
 		'''
-		bash workflow/scripts/pangene_prepare.sh {input.asm} {input.proteins} {params.pansn} {output}
+		bash workflow/scripts/pangene_prepare.sh \
+			{input.asm} \
+			{input.proteins} \
+			{params.pansn} \
+			{output} \
+			{threads}
 		'''
 
 def get_subpafs(wildcards):
@@ -104,14 +109,14 @@ rule pangene_graph:
 	- Construct the pangene graph and convert to a suitable format
 	'''
 	input:
-		lambda wildcards: expand(config['output'] + '/pangene/assemblies/{chr}/{region}/single_assemblies/{asm}_oriented.paf.gz', chr=wildcards.chr, region=wildcards.region, asm=get_subpafs(wildcards))
+		lambda wildcards: expand(outpath("pangene/assemblies/{chr}/{region}/single_assemblies/{asm}_oriented.paf.gz"), chr=wildcards.chr, region=wildcards.region, asm=get_subpafs(wildcards))
 	output:
-		config['output'] + '/pangene/assemblies/{chr}/{region}/{region}.plot.bed.gz'
+		outpath("pangene/assemblies/{chr}/{region}/{region}.plot.bed.gz")
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt *  config['default']['high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt *  config['default']['high']['time']
+		runtime=lambda wildcards, attempt: attempt *  config['default']['high']['runtime']
 	container:
 		'docker://davidebolo1993/pangene:1.1'
 	conda:
@@ -120,7 +125,7 @@ rule pangene_graph:
 		'benchmarks/{chr}.{region}.pangene_graph.benchmark.txt'
 	shell:
 		'''
-		pangene {input} --bed | sh workflow/scripts/convert_bed.sh - | gzip > {output}
+		pangene {input} --bed | bash workflow/scripts/convert_bed.sh - | gzip > {output}
 		'''
 
 rule pangene_viz:
@@ -133,12 +138,12 @@ rule pangene_viz:
 		fai=rules.bedtools_getfasta.output.fai,
 		json=rules.make_clusters.output
 	output:
-		config['output'] + '/pangene/viz/{chr}/{region}/{region}.genes.png'
+		outpath("pangene/viz/{chr}/{region}/{region}.genes.png")
 	threads:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt *  config['default']['high']['mem_mb'],
-		time=lambda wildcards, attempt: attempt * config['default']['high']['time']
+		runtime=lambda wildcards, attempt: attempt * config['default']['high']['runtime']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
@@ -146,10 +151,8 @@ rule pangene_viz:
 	benchmark:
 		'benchmarks/{chr}.{region}.pangene_viz.benchmark.txt'
 	params:
-		paf_folder=config['output'] + '/pangene/assemblies/{chr}/{region}/single_assemblies',
-		tsv=config['output'] + '/cluster/{chr}/{region}/{region}.clusters.medoids.tsv'
+		tsv=outpath("cluster/{chr}/{region}/{region}.clusters.medoids.tsv")
 	shell:
 		'''
 		Rscript workflow/scripts/plotgggenes.r {input.bed} {input.json} {input.fai} {output} {params.tsv}
-		rm -rf {params.paf_folder}
 		'''

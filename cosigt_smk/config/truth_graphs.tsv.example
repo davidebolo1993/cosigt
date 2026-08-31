@@ -1,0 +1,3 @@
+region	graph
+chr1_100000_120000	/path/to/chr1_100000_120000.truth.og
+chr2_200000_230000	/path/to/chr2_200000_230000.truth.og

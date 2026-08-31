@@ -1,0 +1,117 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+type: object
+properties:
+  output:
+    type: string
+  reference:
+    type: string
+  samples:
+    type: string
+  regions:
+    type: string
+  allele_source:
+    type: string
+    enum: [assemblies, custom]
+  assemblies:
+    type: [string, "null"]
+  alleles:
+    type: [string, "null"]
+  read_mode:
+    type: string
+    enum:
+      - short
+      - ancient
+      - "long:map-pb"
+      - "long:map-hifi"
+      - "long:map-ont"
+      - "long:map-iclr"
+      - "long:lr:hq"
+  pansn_prefix:
+    type: string
+  tmpdir:
+    type: string
+  gtf:
+    type: [string, "null"]
+  proteins:
+    type: [string, "null"]
+  flagger_blacklist:
+    type: [string, "null"]
+  wally_viz:
+    type: boolean
+  svbyeye_viz:
+    type: boolean
+  odgi_viz:
+    type: boolean
+  pangene_viz:
+    type: boolean
+  sv_calling:
+    type: boolean
+  vcf:
+    type: boolean
+  truth_graphs:
+    type: [string, "null"]
+  benchmark_mode:
+    type: string
+    enum: [leave_zero_out, leave_all_out]
+  apptainer_cleanenv:
+    type: boolean
+  apptainer_extra:
+    type: [string, "null"]
+  cluster:
+    type: object
+    properties:
+      similarity_threshold:
+        type: [string, number]
+      levels:
+        type: integer
+        minimum: 1
+      eps_selection:
+        type: string
+        enum: [quality, legacy]
+      eps_min:
+        type: number
+        minimum: 0
+      eps_max:
+        type: number
+        minimum: 0
+      eps_step:
+        type: number
+        exclusiveMinimum: 0
+      score_use_dbcv:
+        type: boolean
+      dbcv_dim:
+        type: number
+        exclusiveMinimum: 0
+      low_diversity_mpd_norm:
+        type: number
+        minimum: 0
+      giant_cluster_fraction:
+        type: number
+        exclusiveMinimum: 0
+        exclusiveMaximum: 1
+      small_cluster_size:
+        type: integer
+        minimum: 1
+      ambiguous_eps_ratio:
+        type: number
+        minimum: 1
+      plot_clusters:
+        type: boolean
+      plot_label_max_cluster_size:
+        type: integer
+        minimum: 0
+      plot_width:
+        type: number
+        exclusiveMinimum: 0
+      plot_height:
+        type: number
+        exclusiveMinimum: 0
+    additionalProperties: false
+required:
+  - output
+  - reference
+  - samples
+  - regions
+  - allele_source
+  - read_mode
+additionalProperties: true
