@@ -56,9 +56,14 @@ All three commands take the same variables, on the command line or persisted in 
 | --- | --- | --- |
 | `PROFILE` | `local` | `local`, `slurm`, `lsf`, `cluster-generic`, a path, or `none` |
 | `SOFTWARE` | `apptainer` | `apptainer`, `conda`, or `none` |
-| `TARGET` | `cosigt` | Snakemake target: `cosigt`, `refine`, `benchmark` |
+| `TARGET` | `cosigt` | Snakemake target: `cosigt`, `graph`, `refine`, `benchmark` |
 | `CORES` | all detected | passed to `--cores`; on a cluster, size it from a compute node |
 | `SMK_ARGS` | empty | extra Snakemake arguments, e.g. `-n` for a dry run |
+
+`TARGET=graph` builds the per-region pangenome graphs, their clustering and the
+optional plots, and stops there: nothing that reads a sample's alignment runs.
+Useful to get the expensive graph construction done once, or in advance of
+having the reads. A later `TARGET=cosigt` reuses everything it produced.
 
 So a cluster run is `make run PROFILE=slurm`, a dry run is
 `make run SMK_ARGS=-n`, and a site-specific submit command is

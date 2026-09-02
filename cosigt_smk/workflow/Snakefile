@@ -24,6 +24,7 @@ include: 'rules/wally.smk'
 cosigt_input    = set()
 refine_input    = set()
 cosigt_benchmark= set()
+graph_input     = set()
 
 wally_viz = config.get('wally_viz', False)
 svbyeye_viz = config.get('svbyeye_viz', False)
@@ -66,14 +67,22 @@ for region in config['regions']:
             cosigt_input.add(
                 outpath("cosigt", sample, chrom, region, "svim_asm", "variants.vcf")
             )
+    # Everything the genotyper reads from the graph side. None of it depends on
+    # a sample, so `graph` stops here and leaves the read-facing half undone.
+    graph_input.add(outpath("pggb", chrom, region, f"{region}.og"))
+    graph_input.add(outpath("odgi", "paths", chrom, region, f"{region}.tsv.gz"))
+    graph_input.add(outpath("odgi", "paths", chrom, region, f"{region}.mask.tsv"))
+    graph_input.add(outpath("cluster", chrom, region, f"{region}.clusters.json"))
     if odgi_viz:
         cosigt_input.add(outpath("odgi", "viz", chrom, region, f"{region}.viz.png"))
         cosigt_benchmark.add(outpath("odgi", "viz", chrom, region, f"{region}.viz.png"))
+        graph_input.add(outpath("odgi", "viz", chrom, region, f"{region}.viz.png"))
     if ALLELE_SOURCE == 'assemblies':
         refine_input.add(outpath("refine", "regions_refined.bed"))
     if has_gene_annotations and pangene_viz:
         cosigt_input.add(outpath("pangene", "viz", chrom, region, f"{region}.genes.png"))
         cosigt_benchmark.add(outpath("pangene", "viz", chrom, region, f"{region}.genes.png"))
+        graph_input.add(outpath("pangene", "viz", chrom, region, f"{region}.genes.png"))
     cosigt_benchmark.add(outpath(BENCHMARK_DIR, "benchmark.qv.tsv"))
     cosigt_benchmark.add(outpath(BENCHMARK_DIR, "benchmark.qv.png"))
 
@@ -92,6 +101,12 @@ localrules: check, write_all_regions, write_flagger_blacklist, write_region_bed,
 rule check:
     input:
         METADATA_TARGETS
+
+# GRAPH CONSTRUCTION ONLY - builds the per-region graphs, their clustering and
+# the optional plots, and touches nothing that reads a sample's alignment
+rule graph:
+    input:
+        list(graph_input)
 
 # COSIGT COMMAND
 rule cosigt:
