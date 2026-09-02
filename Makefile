@@ -42,12 +42,22 @@ SOFTWARE_FLAG := $(if $(SOFTWARE_NAME),$(if $(filter none,$(SOFTWARE_NAME)),,--s
 # Absolute, because RUN_SNAKEMAKE cd's into $(COSIGT_DIR) before the shell
 # expands the command substitution that reads this file.
 ARGS_FILE := $(abspath $(COSIGT_DIR)/.cosigt/apptainer.args)
+# The bind mounts depend on the target: `graph` and `refine` never read a
+# sample alignment, so their flags omit those directories. Record which target
+# `check` composed them for, so `run` can refuse a stale pairing instead of
+# failing inside the container with an unhelpful missing-file error.
+TARGET_FILE := $(abspath $(COSIGT_DIR)/.cosigt/target)
 USES_APPTAINER := $(shell printf '%s\n' "$(SOFTWARE_NAME)" | tr ',' ' ' | grep -qw apptainer && echo yes)
 
 .PHONY: init check run
 
+# --config target= tells the workflow which target this invocation is for, so it
+# can validate only what that target needs. It cannot infer this itself:
+# Snakemake does not expose the requested target while the workflow is being
+# parsed, and `make check` always runs the `check` rule, so TARGET never reaches
+# the command line as a positional argument.
 define RUN_SNAKEMAKE
-cd $(COSIGT_DIR) && $(SNAKEMAKE) $(1) $(PROFILE_FLAG) --cores $(CORES) $(SOFTWARE_FLAG) $(2) $(SMK_ARGS)
+cd $(COSIGT_DIR) && $(SNAKEMAKE) $(1) $(PROFILE_FLAG) --cores $(CORES) $(SOFTWARE_FLAG) --config target=$(TARGET) $(2) $(SMK_ARGS)
 endef
 
 # Persist the settings this invocation resolved to, so a later `make run` with
@@ -126,8 +136,9 @@ check:
 	@echo "  ok    config, sample table, regions, indexes and input files"
 	@echo "  ok    region metadata and flagger blacklist written"
 ifeq ($(USES_APPTAINER),yes)
+	@printf '%s\n' "$(TARGET)" > $(TARGET_FILE)
 	@echo
-	@echo "apptainer flags (used automatically by 'make run'):"
+	@echo "apptainer flags for target '$(TARGET)' (used automatically by 'make run'):"
 	@sed 's/^/  /' $(ARGS_FILE)
 endif
 	$(WRITE_CONFIG)
@@ -141,6 +152,10 @@ run:
 ifeq ($(USES_APPTAINER),yes)
 	@test -s $(ARGS_FILE) \
 		|| { echo "$(ARGS_FILE) is missing. Run 'make check' first so the Apptainer flags can be composed."; exit 1; }
+	@checked=$$(cat $(TARGET_FILE) 2>/dev/null); \
+	test "$$checked" = "$(TARGET)" \
+		|| { echo "The Apptainer flags were composed for target '$$checked', but this is a '$(TARGET)' run."; \
+		     echo "Their bind mounts depend on the target. Run 'make check TARGET=$(TARGET)' first."; exit 1; }
 	$(call RUN_SNAKEMAKE,$(TARGET),--apptainer-args "$$(cat $(ARGS_FILE))")
 else
 	$(call RUN_SNAKEMAKE,$(TARGET),)

@@ -41,6 +41,8 @@ It also writes `.cosigt.mk` with the settings below, so later commands can be ru
 - The config file, sample table, region BED, assembly or allele tables, and all referenced files and indexes, writing the generated region metadata and the normalised flagger blacklist as a side effect.
 - Finally, it composes the Apptainer flags this run needs, writes them to `cosigt_smk/.cosigt/apptainer.args`, and persists the validated settings to `.cosigt.mk`.
 
+All of it is scoped to `TARGET`: a `graph` or `refine` run neither reads a sample alignment nor invokes the read-facing tools, so neither is required.
+
 Those flags are the bind mounts covering every configured input and output location, collapsed to the shortest set of parent directories, plus `-e` (`--cleanenv`), which pggb requires. `make run` picks the file up automatically.
 Set `apptainer_extra` in `config.yaml` to append site-specific flags, or `apptainer_cleanenv: false` to drop `-e`.
 
@@ -64,6 +66,13 @@ All three commands take the same variables, on the command line or persisted in 
 optional plots, and stops there: nothing that reads a sample's alignment runs.
 Useful to get the expensive graph construction done once, or in advance of
 having the reads. A later `TARGET=cosigt` reuses everything it produced.
+
+`check` and `run` validate only what the chosen target needs, so `graph` and
+`refine` do not require `samples.tsv` or the alignments to exist at all, and
+under `SOFTWARE=none` they only ask for the tools they actually invoke. The
+Apptainer bind mounts follow from that too, so `run` refuses to start if the
+flags were composed for a different target: re-run `check` after changing
+`TARGET`.
 
 So a cluster run is `make run PROFILE=slurm`, a dry run is
 `make run SMK_ARGS=-n`, and a site-specific submit command is

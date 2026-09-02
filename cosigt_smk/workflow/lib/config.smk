@@ -1,6 +1,7 @@
 import csv
 import os
 import shlex
+import sys
 from collections import OrderedDict
 from shutil import copyfile, which
 
@@ -15,6 +16,34 @@ SAMPLES_SCHEMA = os.path.join(SCHEMA_DIR, "samples.schema.yaml")
 ASSEMBLIES_SCHEMA = os.path.join(SCHEMA_DIR, "assemblies.schema.yaml")
 ALLELES_SCHEMA = os.path.join(SCHEMA_DIR, "alleles.schema.yaml")
 TRUTH_GRAPHS_SCHEMA = os.path.join(SCHEMA_DIR, "truth_graphs.schema.yaml")
+
+# Targets that need only the graph side of the workflow, and so neither read a
+# sample's alignment nor invoke any of the read-facing tools.
+GRAPH_ONLY_TARGETS = ("graph", "refine")
+KNOWN_TARGETS = ("cosigt", "graph", "refine", "benchmark")
+
+
+def requested_target():
+    """
+    Which target this invocation is for, or None when that cannot be
+    determined and everything must therefore be validated.
+
+    Snakemake does not expose the requested target while the workflow is being
+    parsed -- workflow.dag_settings is still None at that point -- so it has to
+    come from the command line. The Makefile passes it as `--config target=`,
+    which is the reliable source: `make check` always runs the `check` rule, so
+    the chosen TARGET never appears as a positional argument there. A bare
+    `snakemake <target>` is covered by the positional fallback.
+
+    Anything ambiguous returns None, which validates everything. Being wrong in
+    that direction only costs a needless check; the opposite would skip a real
+    one.
+    """
+    hinted = config.get("target")
+    if hinted in KNOWN_TARGETS:
+        return hinted
+    named = [t for t in KNOWN_TARGETS if t in sys.argv[1:]]
+    return named[0] if len(named) == 1 else None
 
 
 RESOURCE_DEFAULTS = {
@@ -591,20 +620,26 @@ REGION_ROWS = _parse_regions(config["regions_bed"], REFERENCE_CONTIGS)
 REGION_ORDER = list(REGION_ROWS.keys())
 CHROMOSOMES = list(OrderedDict((row["chrom"], None) for row in REGION_ROWS.values()).keys())
 
-sample_rows = _read_tsv(
-    config["samples_table"],
-    ["sample", "alignment"],
-    SAMPLES_SCHEMA,
-    "Samples TSV",
-)
+RUN_TARGET = requested_target()
+
+# `graph` and `refine` never read a sample's alignment, so requiring the table
+# and every BAM/CRAM to be in place would block the perfectly reasonable case of
+# building the graphs before the reads exist. Everything else still validates.
 SAMPLES = OrderedDict()
-for row in sample_rows:
-    sample = row["sample"]
-    if sample in SAMPLES:
-        _fail(f"Samples TSV: duplicate sample '{sample}'.")
-    alignment = _resolve_path(row["alignment"])
-    _validate_alignment(alignment, f"Sample '{sample}' alignment")
-    SAMPLES[sample] = {"alignment": alignment}
+if RUN_TARGET not in GRAPH_ONLY_TARGETS:
+    sample_rows = _read_tsv(
+        config["samples_table"],
+        ["sample", "alignment"],
+        SAMPLES_SCHEMA,
+        "Samples TSV",
+    )
+    for row in sample_rows:
+        sample = row["sample"]
+        if sample in SAMPLES:
+            _fail(f"Samples TSV: duplicate sample '{sample}'.")
+        alignment = _resolve_path(row["alignment"])
+        _validate_alignment(alignment, f"Sample '{sample}' alignment")
+        SAMPLES[sample] = {"alignment": alignment}
 
 ASSEMBLIES = OrderedDict()
 ALLELES = OrderedDict()
@@ -748,26 +783,38 @@ def apptainer_args():
 
 def required_tools():
     """
-    Binaries the current configuration will actually invoke. Kept in the
-    workflow rather than the Makefile because it depends on read_mode,
-    allele_source and the optional output switches.
+    Binaries the current configuration and target will actually invoke. Kept in
+    the workflow rather than the Makefile because it depends on read_mode,
+    allele_source, the requested target and the optional output switches.
     """
+    # refine only projects regions and remaps; it builds no graph.
+    if RUN_TARGET == "refine":
+        return sorted({"samtools", "bgzip", "impg", "minimap2"})
+
+    # Graph construction, shared by every remaining target.
     tools = {
         "samtools", "bgzip", "bedtools", "minimap2", "odgi", "impg",
-        "gafpack", "gfainject", "panplexity", "pggb", "cosigt", "Rscript",
+        "panplexity", "pggb", "Rscript",
     }
+    if config.get("gtf") != "NA" and config.get("pangene_viz"):
+        tools.update({"pangene", "pangene.js", "miniprot"})
+    if RUN_TARGET == "graph":
+        return sorted(tools)
+
+    # Everything below is reached only once reads are involved.
+    tools.update({"gafpack", "gfainject", "cosigt"})
     if READ_MODE == "short":
         tools.update({"bwa-mem2", "kfilt", "meryl"})
     elif READ_MODE == "ancient":
         tools.add("bwa")
     if config.get("vcf"):
         tools.update({"bcftools", "tabix", "python"})
-    if config.get("gtf") != "NA" and config.get("pangene_viz"):
-        tools.update({"pangene", "pangene.js", "miniprot"})
     if config.get("wally_viz"):
         tools.add("wally")
     if config.get("sv_calling"):
         tools.add("svim-asm")
+    if RUN_TARGET == "benchmark":
+        tools.add("compute_qv")
     return sorted(tools)
 
 
