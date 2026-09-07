@@ -22,6 +22,13 @@ CONDA_MIN_VERSION ?= 24.7.1
 # removes again. Kept in one place so the two cannot drift apart.
 INIT_CONFIGS := config.yaml samples.tsv regions.bed assemblies.tsv alleles.tsv
 
+# Caches under .snakemake/ that `clean` must not touch. Snakemake puts pulled and
+# converted container images in .snakemake/singularity and solved environments in
+# .snakemake/conda unless --apptainer-prefix or --conda-prefix say otherwise, and
+# the profiles here set neither. Both cost far too much to rebuild for a clean to
+# discard them; everything else under .snakemake/ is cheap bookkeeping.
+SNAKEMAKE_KEEP := conda singularity
+
 -include $(CONFIG_FILE)
 
 # Default to every core the machine reports. For PROFILE=local this is the
@@ -183,13 +190,22 @@ clean:
 	@removed=0; \
 	for p in $(CONFIG_FILE) \
 	         $(COSIGT_DIR)/.cosigt \
-	         $(COSIGT_DIR)/.snakemake \
 	         $(COSIGT_DIR)/logs \
 	         $(COSIGT_DIR)/benchmarks \
 	         $(COSIGT_DIR)/resources \
 	         $(COSIGT_DIR)/.cache; do \
 		if [ -e "$$p" ]; then rm -rf "$$p"; echo "  removed  $$p"; removed=1; fi; \
 	done; \
+	if [ -d $(COSIGT_DIR)/.snakemake ]; then \
+		for e in $(COSIGT_DIR)/.snakemake/* $(COSIGT_DIR)/.snakemake/.[!.]*; do \
+			[ -e "$$e" ] || continue; \
+			case " $(SNAKEMAKE_KEEP) " in \
+			  *" $$(basename $$e) "*) \
+				echo "  kept     $$e ($$(du -sh $$e 2>/dev/null | cut -f1), expensive to rebuild)" ;; \
+			  *) rm -rf "$$e"; echo "  removed  $$e"; removed=1 ;; \
+			esac; \
+		done; \
+	fi; \
 	test "$$removed" = "1" || echo "  nothing to remove"
 	@echo
 	@echo "config:"

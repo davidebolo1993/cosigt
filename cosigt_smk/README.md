@@ -50,11 +50,16 @@ Set `apptainer_extra` in `config.yaml` to append site-specific flags, or `apptai
 ### make clean
 
 `clean` removes what `init` and `check` created -- `.cosigt.mk`, `.cosigt/` --
-along with the bookkeeping a run leaves behind: `.snakemake/`, `logs/`,
-`benchmarks/`, `resources/`, `.cache`. It prints what it removed and is safe to
-re-run.
+along with the bookkeeping a run leaves behind: `logs/`, `benchmarks/`,
+`resources/`, `.cache`, and most of `.snakemake/`. It prints what it removed and
+is safe to re-run.
 
-Two things it leaves alone. The pipeline's output directory is never touched: it
+Inside `.snakemake/` it keeps `singularity/` and `conda/`. Unless you set
+`--apptainer-prefix` or `--conda-prefix`, those hold every pulled and converted
+container image and every solved conda environment -- gigabytes that take a long
+time to rebuild. Everything else there is cheap bookkeeping and is removed.
+
+Two further things it leaves alone. The pipeline's output directory is never touched: it
 is not created by `init` and may hold a great deal of cluster time, so removing
 it is left to you. Config files you have edited are also kept, since they are
 your work rather than generated state; ones still identical to their shipped
