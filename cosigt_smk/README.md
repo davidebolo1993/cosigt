@@ -63,7 +63,7 @@ example are removed. `make clean FORCE=1` removes the edited ones too, leaving
 
 ### make run
 
-`run` just runs the selected target. It re-reads the flags written by `check`, so run `check` first, or after changing any input path.
+`run` just runs the selected target. It re-reads the flags written by `check`, so run `check` first, or after changing any configured path -- including `output`, whose directory has to be bound into the container. `check` always recomposes the flags, so they cannot go stale behind you.
 
 ### Settings
 

@@ -837,6 +837,28 @@ DEPLOYMENT = deployment_methods()
 APPTAINER_ARGS_FILE = os.path.join(WORKDIR, ".cosigt", "apptainer.args")
 METADATA_TARGETS.append(APPTAINER_ARGS_FILE)
 
+# The bind mounts are derived from configured paths, so the flags file has to be
+# rebuilt whenever those change -- most obviously `output`, which is only chosen
+# after `make init`. Without a declared dependency the rule has no input and no
+# params, so nothing can ever invalidate it: the file is written once and then
+# reported unchanged forever, and a later run binds the wrong directories.
+#
+# Only files this target actually read are listed, so declaring them cannot
+# resurrect the sample table for a graph-only run.
+APPTAINER_ARGS_DEPS = [
+    path
+    for path in (
+        list(workflow.configfiles)
+        + [
+            config.get("samples_table") if SAMPLES else None,
+            config.get("assemblies_table") if ASSEMBLIES else None,
+            config.get("alleles_table") if ALLELES else None,
+            config.get("truth_graphs_table") if TRUTH_GRAPHS else None,
+        ]
+    )
+    if path
+]
+
 # Fail fast, alongside the other input validation, rather than part-way through
 # a run. Only meaningful without containers or conda, where tools come from PATH.
 if not DEPLOYMENT:

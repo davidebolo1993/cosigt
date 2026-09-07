@@ -133,6 +133,11 @@ check:
 	@if [ "$(SOFTWARE_NAME)" = "none" ]; then echo "  ..    no container/conda deployment; required tools are checked against PATH below"; fi
 	@echo
 	@echo "configuration and inputs:"
+	@# Always recompose the flags. The rule declares the config and tables as
+	@# inputs, which covers editing them, but a --config override on the command
+	@# line changes no file, so removing the old file is what makes `check`
+	@# unconditionally authoritative about the bind mounts.
+	@rm -f $(ARGS_FILE)
 	@log=$$(mktemp); \
 	( $(call RUN_SNAKEMAKE,check,) ) >/dev/null 2>$$log \
 		|| { echo "  FAIL  see below"; echo; sed 's/^/  /' $$log; rm -f $$log; exit 1; }; \

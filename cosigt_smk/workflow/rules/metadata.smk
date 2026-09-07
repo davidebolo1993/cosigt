@@ -45,7 +45,14 @@ rule write_apptainer_args:
 	by hand; -e (--cleanenv) is included because pggb fails without it.
 	Tools required from PATH when running without containers or conda are
 	verified at config-parse time, in lib/config.smk.
+
+	The config and the tables it points to are declared as inputs so that
+	editing them rebuilds the flags. Without that this rule has neither input
+	nor params, so nothing can invalidate its output and the flags silently
+	keep whatever paths were configured the first time `check` ran.
 	'''
+	input:
+		APPTAINER_ARGS_DEPS
 	output:
 		APPTAINER_ARGS_FILE
 	run:
