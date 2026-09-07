@@ -107,6 +107,8 @@ rule pangene_graph:
 	'''
 	https://github.com/lh3/pangene
 	- Construct the pangene graph and convert to a suitable format
+	- The PAFs are globbed inside their own directory rather than spliced into
+	  the command.
 	'''
 	input:
 		lambda wildcards: expand(outpath("pangene/assemblies/{chr}/{region}/single_assemblies/{asm}_oriented.paf.gz"), chr=wildcards.chr, region=wildcards.region, asm=get_subpafs(wildcards))
@@ -123,9 +125,21 @@ rule pangene_graph:
 		'../envs/pangene.yaml'
 	benchmark:
 		'benchmarks/{chr}.{region}.pangene_graph.benchmark.txt'
+	params:
+		pafdir=outpath("pangene/assemblies/{chr}/{region}/single_assemblies")
 	shell:
 		'''
-		pangene {input} --bed | bash workflow/scripts/convert_bed.sh - | gzip > {output}
+		root=$(pwd)
+		cd {params.pafdir}
+		shopt -s nullglob
+		pafs=(*_oriented.paf.gz)
+		if [ ${{#pafs[@]}} -eq 0 ]; then
+			echo "No *_oriented.paf.gz in {params.pafdir}" >&2
+			exit 1
+		fi
+		pangene "${{pafs[@]}}" --bed \
+			| bash "$root"/workflow/scripts/convert_bed.sh - \
+			| gzip > {output}
 		'''
 
 rule pangene_viz:

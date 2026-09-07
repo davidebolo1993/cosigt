@@ -11,6 +11,7 @@ There are three commands. From the repository root:
 make init     # create config/ from the examples and write .cosigt.mk
 make check    # validate the environment and the configuration
 make run      # run the pipeline
+make clean    # undo init and check, back to a fresh checkout
 ```
 
 Edit the files created in `cosigt_smk/config/` between `init` and `check`.
@@ -45,6 +46,20 @@ All of it is scoped to `TARGET`: a `graph` or `refine` run neither reads a sampl
 
 Those flags are the bind mounts covering every configured input and output location, collapsed to the shortest set of parent directories, plus `-e` (`--cleanenv`), which pggb requires. `make run` picks the file up automatically.
 Set `apptainer_extra` in `config.yaml` to append site-specific flags, or `apptainer_cleanenv: false` to drop `-e`.
+
+### make clean
+
+`clean` removes what `init` and `check` created -- `.cosigt.mk`, `.cosigt/` --
+along with the bookkeeping a run leaves behind: `.snakemake/`, `logs/`,
+`benchmarks/`, `resources/`, `.cache`. It prints what it removed and is safe to
+re-run.
+
+Two things it leaves alone. The pipeline's output directory is never touched: it
+is not created by `init` and may hold a great deal of cluster time, so removing
+it is left to you. Config files you have edited are also kept, since they are
+your work rather than generated state; ones still identical to their shipped
+example are removed. `make clean FORCE=1` removes the edited ones too, leaving
+`config/` with nothing but `*.example`.
 
 ### make run
 

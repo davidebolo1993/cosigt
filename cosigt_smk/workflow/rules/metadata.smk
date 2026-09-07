@@ -12,26 +12,29 @@ rule write_all_regions:
 				handle.write('\t'.join([row['chrom'], row['start'], row['end'], row['annot']]) + '\n')
 
 
-rule write_region_bed:
+rule write_region_beds:
 	'''
-	Write one per-region BED, including optional alternative intervals.
+	Write every per-region BED, including optional alternative intervals.
+
+	One job for all regions rather than one job per region. These are `run:`
+	directives, and Snakemake re-establishes the workflow context for each such
+	job -- around a second apiece, against a few milliseconds of actual work --
+	so a per-region rule made `make check` scale with the size of the regions
+	BED and dominate its runtime. Nothing downstream consumes these files
+	individually, so there is nothing to gain from the finer granularity.
 	'''
 	output:
-		outpath("metadata/regions/{chr}/{region}.bed")
+		REGION_BED_TARGETS
 	run:
-		if wildcards.region not in REGION_ROWS:
-			raise WorkflowError(f"Unknown region '{wildcards.region}'.")
-		row = REGION_ROWS[wildcards.region]
-		if row['chrom'] != wildcards.chr:
-			raise WorkflowError(
-				f"Region '{wildcards.region}' belongs to chromosome '{row['chrom']}', not '{wildcards.chr}'."
-			)
-		os.makedirs(os.path.dirname(output[0]), exist_ok=True)
-		with open(output[0], 'w') as handle:
-			handle.write('\t'.join([row['chrom'], row['start'], row['end'], row['annot']]) + '\n')
-			if row['alts'] is not None:
-				for alt_chrom, alt_start, alt_end in _parse_alt_regions(row['alts'], wildcards.region):
-					handle.write('\t'.join([alt_chrom, alt_start, alt_end, alt_chrom]) + '\n')
+		for region in REGION_ORDER:
+			row = REGION_ROWS[region]
+			path = _metadata_region_bed(region)
+			os.makedirs(os.path.dirname(path), exist_ok=True)
+			with open(path, 'w') as handle:
+				handle.write('\t'.join([row['chrom'], row['start'], row['end'], row['annot']]) + '\n')
+				if row['alts'] is not None:
+					for alt_chrom, alt_start, alt_end in _parse_alt_regions(row['alts'], region):
+						handle.write('\t'.join([alt_chrom, alt_start, alt_end, alt_chrom]) + '\n')
 
 
 rule write_apptainer_args:

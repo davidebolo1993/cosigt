@@ -18,6 +18,10 @@ TARGET     ?= cosigt
 SMK_ARGS   ?=
 CONDA_MIN_VERSION ?= 24.7.1
 
+# The config files `init` copies from the shipped examples, and that `clean`
+# removes again. Kept in one place so the two cannot drift apart.
+INIT_CONFIGS := config.yaml samples.tsv regions.bed assemblies.tsv alleles.tsv
+
 -include $(CONFIG_FILE)
 
 # Default to every core the machine reports. For PROFILE=local this is the
@@ -49,7 +53,7 @@ ARGS_FILE := $(abspath $(COSIGT_DIR)/.cosigt/apptainer.args)
 TARGET_FILE := $(abspath $(COSIGT_DIR)/.cosigt/target)
 USES_APPTAINER := $(shell printf '%s\n' "$(SOFTWARE_NAME)" | tr ',' ' ' | grep -qw apptainer && echo yes)
 
-.PHONY: init check run
+.PHONY: init check run clean
 
 # --config target= tells the workflow which target this invocation is for, so it
 # can validate only what that target needs. It cannot infer this itself:
@@ -160,3 +164,48 @@ ifeq ($(USES_APPTAINER),yes)
 else
 	$(call RUN_SNAKEMAKE,$(TARGET),)
 endif
+
+# Undo `init` and `check`, plus the bookkeeping a run leaves behind.
+#
+# Two things are deliberately not removed. The pipeline's output directory is
+# never touched: it is not created by `init`, and it can hold weeks of cluster
+# time. Config files you have edited are kept as well, since they are your work
+# rather than generated state -- pass FORCE=1 to remove those too.
+clean:
+	@echo "cosigt clean"
+	@echo
+	@echo "generated state:"
+	@removed=0; \
+	for p in $(CONFIG_FILE) \
+	         $(COSIGT_DIR)/.cosigt \
+	         $(COSIGT_DIR)/.snakemake \
+	         $(COSIGT_DIR)/logs \
+	         $(COSIGT_DIR)/benchmarks \
+	         $(COSIGT_DIR)/resources \
+	         $(COSIGT_DIR)/.cache; do \
+		if [ -e "$$p" ]; then rm -rf "$$p"; echo "  removed  $$p"; removed=1; fi; \
+	done; \
+	test "$$removed" = "1" || echo "  nothing to remove"
+	@echo
+	@echo "config:"
+	@out=$$(sed -n 's/^output:[[:space:]]*//p' $(COSIGT_DIR)/config/config.yaml 2>/dev/null | head -1); \
+	kept=0; \
+	for f in $(INIT_CONFIGS); do \
+		p=$(COSIGT_DIR)/config/$$f; \
+		[ -e "$$p" ] || continue; \
+		if [ "$(FORCE)" = "1" ] || cmp -s "$$p" "$$p.example"; then \
+			rm -f "$$p"; echo "  removed  $$p"; \
+		else \
+			kept=1; echo "  kept     $$p (edited since init)"; \
+		fi; \
+	done; \
+	if [ "$$kept" = "1" ]; then \
+		echo; \
+		echo "  Those hold your configuration, so they were left in place."; \
+		echo "  Re-run as 'make clean FORCE=1' to remove them as well."; \
+	fi; \
+	if [ -n "$$out" ]; then \
+		echo; \
+		echo "  Results in '$$out' were not touched. Remove them yourself if you"; \
+		echo "  want a completely clean tree; nothing here will delete them."; \
+	fi
