@@ -23,7 +23,7 @@ If you use cosigt in your research, please cite the following references:
 <a id="1">[1]</a> 
 Bolognini, D. et al., (2026). 
 COSIGT: population‑scalable genotyping of complex loci from low‑coverage sequencing data using pangenome graphs
-**Genome Biology** *In press*
+**Genome Biol** 27, 286
 
 <a id="2">[2]</a> 
 Bolognini, D. et al., (2024). 
