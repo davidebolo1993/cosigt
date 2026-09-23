@@ -95,7 +95,15 @@ rule refine:
     input:
         list(refine_input)
 
-localrules: check, write_all_regions, write_flagger_blacklist, write_region_beds, write_apptainer_args
+# benchmark_table, plot_benchmark and merge_sort_vcf aggregate across every
+# region, so a submitted job would first rebuild the whole DAG on the compute
+# node -- measured on a 300-region, 200-sample run at ~13 minutes and over 10 GB
+# before the rule's own command began, which then OOM-killed. Run locally they
+# reuse the DAG the main process already has. Their real cost is small: the
+# benchmark concatenation measures 0.43 s of CPU and 3.6 MB. Containers still
+# apply to local rules, so these keep running inside theirs.
+localrules: check, write_all_regions, write_flagger_blacklist, write_region_beds, write_apptainer_args,
+            benchmark_table, plot_benchmark, merge_sort_vcf
 
 # FAST CONFIG AND INPUT VALIDATION
 rule check:
