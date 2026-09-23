@@ -721,27 +721,6 @@ if BENCHMARK_MODE == "leave_all_out":
         )
 
 config["samples"] = list(SAMPLES.keys())
-
-# Snakemake rebuilds the DAG inside every job it submits. A per-sample job prunes
-# to a handful of jobs and starts in a second or two, but a rule that aggregates
-# across every region depends on the whole workflow and rebuilds all of it first.
-# Measured at roughly 1.2 ms per job: at 200 samples over 300 regions that is
-# ~430k jobs and about eight minutes, spent before the rule's own command runs.
-# Such a rule needs a walltime that covers its own startup or the scheduler kills
-# it while Snakemake is still resolving the graph -- which looks like a timeout on
-# a job that does seconds of actual work.
-#
-# Budgeted at 2 ms per job for slower cluster hardware and shared filesystems.
-def _dag_rebuild_minutes():
-    jobs = (
-        7 * len(SAMPLES) * len(REGION_ORDER)
-        + 15 * len(REGION_ORDER)
-        + len(SAMPLES)
-    )
-    return max(5, -(-jobs * 2 // 60000))
-
-
-DAG_REBUILD_MINUTES = _dag_rebuild_minutes()
 config["regions"] = REGION_ORDER
 config["chromosomes"] = CHROMOSOMES
 

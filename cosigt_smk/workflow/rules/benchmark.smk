@@ -161,11 +161,6 @@ rule benchmark_table:
 	'''
 	https://github.com/davidebolo1993/cosigt
 	- Concatenate the per-region QV tables into a single table
-	- Runs locally (see `localrules` in the Snakefile). It needs no container and
-	  does a second of work, but it depends on every region, so as a submitted
-	  job it would first rebuild the entire DAG on the compute node -- minutes at
-	  cohort scale, against a walltime sized for the concatenation. That is what
-	  made it die of a runtime limit no matter how large the limit looked.
 	'''
 	input:
 		get_all_qv_tables
@@ -200,7 +195,7 @@ rule plot_benchmark:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
-		runtime=lambda wildcards, attempt: attempt * (config['default']['mid']['runtime'] + DAG_REBUILD_MINUTES)
+		runtime=lambda wildcards, attempt: attempt * config['default']['mid']['runtime']
 	container:
 		'docker://davidebolo1993/renv:4.3.3'
 	conda:
