@@ -7,9 +7,10 @@
 # passes over two gzip round-trips. Behaviour is unchanged:
 #
 #   merge   consecutive rows sharing query and target names are combined when
-#           either gap is within <merge_distance>, taking the min start and max
-#           end on both sides. Input must already be sorted, as bedtools sort
-#           leaves it.
+#           the next row starts at most <merge_distance> after the end of the
+#           current block (overlapping rows always merge), taking the min start
+#           and max end on both sides. Input must already be sorted by query
+#           start, as bedtools sort leaves it.
 #   filter  a merged block is kept only if its target interval covers both
 #           flanks of the region, i.e. spans start..start+flank and
 #           end-flank..end.
@@ -24,8 +25,6 @@ region="$3"
 flank_size="$4"
 
 awk -v d="$distance" -v region="$region" -v size="$flank_size" '
-function abs(x) { return (x < 0) ? -x : x }
-
 # Emit the block held in the accumulator, if it spans both flanks.
 function flush() {
   if (qname != "" &&
@@ -48,7 +47,7 @@ BEGIN {
 
 {
   if ($1 == qname && $4 == tname &&
-      (abs($2 - qend) <= d || abs(qstart - $3) <= d)) {
+      $2 <= qend + d) {
 
     # Extend query block
     qstart = (qstart < $2) ? qstart : $2
