@@ -332,7 +332,7 @@ rule merge_sort_vcf:
 		1
 	resources:
 		mem_mb=lambda wildcards, attempt: attempt * config['default']['mid']['mem_mb'],
-		runtime=lambda wildcards, attempt: attempt * config['default']['mid']['runtime']
+		runtime=lambda wildcards, attempt: attempt * (config['default']['mid']['runtime'] + DAG_REBUILD_MINUTES)
 	container:
 		'docker://davidebolo1993/bcftools:1.23.1'
 	conda:
