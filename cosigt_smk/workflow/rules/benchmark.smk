@@ -161,6 +161,14 @@ rule benchmark_table:
 	'''
 	https://github.com/davidebolo1993/cosigt
 	- Concatenate the per-region QV tables into a single table
+	- Done in Python rather than a shell loop because a shell command has every
+	  input path spliced into it, and Snakemake passes that command to bash as a
+	  single argument, which Linux caps at MAX_ARG_STRLEN (128 KiB). At roughly
+	  130 bytes per path that ceiling sits near a thousand regions, and crossing
+	  it does not produce a clean error. Iterating the declared inputs has no
+	  such limit, and unlike globbing the directory it cannot pick up a stale
+	  table from a region since removed from the regions BED. Verified to produce
+	  byte-identical output to the shell loop it replaces.
 	'''
 	input:
 		get_all_qv_tables
@@ -173,13 +181,15 @@ rule benchmark_table:
 		runtime=lambda wildcards, attempt: attempt * config['default']['small']['runtime']
 	benchmark:
 		'benchmarks/benchmark_table.benchmark.txt'
-	shell:
-		'''
-		head -n 1 {input[0]} > {output}
-		for file in {input}; do
-			tail -n +2 "$file" >> {output}
-		done
-		'''
+	run:
+		with open(output[0], 'w') as out:
+			for index, table in enumerate(input):
+				with open(table) as handle:
+					header = handle.readline()
+					if index == 0:
+						out.write(header)
+					for line in handle:
+						out.write(line)
 
 
 rule plot_benchmark:
