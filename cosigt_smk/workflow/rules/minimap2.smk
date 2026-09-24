@@ -34,59 +34,30 @@ rule pansnspec_target:
 		samtools faidx {output.fasta}
 		'''
 
-rule samtools_faidx_batches:
+rule minimap2_align_batches:
 	'''
 	https://github.com/samtools/samtools
+	https://github.com/lh3/minimap2
 	- Extract the contigs of one PanSN sample (a batch) from the original assemblies
+	- Align them (queries) to the target (reference chromosome), streaming the
+	  extracted contigs into minimap2 rather than writing them out first
 	- Compress with bgzip
-	- Build index
 	- The batches are read from the assembly .fai at parse time (see
 	  assembly_batches), so the contig list is written here rather than by a
 	  checkpoint. A checkpoint re-runs the post-processing of the whole DAG each
 	  time one completes, which at cohort scale costs as much as building it.
-	'''
-	input:
-		fasta=assembly_fasta_path,
-		fai=assembly_fai_path
-	output:
-		ids=temp(outpath("minimap2/{chr}/batches/ids/{batch}.txt")),
-		fasta=temp(outpath("minimap2/{chr}/batches/fasta/{batch}.fasta.gz")),
-		fai=temp(outpath("minimap2/{chr}/batches/fasta/{batch}.fasta.gz.fai")),
-		gzi=temp(outpath("minimap2/{chr}/batches/fasta/{batch}.fasta.gz.gzi"))
-	threads:
-		1
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default']['high']['mem_mb'],
-		runtime=lambda wildcards, attempt: attempt * config['default']['high']['runtime']
-	container:
-		'docker://davidebolo1993/samtools:1.23.1'
-	conda:
-		'../envs/samtools.yaml'
-	benchmark:
-		'benchmarks/{chr}.{batch}.samtools_faidx_batches.benchmark.txt'
-	params:
-		batch='{batch}'
-	shell:
-		'''
-		awk -F '\\t' -v batch={params.batch:q} '{{split($1, parts, "#")}} parts[1] == batch {{print $1}}' {input.fai} > {output.ids}
-		samtools faidx -r {output.ids} {input.fasta} | bgzip -c > {output.fasta}
-		samtools faidx {output.fasta}
-		'''
-
-rule minimap2_align_batches:
-	'''
-	https://github.com/lh3/minimap2
-	- Align individual queries (assemblies) to the target (reference chromosome)
-	- Compress with bgzip
+	- Extraction used to be a job of its own. It is a cheap step that is simply
+	  redone if the alignment fails, and folding it in removes a job per batch
+	  and halves the batch jobs that every group check walks through.
 	'''
 	input:
 		target_fasta=rules.pansnspec_target.output.fasta,
 		target_fai=rules.pansnspec_target.output.fai,
-		queries_fasta=rules.samtools_faidx_batches.output.fasta,
-		queries_fai=rules.samtools_faidx_batches.output.fai,
-		queries_gzi=rules.samtools_faidx_batches.output.gzi
+		queries_fasta=assembly_fasta_path,
+		queries_fai=assembly_fai_path
 	output:
-		temp(outpath("minimap2/{chr}/batches/paf/{batch}.paf.gz"))
+		paf=temp(outpath("minimap2/{chr}/batches/paf/{batch}.paf.gz")),
+		ids=temp(outpath("minimap2/{chr}/batches/ids/{batch}.txt"))
 	threads:
 		config['minimap2']['avo']['threads']
 	resources:
@@ -98,15 +69,19 @@ rule minimap2_align_batches:
 		'../envs/minimap2.yaml'
 	benchmark:
 		'benchmarks/{chr}.{batch}.minimap2_align_batches.benchmark.txt'
+	params:
+		batch='{batch}'
 	shell:
 		'''
+		awk -F '\\t' -v batch={params.batch:q} '{{split($1, parts, "#")}} parts[1] == batch {{print $1}}' {input.queries_fai} > {output.ids}
+		samtools faidx -r {output.ids} {input.queries_fasta} | \
 		minimap2 \
 			-x asm20 \
 			--eqx \
 			-c \
 			-t {threads} \
 			{input.target_fasta} \
-			{input.queries_fasta} | bgzip -c > {output}
+			- | bgzip -c > {output.paf}
 		'''
 
 def get_paf_files(wildcards):
