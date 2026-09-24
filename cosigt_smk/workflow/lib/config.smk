@@ -509,6 +509,14 @@ def assembly_fai_path(wildcards):
     return assembly_fasta_path(wildcards) + ".fai"
 
 
+def assembly_batches(chrom):
+    """PanSN samples in a chromosome's assembly FASTA, one minimap2 batch each."""
+    try:
+        return ASSEMBLIES[chrom]["batches"]
+    except KeyError:
+        _fail(f"No assembly FASTA configured for chromosome '{chrom}'.")
+
+
 def custom_allele_fasta_path(wildcards):
     try:
         return ALLELES[wildcards.region]["fasta"]
@@ -657,8 +665,13 @@ if ALLELE_SOURCE == "assemblies":
         if chrom in ASSEMBLIES:
             _fail(f"Assemblies TSV: duplicate chromosome '{chrom}'.")
         fasta = _resolve_path(row["fasta"])
-        _validate_fasta(fasta, f"Assembly FASTA for '{chrom}'", require_pansn=True)
-        ASSEMBLIES[chrom] = {"fasta": fasta}
+        names = _validate_fasta(fasta, f"Assembly FASTA for '{chrom}'", require_pansn=True)
+        # minimap2 alignment is parallelised over PanSN samples (the first field
+        # of sample#hap#contig). They are fixed by the .fai, which is read here
+        # anyway, so the batches are known at parse time rather than discovered
+        # by a checkpoint.
+        batches = sorted({name.split("#", 1)[0] for name in names})
+        ASSEMBLIES[chrom] = {"fasta": fasta, "batches": batches}
     missing = [chrom for chrom in CHROMOSOMES if chrom not in ASSEMBLIES]
     if missing:
         _fail(f"Assemblies TSV: missing chromosome(s) used by regions: {', '.join(missing)}.")

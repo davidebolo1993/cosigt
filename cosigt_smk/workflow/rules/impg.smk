@@ -4,7 +4,7 @@ rule impg_index:
 	- Impg refine	
 	'''
 	input:
-		paf=get_merged_paf
+		paf=rules.merge_paf_per_region.output.paf
 	output:
 		outpath("impg/{chr}/{chr}.paf.gz.impg")
 	threads:
@@ -34,7 +34,7 @@ rule impg_project_batches:
 	- Merge bedpe entries in a 200k range and keep only contigs spanning the target flanks (1k)
 	'''
 	input:
-		paf=get_merged_paf,
+		paf=rules.merge_paf_per_region.output.paf,
 		bed=region_bed_path,
 		flagger=rules.write_flagger_blacklist.output,
 		index=rules.impg_index.output

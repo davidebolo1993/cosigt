@@ -58,7 +58,7 @@ rule pangene_getaa:
 			{input.proteins} | bgzip > {output}
 		'''
 
-checkpoint pangene_prepare:
+rule pangene_prepare:
 	'''
 	https://github.com/lh3/miniprot
 	- Protein-to-assemblies alignment using miniprot
@@ -92,26 +92,18 @@ checkpoint pangene_prepare:
 			{threads}
 		'''
 
-def get_subpafs(wildcards):
-	'''
-	https://github.com/davidebolo1993/cosigt
-	- Needed to get the wildcard name
-	'''
-	chromosome=wildcards.chr
-	region=wildcards.region
-	checkpoint_output = checkpoints.pangene_prepare.get(chr=chromosome, region=region).output[0]
-	subpafs_files = glob(checkpoint_output + '/*_oriented.paf.gz')
-	return [os.path.basename(f).split('_oriented')[0] for f in subpafs_files]
-
 rule pangene_graph:
 	'''
 	https://github.com/lh3/pangene
 	- Construct the pangene graph and convert to a suitable format
 	- The PAFs are globbed inside their own directory rather than spliced into
-	  the command.
+	  the command, so the directory itself is the input. pangene_prepare used
+	  to be a checkpoint only to list those PAFs as inputs, and every checkpoint
+	  that completes re-runs the post-processing of the whole DAG -- once per
+	  region, each costing about as much as building the DAG in the first place.
 	'''
 	input:
-		lambda wildcards: expand(outpath("pangene/assemblies/{chr}/{region}/single_assemblies/{asm}_oriented.paf.gz"), chr=wildcards.chr, region=wildcards.region, asm=get_subpafs(wildcards))
+		rules.pangene_prepare.output
 	output:
 		outpath("pangene/assemblies/{chr}/{region}/{region}.plot.bed.gz")
 	threads:

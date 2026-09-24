@@ -34,52 +34,22 @@ rule pansnspec_target:
 		samtools faidx {output.fasta}
 		'''
 
-checkpoint generate_batches:
-	'''
-	https://github.com/davidebolo1993/cosigt
-	- Generate batches for parallel alignment
-	- With assemblies following PanSN specification, each sample is aligned independently
-	- Kept on disk (it is only a few small text files) so that re-evaluating the
-	  checkpoint on later runs still resolves the same batch wildcards
-	'''
-	input:
-		assembly_fai_path,
-	output:
-		directory(outpath("minimap2/{chr}/batches/ids"))
-	threads:
-		1
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['default']['small']['mem_mb'],
-		runtime=lambda wildcards, attempt: attempt * config['default']['small']['runtime']
-	benchmark:
-		'benchmarks/{chr}.generate_batches.benchmark.txt'
-	shell:
-		'''
-		bash workflow/scripts/make_minimap2_batches.sh {input} {output}
-		'''
-
-def get_batches(wildcards):
-	'''
-	https://github.com/davidebolo1993/cosigt
-	- Trace sample names - those will be used as widlcards downstream
-	'''
-	chr=wildcards.chr
-	checkpoint_output = checkpoints.generate_batches.get(chr=chr).output[0]
-	batch_files = glob(checkpoint_output + '/*txt')
-	return [os.path.basename(f).split('.')[0] for f in batch_files]
-
 rule samtools_faidx_batches:
 	'''
 	https://github.com/samtools/samtools
-	- Extract individual contigs from the original assemblies
+	- Extract the contigs of one PanSN sample (a batch) from the original assemblies
 	- Compress with bgzip
 	- Build index
+	- The batches are read from the assembly .fai at parse time (see
+	  assembly_batches), so the contig list is written here rather than by a
+	  checkpoint. A checkpoint re-runs the post-processing of the whole DAG each
+	  time one completes, which at cohort scale costs as much as building it.
 	'''
 	input:
 		fasta=assembly_fasta_path,
-		fai=assembly_fai_path,
-		ids=outpath("minimap2/{chr}/batches/ids/{batch}.txt")
+		fai=assembly_fai_path
 	output:
+		ids=temp(outpath("minimap2/{chr}/batches/ids/{batch}.txt")),
 		fasta=temp(outpath("minimap2/{chr}/batches/fasta/{batch}.fasta.gz")),
 		fai=temp(outpath("minimap2/{chr}/batches/fasta/{batch}.fasta.gz.fai")),
 		gzi=temp(outpath("minimap2/{chr}/batches/fasta/{batch}.fasta.gz.gzi"))
@@ -94,9 +64,12 @@ rule samtools_faidx_batches:
 		'../envs/samtools.yaml'
 	benchmark:
 		'benchmarks/{chr}.{batch}.samtools_faidx_batches.benchmark.txt'
+	params:
+		batch='{batch}'
 	shell:
 		'''
-		samtools faidx -r {input.ids} {input.fasta} | bgzip -c > {output.fasta}
+		awk -F '\\t' -v batch={params.batch:q} '{{split($1, parts, "#")}} parts[1] == batch {{print $1}}' {input.fai} > {output.ids}
+		samtools faidx -r {output.ids} {input.fasta} | bgzip -c > {output.fasta}
 		samtools faidx {output.fasta}
 		'''
 
@@ -139,16 +112,15 @@ rule minimap2_align_batches:
 def get_paf_files(wildcards):
 	'''
 	https://github.com/davidebolo1993/cosigt
-	- Delay resolution
+	- One PAF per PanSN sample in this chromosome's assemblies
 	'''
-	batches = get_batches(wildcards)
 	return expand(
 		outpath("minimap2/{chr}/batches/paf/{batch}.paf.gz"),
 		chr=wildcards.chr,
-		batch=batches
+		batch=assembly_batches(wildcards.chr)
 	)
 
-checkpoint merge_paf_per_region:
+rule merge_paf_per_region:
 	'''
 	https://github.com/davidebolo1993/cosigt
 	- Concatenate the paf files for each chromosome together
@@ -176,11 +148,3 @@ checkpoint merge_paf_per_region:
 		cat {input} > {output.paf}
 		bgzip -r {output.paf}
 		'''
-
-def get_merged_paf(wildcards):
-	'''
-	https://github.com/davidebolo1993/cosigt
-	- For some reason (this I don't fully understand, honestly) we need to re-evaluate this
-	'''
-	checkpoint_output = checkpoints.merge_paf_per_region.get(chr=wildcards.chr).output[0]
-	return checkpoint_output

@@ -4,7 +4,7 @@ rule impg_refine:
 	- Impg refine
 	'''
 	input:
-		paf=get_merged_paf,
+		paf=rules.merge_paf_per_region.output.paf,
 		bed=region_bed_path,
 		flagger=rules.write_flagger_blacklist.output,
 		index=rules.impg_index.output

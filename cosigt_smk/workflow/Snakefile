@@ -1,4 +1,3 @@
-from glob import glob
 configfile: 'config/config.yaml'
 
 include: 'lib/config.smk'
