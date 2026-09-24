@@ -35,13 +35,17 @@ if READ_MODE == 'short':
 		https://github.com/bwa-mem2/bwa-mem2
 		https://github.com/samtools/samtools
 		- Re-align original short-reads to the contigs, keeping up to 10k multi-mappings
+		- The mapped and the k-mer-filtered unmapped reads are streamed into
+		  bwa-mem2 together rather than first concatenated by a job of their own,
+		  which was one extra job per (sample, region) for a `cat`
 		- Sort alignment
 		- Convert to .cram and index at the same time
 		'''
 		input:
 			ref_fasta=rules.bedtools_getfasta.output.fasta,
 			ref_fai=rules.bwamem2_index.output,
-			sample_fasta=rules.combine_mapped_unmapped.output
+			fasta_mapped=rules.samtools_fasta_mapped.output,
+			fasta_unmapped=rules.kfilt_filter_unmapped.output
 		output:
 			cram=temp(outpath("bwa-mem2/{sample}/{chr}/{region}/{region}.realigned.cram")),
 			crai=temp(outpath("bwa-mem2/{sample}/{chr}/{region}/{region}.realigned.cram.crai"))
@@ -77,13 +81,13 @@ if READ_MODE == 'short':
 		shell:
 			'''
 			echo "bwa-mem2 mem -c {resources.max_occ} (seed-occurrence cap, halved on each retry)" >&2
-			bwa-mem2 mem \
+			cat {input.fasta_mapped} {input.fasta_unmapped} | bwa-mem2 mem \
 			-t {threads} \
 			-p \
 			-h 10000 \
 			-c {resources.max_occ} \
 			{params.index_prefix} \
-			{input.sample_fasta} | samtools sort \
+			/dev/stdin | samtools sort \
 			-@ {threads} \
 			-T {params.tmp_prefix} | \
 			samtools view \
