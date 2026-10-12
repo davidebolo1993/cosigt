@@ -16,6 +16,7 @@ SAMPLES_SCHEMA = os.path.join(SCHEMA_DIR, "samples.schema.yaml")
 ASSEMBLIES_SCHEMA = os.path.join(SCHEMA_DIR, "assemblies.schema.yaml")
 ALLELES_SCHEMA = os.path.join(SCHEMA_DIR, "alleles.schema.yaml")
 TRUTH_GRAPHS_SCHEMA = os.path.join(SCHEMA_DIR, "truth_graphs.schema.yaml")
+GRAPHS_SCHEMA = os.path.join(SCHEMA_DIR, "graphs.schema.yaml")
 
 # Targets that need only the graph side of the workflow, and so neither read a
 # sample's alignment nor invoke any of the read-facing tools.
@@ -518,10 +519,26 @@ def assembly_batches(chrom):
 
 
 def custom_allele_fasta_path(wildcards):
+    """
+    The per-region allele FASTA that bedtools_getfasta normalises.
+
+    For allele_source: graph there is no user FASTA: the sequences are the
+    graph's own paths, extracted by pggb_construct, so the rest of the workflow
+    is exactly the custom path with a different starting file.
+    """
+    if ALLELE_SOURCE == "graph":
+        return outpath("pggb", wildcards.chr, wildcards.region, f"{wildcards.region}.paths.fa")
     try:
         return ALLELES[wildcards.region]["fasta"]
     except KeyError:
         _fail(f"No custom allele FASTA configured for region '{wildcards.region}'.")
+
+
+def custom_graph_path(wildcards):
+    try:
+        return GRAPHS[wildcards.region]["graph"]
+    except KeyError:
+        _fail(f"No graph configured for region '{wildcards.region}'.")
 
 
 def realigned_alignment_path(wildcards):
@@ -602,6 +619,7 @@ config["samples_table"] = _resolve_path(config["samples"])
 config["regions_bed"] = _resolve_path(config["regions"])
 config["assemblies_table"] = _resolve_optional_path(config.get("assemblies"))
 config["alleles_table"] = _resolve_optional_path(config.get("alleles"))
+config["graphs_table"] = _resolve_optional_path(config.get("graphs"))
 config["truth_graphs_table"] = _resolve_optional_path(config.get("truth_graphs"))
 config["gtf"] = _resolve_optional_path(config.get("gtf")) or "NA"
 config["proteins"] = _resolve_optional_path(config.get("proteins")) or "NA"
@@ -651,6 +669,7 @@ if RUN_TARGET not in GRAPH_ONLY_TARGETS:
 
 ASSEMBLIES = OrderedDict()
 ALLELES = OrderedDict()
+GRAPHS = OrderedDict()
 if ALLELE_SOURCE == "assemblies":
     if config.get("assemblies_table") is None:
         _fail("Config key 'assemblies' is required when allele_source is 'assemblies'.")
@@ -675,7 +694,7 @@ if ALLELE_SOURCE == "assemblies":
     missing = [chrom for chrom in CHROMOSOMES if chrom not in ASSEMBLIES]
     if missing:
         _fail(f"Assemblies TSV: missing chromosome(s) used by regions: {', '.join(missing)}.")
-else:
+elif ALLELE_SOURCE == "custom":
     if config.get("alleles_table") is None:
         _fail("Config key 'alleles' is required when allele_source is 'custom'.")
     allele_rows = _read_tsv(
@@ -694,6 +713,42 @@ else:
     missing = [region for region in REGION_ORDER if region not in ALLELES]
     if missing:
         _fail(f"Alleles TSV: missing region(s) used by regions BED: {', '.join(missing)}.")
+else:
+    # allele_source: graph -- one pre-built odgi graph per region, used in place
+    # of the graph pggb would otherwise build. Its paths are the alleles.
+    if config.get("graphs_table") is None:
+        _fail("Config key 'graphs' is required when allele_source is 'graph'.")
+    graph_rows = _read_tsv(
+        config["graphs_table"],
+        ["region", "graph"],
+        GRAPHS_SCHEMA,
+        "Graphs TSV",
+    )
+    for row in graph_rows:
+        region = row["region"]
+        if region in GRAPHS:
+            _fail(f"Graphs TSV: duplicate region '{region}'.")
+        graph = _resolve_path(row["graph"])
+        _ensure_file(graph, f"Graph for '{region}'")
+        # odgi reads .og natively and plain GFAv1 by converting on the fly; the
+        # staged copy downstream is always .og, so either works. A compressed GFA
+        # is the trap: odgi mistakes it for a serialized graph and aborts with an
+        # opaque length_error rather than refusing it.
+        if graph.endswith((".gz", ".bgz", ".zst")):
+            _fail(
+                f"Graph for '{region}': {graph} is compressed, and odgi only reads "
+                "uncompressed GFA. Decompress it first, or convert it with "
+                "'odgi build -g in.gfa -o out.og'."
+            )
+        if not graph.endswith((".og", ".gfa")):
+            _fail(
+                f"Graph for '{region}': {graph} must be an odgi graph (.og) or an "
+                "uncompressed GFA (.gfa)."
+            )
+        GRAPHS[region] = {"graph": graph}
+    missing = [region for region in REGION_ORDER if region not in GRAPHS]
+    if missing:
+        _fail(f"Graphs TSV: missing region(s) used by regions BED: {', '.join(missing)}.")
 
 # leave_all_out compares against haplotypes that are, by design, absent from the
 # genotyping graph. Those come from pre-built per-region truth graphs supplied by
@@ -758,6 +813,8 @@ for assembly in ASSEMBLIES.values():
     bind_paths.add(os.path.dirname(assembly["fasta"]))
 for allele in ALLELES.values():
     bind_paths.add(os.path.dirname(allele["fasta"]))
+for graph in GRAPHS.values():
+    bind_paths.add(os.path.dirname(graph["graph"]))
 for truth in TRUTH_GRAPHS.values():
     bind_paths.add(os.path.dirname(truth["graph"]))
 
@@ -811,6 +868,9 @@ def required_tools():
     }
     if config.get("gtf") != "NA" and config.get("pangene_viz"):
         tools.update({"pangene", "pangene.js", "miniprot"})
+    # A supplied graph is only re-sorted and read with odgi; pggb never runs.
+    if ALLELE_SOURCE == "graph":
+        tools.discard("pggb")
     if RUN_TARGET == "graph":
         return sorted(tools)
 
@@ -866,6 +926,7 @@ APPTAINER_ARGS_DEPS = [
             config.get("samples_table") if SAMPLES else None,
             config.get("assemblies_table") if ASSEMBLIES else None,
             config.get("alleles_table") if ALLELES else None,
+            config.get("graphs_table") if GRAPHS else None,
             config.get("truth_graphs_table") if TRUTH_GRAPHS else None,
         ]
     )

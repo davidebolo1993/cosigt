@@ -6,7 +6,7 @@ rule odgi_utils:
 	- Compute paths coverage over nodes
 	'''
 	input:
-		rules.pggb_construct.output
+		rules.pggb_construct.output.graph
 	output:
 		gfa=outpath("odgi/view/{chr}/{region}/{region}.gfa.gz"),
 		paths=outpath("odgi/paths/{chr}/{region}/{region}.tsv.gz"),
@@ -112,7 +112,7 @@ rule odgi_dissimilarity:
 	- Compute the dissimilarity of each path with respect to each other path
 	'''
 	input:
-		rules.pggb_construct.output
+		rules.pggb_construct.output.graph
 	output:
 		temp(outpath("odgi/dissimilarity/{chr}/{region}/{region}.tsv.gz"))
 	threads:

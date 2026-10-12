@@ -11,10 +11,12 @@ properties:
     type: string
   allele_source:
     type: string
-    enum: [assemblies, custom]
+    enum: [assemblies, custom, graph]
   assemblies:
     type: [string, "null"]
   alleles:
+    type: [string, "null"]
+  graphs:
     type: [string, "null"]
   read_mode:
     type: string

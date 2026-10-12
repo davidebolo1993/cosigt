@@ -53,47 +53,105 @@ def parse_fai_and_set_flags(fai_input):
 
 
 
-rule pggb_construct:
-	'''
-	https://github.com/pangenome/pggb
-	- Build pangenome graph using pggb
-	'''
-	input:
-		fasta=rules.bedtools_getfasta.output.fasta,
-		fai=rules.bedtools_getfasta.output.fai
-	output:
-		outpath("pggb/{chr}/{region}/{region}.og")
-	threads:
-		config['pggb']['threads']
-	resources:
-		mem_mb=lambda wildcards, attempt: attempt * config['pggb']['mem_mb'],
-		runtime=lambda wildcards, attempt: attempt * config['pggb']['runtime']
-	container:
-		'docker://ghcr.io/pangenome/pggb:20250423145743e25486'
-	conda:
-		'../envs/pggb.yaml'
-	benchmark:
-		'benchmarks/{chr}.{region}.pggb_construct.benchmark.txt'
-	params:
-		prefix=outpath("pggb/{chr}/{region}"),
-		flags=lambda wildcards, input: config['pggb']['params'] + ' ' + parse_fai_and_set_flags(input.fai),
-		tmpdir=tmp_path(config['pggb']['tmpdir'], "{chr}", "{region}", "{region}"),
-		pansn=config['pansn_prefix']
-	shell:
+if ALLELE_SOURCE != 'graph':
+
+	rule pggb_construct:
 		'''
-		if [ -d {params.prefix} ]; then
-			rm -rf {params.prefix}
-		fi
-		mkdir -p {params.tmpdir}
-		pggb \
-			-i {input.fasta} \
-			-o {params.prefix} \
-			-t {threads} \
-			-D {params.tmpdir} \
-			-n $(wc -l < {input.fai}) \
-			{params.flags} \
-		&& odgi paths -i {params.prefix}/*smooth.final.og -L | grep {params.pansn} > {params.prefix}/ref_path.txt \
-		&& odgi sort -i {params.prefix}/*smooth.final.og -Y -H {params.prefix}/ref_path.txt -o {output} -C {params.tmpdir} \
-		&& rm {params.prefix}/ref_path.txt
-		rm -rf {params.tmpdir}
+		https://github.com/pangenome/pggb
+		- Build pangenome graph using pggb
 		'''
+		input:
+			fasta=rules.bedtools_getfasta.output.fasta,
+			fai=rules.bedtools_getfasta.output.fai
+		output:
+			graph=outpath("pggb/{chr}/{region}/{region}.og")
+		threads:
+			config['pggb']['threads']
+		resources:
+			mem_mb=lambda wildcards, attempt: attempt * config['pggb']['mem_mb'],
+			runtime=lambda wildcards, attempt: attempt * config['pggb']['runtime']
+		container:
+			'docker://ghcr.io/pangenome/pggb:20250423145743e25486'
+		conda:
+			'../envs/pggb.yaml'
+		benchmark:
+			'benchmarks/{chr}.{region}.pggb_construct.benchmark.txt'
+		params:
+			prefix=outpath("pggb/{chr}/{region}"),
+			flags=lambda wildcards, input: config['pggb']['params'] + ' ' + parse_fai_and_set_flags(input.fai),
+			tmpdir=tmp_path(config['pggb']['tmpdir'], "{chr}", "{region}", "{region}"),
+			pansn=config['pansn_prefix']
+		shell:
+			'''
+			if [ -d {params.prefix} ]; then
+				rm -rf {params.prefix}
+			fi
+			mkdir -p {params.tmpdir}
+			pggb \
+				-i {input.fasta} \
+				-o {params.prefix} \
+				-t {threads} \
+				-D {params.tmpdir} \
+				-n $(wc -l < {input.fai}) \
+				{params.flags} \
+			&& odgi paths -i {params.prefix}/*smooth.final.og -L | grep {params.pansn} > {params.prefix}/ref_path.txt \
+			&& odgi sort -i {params.prefix}/*smooth.final.og -Y -H {params.prefix}/ref_path.txt -o {output.graph} -C {params.tmpdir} \
+			&& rm {params.prefix}/ref_path.txt
+			rm -rf {params.tmpdir}
+			'''
+
+else:
+
+	rule pggb_construct:
+		'''
+		https://github.com/pangenome/odgi
+		- allele_source: graph -- stage a user-provided graph where pggb would
+		  have written its own, so every rule downstream is unchanged
+		- Accepts .og or plain GFA: odgi converts GFA on read, and the staged
+		  copy is always .og, so nothing downstream sees the difference
+		- Re-sorted by the reference path exactly as the pggb branch does with a
+		  graph it builds, so both sources hand downstream the same layout
+		- Its paths are extracted as the allele FASTA, written as stored and not
+		  flipped: gfainject places realigned reads back onto this graph by path
+		  name, so the FASTA has to match the graph base for base
+		- Fails here, on the first step for the region, if the graph has no path
+		  carrying the PanSN reference prefix
+		'''
+		input:
+			custom_graph_path
+		output:
+			graph=outpath("pggb/{chr}/{region}/{region}.og"),
+			fasta=outpath("pggb/{chr}/{region}/{region}.paths.fa")
+		threads:
+			1
+		resources:
+			mem_mb=lambda wildcards, attempt: attempt * config['default']['high']['mem_mb'],
+			runtime=lambda wildcards, attempt: attempt * config['default']['mid']['runtime']
+		container:
+			'docker://ghcr.io/pangenome/pggb:20250423145743e25486'
+		conda:
+			'../envs/pggb.yaml'
+		benchmark:
+			'benchmarks/{chr}.{region}.pggb_construct.benchmark.txt'
+		params:
+			prefix=outpath("pggb/{chr}/{region}"),
+			tmpdir=tmp_path(config['pggb']['tmpdir'], "{chr}", "{region}", "{region}"),
+			pansn=config['pansn_prefix']
+		shell:
+			'''
+			mkdir -p {params.prefix} {params.tmpdir}
+			# Listed first and separately so that a graph odgi cannot read fails on
+			# odgi's own error, instead of being misreported below as a graph that
+			# merely lacks a reference path.
+			odgi paths -i {input} -L > {params.prefix}/all_paths.txt
+			grep {params.pansn} {params.prefix}/all_paths.txt > {params.prefix}/ref_path.txt || true
+			if [ ! -s {params.prefix}/ref_path.txt ]; then
+				echo "Graph {input} has no path with the reference prefix {params.pansn}." >&2
+				echo "cosigt needs the reference path in every graph, named with pansn_prefix." >&2
+				exit 1
+			fi
+			odgi sort -i {input} -Y -H {params.prefix}/ref_path.txt -o {output.graph} -C {params.tmpdir}
+			odgi paths -i {output.graph} -f > {output.fasta}
+			rm -f {params.prefix}/ref_path.txt {params.prefix}/all_paths.txt
+			rm -rf {params.tmpdir}
+			'''

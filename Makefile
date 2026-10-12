@@ -20,7 +20,7 @@ CONDA_MIN_VERSION ?= 24.7.1
 
 # The config files `init` copies from the shipped examples, and that `clean`
 # removes again. Kept in one place so the two cannot drift apart.
-INIT_CONFIGS := config.yaml samples.tsv regions.bed assemblies.tsv alleles.tsv
+INIT_CONFIGS := config.yaml samples.tsv regions.bed assemblies.tsv alleles.tsv graphs.tsv
 
 # Caches under .snakemake/ that `clean` must not touch. Snakemake puts pulled and
 # converted container images in .snakemake/singularity and solved environments in
@@ -101,6 +101,7 @@ init:
 	@cp -n $(COSIGT_DIR)/config/regions.bed.example    $(COSIGT_DIR)/config/regions.bed
 	@cp -n $(COSIGT_DIR)/config/assemblies.tsv.example $(COSIGT_DIR)/config/assemblies.tsv
 	@cp -n $(COSIGT_DIR)/config/alleles.tsv.example    $(COSIGT_DIR)/config/alleles.tsv
+	@cp -n $(COSIGT_DIR)/config/graphs.tsv.example     $(COSIGT_DIR)/config/graphs.tsv
 	$(WRITE_CONFIG)
 	@echo "Wrote $(CONFIG_FILE) and $(COSIGT_DIR)/config/."
 	@echo "Next: edit $(COSIGT_DIR)/config/*, then run 'make check'."

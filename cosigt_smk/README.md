@@ -26,9 +26,10 @@ Edit the files created in `cosigt_smk/config/` between `init` and `check`.
 | `samples.tsv` | one row per sample to genotype |
 | `regions.bed` | regions of interest, with per-region ploidy |
 | `assemblies.tsv` | assemblies per chromosome, for `allele_source: assemblies` |
-| `alleles.tsv` | curated panel, for `allele_source: alleles` |
+| `alleles.tsv` | curated panel, for `allele_source: custom` |
+| `graphs.tsv` | pre-built graphs (`.og` or `.gfa`), for `allele_source: graph` |
 
-Only one of `assemblies.tsv` and `alleles.tsv` is used, depending on `allele_source`. `truth_graphs.tsv.example` is not copied, because it is only needed for `benchmark_mode: leave_all_out`; copy it yourself if you need it.
+Only one of `assemblies.tsv`, `alleles.tsv` and `graphs.tsv` is used, depending on `allele_source`. `truth_graphs.tsv.example` is not copied, because it is only needed for `benchmark_mode: leave_all_out`; copy it yourself if you need it.
 
 It also writes `.cosigt.mk` with the settings below, so later commands can be run without repeating them. Existing files are never overwritten, so `init` is safe to re-run and will not touch edits you have already made.
 
