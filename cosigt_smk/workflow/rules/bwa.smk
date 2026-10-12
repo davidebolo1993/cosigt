@@ -6,7 +6,7 @@ if READ_MODE == 'ancient':
 		- Build index for allele contigs for ancient-DNA realignment
 		- Written under an aligner-specific prefix rather than next to the shared
 		  allele FASTA, so that switching read_mode cannot leave behind stale
-		  .pac/.ann/.amb files in the incompatible bwa-mem2 format
+		  .pac/.ann/.amb files in the incompatible bwa-mem3 format
 		'''
 		input:
 			rules.bedtools_getfasta.output.fasta

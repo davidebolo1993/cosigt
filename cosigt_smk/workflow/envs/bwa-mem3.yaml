@@ -1,0 +1,8 @@
+channels:
+ - conda-forge
+ - bioconda
+dependencies:
+ - bwa-mem3=0.14.1
+ # bwa-mem3 0.14.1 links htslib 1.24, so samtools has to be on the same htslib:
+ # samtools 1.23.1, pinned with bwa-mem2, cannot be installed alongside it.
+ - samtools=1.24

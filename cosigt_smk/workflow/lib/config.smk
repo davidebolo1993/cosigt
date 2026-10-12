@@ -48,11 +48,12 @@ def requested_target():
 
 
 RESOURCE_DEFAULTS = {
-    # max_occ is bwa-mem2's -c. It aborts on an internal assert when too many
-    # seeds share a position, which an allele panel provokes by construction;
-    # lowering -c is the documented workaround, so each retry halves it down to
-    # min_max_occ. See bwa-mem2 issue #269.
-    "bwa-mem2": {
+    # max_occ is bwa-mem3's -c. bwa-mem2 aborts on an internal assert when too
+    # many seeds share a position, which an allele panel provokes by
+    # construction; lowering -c is the documented workaround (bwa-mem2 issue
+    # #269). bwa-mem3 is a fork that documents no fix, so each retry still
+    # halves it down to min_max_occ.
+    "bwa-mem3": {
         "threads": 5, "mem_mb": 10000, "runtime": 4,
         "max_occ": 500, "min_max_occ": 50, "retries": 3,
     },
@@ -543,7 +544,7 @@ def custom_graph_path(wildcards):
 
 def realigned_alignment_path(wildcards):
     if READ_MODE == "short":
-        folder = "bwa-mem2"
+        folder = "bwa-mem3"
     elif READ_MODE == "ancient":
         folder = "bwa"
     elif LONG_READ_PRESET is not None:
@@ -577,6 +578,14 @@ def cluster_args():
     return " ".join(parts)
 
 
+# The short-read aligner is bwa-mem3, configured under its own key. A config
+# written for bwa-mem2 would otherwise have its tuning silently replaced by the
+# defaults below, since a bwa-mem2 block is no longer read by anything.
+if "bwa-mem2" in config and "bwa-mem3" not in config:
+    _fail(
+        "Config has a 'bwa-mem2' block, but the short-read aligner is now bwa-mem3. "
+        "Rename the block to 'bwa-mem3'; its keys are unchanged."
+    )
 _deep_defaults(config, RESOURCE_DEFAULTS)
 _deep_defaults(config, {"cluster": CLUSTER_DEFAULTS})
 _migrate_time_to_runtime(config)
@@ -877,7 +886,7 @@ def required_tools():
     # Everything below is reached only once reads are involved.
     tools.update({"gafpack", "gfainject", "cosigt"})
     if READ_MODE == "short":
-        tools.update({"bwa-mem2", "kfilt", "meryl"})
+        tools.update({"bwa-mem3", "kfilt", "meryl"})
     elif READ_MODE == "ancient":
         tools.add("bwa")
     if config.get("vcf"):

@@ -19,7 +19,7 @@ assemblies: config/assemblies.tsv
 alleles: config/alleles.tsv
 graphs: config/graphs.tsv
 
-# short: bwa-mem2; ancient: bwa aln/samse; long:<preset>: minimap2.
+# short: bwa-mem3; ancient: bwa aln/samse; long:<preset>: minimap2.
 # Supported long-read presets: map-pb, map-hifi, map-ont, map-iclr, lr:hq.
 # Example: read_mode: "long:map-ont"
 read_mode: short
@@ -60,12 +60,13 @@ pangene_viz: true
 sv_calling: false
 vcf: false
 
-# max_occ is bwa-mem2's -c (skip seeds with more than INT occurrences). An
+# max_occ is bwa-mem3's -c (skip seeds with more than INT occurrences). An
 # allele panel repeats every locus once per haplotype, so seed counts are high
-# by construction and bwa-mem2 can abort on an internal assert. Each retry
+# by construction and bwa-mem2 can abort on an internal assert; bwa-mem3, a
+# fork of it, documents no fix, so the guard is kept. Each retry
 # halves -c down to min_max_occ; raise max_occ to keep more multi-mapping seeds,
 # lower it if the assert still fires on the first attempt.
-bwa-mem2:
+bwa-mem3:
   threads: 5
   mem_mb: 10000
   runtime: 4
