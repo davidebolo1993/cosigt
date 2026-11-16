@@ -6,6 +6,7 @@ rerun-triggers:
   - mtime
 scheduler: greedy
 latency-wait: 60
+retries: 3
 shared-fs-usage:
   - input-output
   - persistence
