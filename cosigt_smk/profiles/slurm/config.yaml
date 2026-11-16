@@ -2,6 +2,7 @@ executor: slurm
 jobs: 100
 printshellcmds: true
 rerun-incomplete: true
+retries: 3
 rerun-triggers:
   - mtime
 scheduler: greedy
